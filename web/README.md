@@ -1,0 +1,147 @@
+# Game Collection Web App
+
+A modern, responsive web application featuring a collection of interactive games built with Vue.js and Tailwind CSS. The app includes a beautiful UI with dark mode support and smooth transitions.
+
+## 🎮 Featured Games
+
+### 1. Number Guessing Game
+
+- Guess a number between 1-100
+- Real-time feedback (too high/too low)
+- Attempt counter
+- Responsive design with smooth animations
+- Online multiplayer support (coming soon)
+
+### 2. Wordle Game
+
+- Infinite tries version of the classic word game
+- Support for both English and Turkish languages
+- Customizable word length (5-7 letters)
+- Visual feedback for correct/present/absent letters
+- Keyboard input support
+- Animations for guesses and errors
+
+### 3. Bottle Spin Game (Truth or Dare)
+
+- Dynamic player count support
+- Animated bottle spinning
+- Color-coded player sections
+- Truth and Dare options
+- Extensive question/task database
+- Supports multiple rounds
+
+## 🚀 Features
+
+- **Modern UI/UX**
+
+  - Clean and intuitive interface
+  - Responsive design for all screen sizes
+  - Glass morphism effects
+  - Smooth animations and transitions
+- **Theme Support**
+
+  - Light/Dark mode toggle
+  - Persistent theme preference
+  - Smooth theme transitions
+- **Accessibility**
+
+  - Keyboard navigation support
+  - Screen reader friendly
+  - High contrast mode support
+- **Performance**
+
+  - Fast loading times
+  - Optimized animations
+  - Efficient state management
+
+## 🛠 Technical Stack
+
+- **Frontend Framework**: Vue.js 3 with Composition API
+- **Styling**: Tailwind CSS
+- **Build Tool**: Vite
+- **Language**: JavaScript/TypeScript
+- **State Management**: Vue Refs and Computed Properties
+- **Animations**: CSS Transitions and Keyframes
+
+## 📱 Responsive Design
+
+The app is fully responsive and works seamlessly across:
+
+- Desktop computers
+- Tablets
+- Mobile phones
+- Different screen orientations
+
+## 🔜 Upcoming Features
+
+1. **Memory Match Game**
+
+   - Classic card matching gameplay
+   - Multiple difficulty levels
+   - Score tracking
+2. **Word Puzzle**
+
+   - Vocabulary challenges
+   - Multiple languages support
+   - Progressive difficulty
+3. **Math Quiz**
+
+   - Quick calculations
+   - Different operation types
+   - Time challenges
+
+## 🚀 Getting Started
+
+1. Clone the repository:
+   \`\`\`bash
+   git clone [repository-url]
+   \`\`\`
+2. Install dependencies:
+   \`\`\`bash
+   cd [project-directory]
+   npm install
+   \`\`\`
+3. Run development server:
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+4. Build for production:
+   \`\`\`bash
+   npm run build
+   \`\`\`
+
+## 🔧 Configuration
+
+The app can be configured through various environment variables:
+
+- \`VITE_APP_TITLE\`: Application title
+- \`VITE_API_URL\`: Backend API URL (for future use)
+- \`VITE_FIREBASE_CONFIG\`: Firebase configuration (for multiplayer features)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the project
+2. Create your feature branch (\`git checkout -b feature/AmazingFeature\`)
+3. Commit your changes (\`git commit -m 'Add some AmazingFeature'\`)
+4. Push to the branch (\`git push origin feature/AmazingFeature\`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Vue.js team for the amazing framework
+- Tailwind CSS for the utility-first CSS framework
+- The open-source community for inspiration and resources
+
+## 📧 Contact
+
+For any questions or suggestions, please open an issue in the repository.
+
+---
+
+Made with ❤️ using Vue.js and Tailwind CSS
