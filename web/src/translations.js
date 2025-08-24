@@ -10,7 +10,7 @@ export const translations = {
     comingSoonDesc: 'This game is currently under development. Check back soon!',
     
     // Menu translations
-    menuTitle: 'Game Collection',
+    menuTitle: 'Game Collection test',
     menuSubtitle: 'Choose a game to begin your adventure',
     
     // Number Guessing Game
