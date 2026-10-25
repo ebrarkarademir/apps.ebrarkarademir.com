@@ -11,6 +11,7 @@ import TabuGame from './games/TabuGame.vue'
 import QuizRaceGame from './games/QuizRaceGame.vue'
 import { translations } from './translations'
 import { rules, rulesLabels } from './rules'
+import { cardArt } from './cardArt'
 
 // Initialize language from localStorage or default to 'EN'
 const currentLang = ref(localStorage.getItem('preferredLanguage') || 'EN')
@@ -24,62 +25,101 @@ watch(currentLang, (newLang) => {
   document.documentElement.lang = newLang.toLowerCase()
 }, { immediate: true })
 
+const minutes = (n) => t.value.cardMinutes.replace('{n}', n)
+
+// Menu cards: `players`, `duration` and `mode` fill the info side of each card, and
+// `soon` marks games that still open the Coming Soon screen
 const games = computed(() => [
   {
     id: 'quiz-race',
     category: 'party',
     title: t.value.quizTitle,
     description: t.value.quizDesc,
-    icon: '[?]'
+    icon: '[?]',
+    art: cardArt['quiz-race'],
+    players: '1–10',
+    duration: minutes('5–10'),
+    mode: t.value.cardModeOnline
   },
   {
     id: 'number-guess',
     category: 'solo',
     title: t.value.numberGuessTitle,
     description: t.value.numberGuessDesc,
-    icon: '[#]'
+    icon: '[#]',
+    art: cardArt['number-guess'],
+    players: '1',
+    duration: minutes('1–3'),
+    mode: t.value.cardModeSolo
   },
   {
     id: 'wordle',
     category: 'solo',
     title: t.value.wordleTitle,
     description: t.value.wordleDesc,
-    icon: '[W]'
+    icon: '[W]',
+    art: cardArt.wordle,
+    players: '1',
+    duration: minutes('2–5'),
+    mode: t.value.cardModeSolo,
+    soon: true
   },
   {
     id: 'bottle-spin',
     category: 'party',
     title: t.value.bottleTitle,
     description: t.value.bottleDesc,
-    icon: '[@]'
+    icon: '[@]',
+    art: cardArt['bottle-spin'],
+    players: '2+',
+    duration: t.value.cardUnlimited,
+    mode: t.value.cardModeOnePhone
   },
   {
     id: 'casus-kim',
     category: 'party',
     title: t.value.casusTitle,
     description: t.value.casusDesc,
-    icon: '[*]'
+    icon: '[*]',
+    art: cardArt['casus-kim'],
+    players: '3–12',
+    duration: minutes('5–10'),
+    mode: t.value.cardModeOnline
   },
   {
     id: 'tabu',
     category: 'party',
     title: t.value.tabuTitle,
     description: t.value.tabuDesc,
-    icon: '[!]'
+    icon: '[!]',
+    art: cardArt.tabu,
+    players: '2+',
+    duration: t.value.cardPerTurn,
+    mode: t.value.cardModeOnline
   },
   {
     id: 'coming-soon-1',
     category: 'solo',
     title: t.value.memoryMatchTitle,
     description: t.value.comingSoonDesc,
-    icon: '[=]'
+    icon: '[=]',
+    art: cardArt['coming-soon-1'],
+    players: '1',
+    duration: '—',
+    mode: t.value.cardModeSolo,
+    soon: true
   },
   {
     id: 'coming-soon-2',
     category: 'solo',
     title: t.value.wordPuzzleTitle,
     description: t.value.comingSoonDesc,
-    icon: '[A]'
+    icon: '[A]',
+    art: cardArt['coming-soon-2'],
+    players: '1',
+    duration: '—',
+    mode: t.value.cardModeSolo,
+    soon: true
   }
 ])
 
@@ -116,6 +156,9 @@ const selectedGame = ref(initialRoute.game)
 const inviteCodeFor = (gameId) => (gameId === inviteGame ? inviteCode : '')
 const showRules = ref(false)
 
+// Menu card turned over to its info side
+const flippedGame = ref(null)
+
 // Nav bar categories
 const selectedCategory = ref(initialRoute.category || 'all')
 
@@ -130,6 +173,7 @@ const applyRoute = ({ category, game }) => {
   if (category) selectedCategory.value = category
   selectedGame.value = game
   showRules.value = false
+  flippedGame.value = null
 }
 
 const navigate = (path) => {
@@ -173,12 +217,16 @@ const filteredGames = computed(() =>
 
 const selectedGameTitle = computed(() => games.value.find(game => game.id === selectedGame.value)?.title || '')
 
-// The shell prompt in the nav doubles as a breadcrumb: ~, ~/party, ~/party/tabu
-const promptPath = computed(() => {
-  const parts = ['~']
-  if (activeCategory.value !== 'all') parts.push(activeCategory.value)
-  if (selectedGame.value) parts.push(selectedGame.value)
-  return parts.join('/')
+// The shell prompt in the nav doubles as a breadcrumb: ~, ~/party, ~/party/tabu.
+// Every part but the last is a link to that level.
+const crumbs = computed(() => {
+  const list = [{ text: '~', path: '/', label: t.value.crumbHome }]
+  if (activeCategory.value !== 'all') {
+    const category = categories.value.find(item => item.key === activeCategory.value)
+    list.push({ text: activeCategory.value, path: categoryPath(activeCategory.value), label: category?.label })
+  }
+  if (selectedGame.value) list.push({ text: selectedGame.value })
+  return list.map((crumb, index) => (index === list.length - 1 ? { ...crumb, path: null } : crumb))
 })
 
 const selectCategory = (key) => navigate(categoryPath(key))
@@ -201,8 +249,32 @@ const legendStyles = {
   gray: 'border border-term-low text-term-low'
 }
 
+const isTyping = (target) => !!target.closest?.('input, textarea, select, [contenteditable="true"]')
+
+// Esc climbs one level: game -> its list, category -> all. Online games ignore it, since
+// leaving would drop the player out of the room.
+const goUp = () => {
+  if (selectedGame.value) {
+    if (!ONLINE_GAMES.includes(selectedGame.value)) closeGame()
+  } else if (selectedCategory.value !== 'all') {
+    navigate('/')
+  }
+}
+
 const onKeydown = (e) => {
-  if (e.key === 'Escape') showRules.value = false
+  if (e.ctrlKey || e.metaKey || e.altKey) return
+
+  if (e.key === 'Escape') {
+    if (showRules.value) showRules.value = false
+    else if (flippedGame.value) flippedGame.value = null
+    else if (!isTyping(e.target)) goUp()
+    return
+  }
+
+  // 1-9 on the menu opens the game on that card
+  if (selectedGame.value || showRules.value || isTyping(e.target)) return
+  const game = /^[1-9]$/.test(e.key) && filteredGames.value[Number(e.key) - 1]
+  if (game) openGame(game.id)
 }
 
 onMounted(() => {
@@ -224,8 +296,14 @@ const toggleLanguage = () => {
     <nav :aria-label="t.navLabel" class="sticky top-0 z-30 bg-black/90 border-b border-term-low">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap md:flex-nowrap items-center gap-x-6 gap-y-3">
         <!-- Shell prompt -->
-        <p class="order-1 flex-1 basis-0 md:flex-none md:basis-auto min-w-0 truncate text-sm font-semibold" aria-hidden="true">
-          <span class="term-muted">guest@apps</span>:<span>{{ promptPath }}</span>$<span class="term-cursor"></span>
+        <p class="order-1 flex-1 basis-0 md:flex-none md:basis-auto min-w-0 truncate text-sm font-semibold">
+          <span aria-hidden="true"><span class="term-muted">guest@apps</span>:</span>
+          <template v-for="(crumb, index) in crumbs" :key="crumb.text">
+            <span v-if="index" aria-hidden="true">/</span>
+            <button v-if="crumb.path" type="button" class="term-crumb" :aria-label="crumb.label" @click="navigate(crumb.path)">{{ crumb.text }}</button>
+            <span v-else aria-current="page">{{ crumb.text }}</span>
+          </template>
+          <span class="term-cursor" aria-hidden="true">$</span>
         </p>
 
         <!-- Category items: own scrollable row on phones, middle on desktop -->
@@ -262,6 +340,7 @@ const toggleLanguage = () => {
     <div class="px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10 max-w-7xl mx-auto">
       <GameMenu
         v-if="!selectedGame"
+        v-model:flipped="flippedGame"
         :games="filteredGames"
         :t="t"
         @select-game="openGame"

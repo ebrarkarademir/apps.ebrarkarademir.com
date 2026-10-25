@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import TermWindow from '../components/TermWindow.vue'
+import QrCode from '../components/QrCode.vue'
 
 // Shared frame for online games: header, name + create/join screen, connecting spinner and
 // the lobby. Games put lobby options in the `lobby` slot and their own screens in the
@@ -157,21 +158,29 @@ function onCodeInput (event) {
 
     <!-- Lobby -->
     <div v-else-if="view.phase === 'lobby'" class="space-y-6">
-      <div class="term-panel border-term p-5 text-center">
-        <p class="term-label">{{ t.onlineRoomLabel }}</p>
-        <p class="font-display text-7xl leading-none tracking-[0.3em] my-3 pl-[0.3em]">{{ room.roomCode }}</p>
-        <p class="term-muted text-sm">{{ fmt(t.onlineShareHint, { game: title }) }}</p>
-        <button @click="shareRoom" class="term-btn mt-4 min-h-9 text-sm">
-          {{ copied ? t.onlineCopied : t.onlineCopyLink }}
-        </button>
-        <input
-          ref="linkField"
-          :value="room.shareLink"
-          readonly
-          :aria-label="t.onlineCopyLink"
-          @focus="$event.target.select()"
-          class="term-input mt-3 h-9 text-xs text-center term-muted"
-        />
+      <div class="term-panel border-term p-5 grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div class="min-w-0 text-center">
+          <p class="term-label">{{ t.onlineRoomLabel }}</p>
+          <p class="font-display text-7xl leading-none tracking-[0.3em] my-3 pl-[0.3em]">{{ room.roomCode }}</p>
+          <p class="term-muted text-sm">{{ fmt(t.onlineShareHint, { game: title }) }}</p>
+          <button @click="shareRoom" class="term-btn mt-4 min-h-9 text-sm">
+            {{ copied ? t.onlineCopied : t.onlineCopyLink }}
+          </button>
+          <input
+            ref="linkField"
+            :value="room.shareLink"
+            readonly
+            :aria-label="t.onlineCopyLink"
+            @focus="$event.target.select()"
+            class="term-input mt-3 h-9 text-xs text-center term-muted"
+          />
+        </div>
+
+        <!-- Friends in the same room can scan the host's screen instead of typing the code -->
+        <figure class="mx-auto flex flex-col items-center gap-2">
+          <QrCode :text="room.shareLink" class="w-40 h-40" />
+          <figcaption class="term-label">&gt; {{ t.onlineScanHint }}</figcaption>
+        </figure>
       </div>
 
       <slot name="players" :players="view.players">

@@ -23,6 +23,22 @@ export const translations = {
     navAll: 'All',
     navParty: 'Party Games',
     navSolo: 'Solo Games',
+    crumbHome: 'Home',
+
+    // Game cards
+    cardShowInfo: 'show info',
+    cardFlipBack: 'Flip card back',
+    cardRun: 'Run',
+    cardPlayers: 'Players',
+    cardTime: 'Time',
+    cardMode: 'Mode',
+    cardModeOnline: 'Online',
+    cardModeOnePhone: 'One phone',
+    cardModeSolo: 'Solo',
+    cardMinutes: '{n} min',
+    cardPerTurn: '60 s / turn',
+    cardUnlimited: 'Unlimited',
+    cardSoon: 'Soon',
     
     // Number Guessing Game
     numberGuessTitle: 'Number Guessing Game',
@@ -212,6 +228,7 @@ export const translations = {
     onlineShareHint: 'On another phone or computer, open this site, choose {game} and enter the code — or share the link.',
     onlineCopyLink: 'Share link',
     onlineCopied: 'Link copied!',
+    onlineScanHint: 'Scan to join',
     onlinePlayers: 'Players',
     onlineHostBadge: 'Host',
     onlineStart: 'Start game',
@@ -262,6 +279,22 @@ export const translations = {
     navAll: 'Tümü',
     navParty: 'Parti Oyunları',
     navSolo: 'Tek Kişilik',
+    crumbHome: 'Ana sayfa',
+
+    // Game cards
+    cardShowInfo: 'bilgileri göster',
+    cardFlipBack: 'Kartı geri çevir',
+    cardRun: 'Çalıştır',
+    cardPlayers: 'Oyuncu',
+    cardTime: 'Süre',
+    cardMode: 'Mod',
+    cardModeOnline: 'Çevrimiçi',
+    cardModeOnePhone: 'Tek telefon',
+    cardModeSolo: 'Tek kişilik',
+    cardMinutes: '{n} dk',
+    cardPerTurn: '60 sn / tur',
+    cardUnlimited: 'Sınırsız',
+    cardSoon: 'Yakında',
     
     // Number Guessing Game
     numberGuessTitle: 'Sayı Tahmin Oyunu',
@@ -451,6 +484,7 @@ export const translations = {
     onlineShareHint: 'Başka bir telefon veya bilgisayarda bu siteyi aç, {game} oyununu seç ve kodu gir — ya da bağlantıyı paylaş.',
     onlineCopyLink: 'Bağlantıyı paylaş',
     onlineCopied: 'Bağlantı kopyalandı!',
+    onlineScanHint: 'Katılmak için okut',
     onlinePlayers: 'Oyuncular',
     onlineHostBadge: 'Sunucu',
     onlineStart: 'Oyunu başlat',

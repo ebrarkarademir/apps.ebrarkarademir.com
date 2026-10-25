@@ -7,13 +7,14 @@ export const rules = {
       title: 'How it works',
       goal: 'Pick a game, play right in your browser, and come back to the menu anytime.',
       steps: [
-        'Choose any card from the menu to open that game.',
+        'Tap a card to flip it and see the players, time and mode, then press [ Run ] to open the game.',
         'Use the [<] Back command inside a game to return to the menu.',
         'Tap [?] anytime to see the rules for the game you are playing.'
       ],
       tips: [
         'Switch between English and Turkish with the EN/TR button.',
-        'Your language choice is remembered on this device.'
+        'Your language choice is remembered on this device.',
+        'On a keyboard, press 1–9 to open a game and Esc to go back. Click any part of the ~/path at the top to jump there.'
       ]
     },
     TR: {
@@ -21,13 +22,14 @@ export const rules = {
       title: 'Nasıl çalışır?',
       goal: 'Bir oyun seç, doğrudan tarayıcında oyna ve istediğin zaman menüye dön.',
       steps: [
-        'Menüden bir karta dokunarak oyunu aç.',
+        'Bir karta dokunup çevir; oyuncu sayısını, süreyi ve modu gör, sonra [ Çalıştır ] ile oyunu aç.',
         'Oyunun içindeki [<] Geri komutuyla menüye dön.',
         'Oynadığın oyunun kurallarını görmek için istediğin zaman [?] butonuna bas.'
       ],
       tips: [
         'EN/TR butonuyla Türkçe ve İngilizce arasında geçiş yap.',
-        'Dil tercihin bu cihazda hatırlanır.'
+        'Dil tercihin bu cihazda hatırlanır.',
+        'Klavyede 1–9 ile bir oyunu aç, Esc ile geri dön. Üstteki ~/yol kısmının bir parçasına tıklayarak oraya git.'
       ]
     }
   },

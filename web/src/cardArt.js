@@ -1,0 +1,59 @@
+// ASCII art for the face of each game card, keyed by game id. Lines stay within 13
+// columns so the art still fits the two-column card grid on a phone.
+export const cardArt = {
+  'quiz-race': [
+    '  ___',
+    String.raw` |__ \ `,
+    '   / /',
+    '  |_|',
+    '  (_)'
+  ],
+  'number-guess': [
+    '+---------+',
+    '|  1-100  |',
+    '+---------+',
+    ' [^] ? [v]'
+  ],
+  wordle: [
+    '[W][O][R][D]',
+    '[ ][ ][ ][ ]',
+    '[ ][ ][ ][ ]'
+  ],
+  'bottle-spin': [
+    '   [_]',
+    '   | |',
+    String.raw`  /   \ `,
+    ' |     |',
+    ' |     |',
+    " '-----'"
+  ],
+  'casus-kim': [
+    '   _____',
+    ' _|_____|_',
+    '  [o]-[o]',
+    String.raw`    \_/`
+  ],
+  tabu: [
+    ' .------.',
+    '( #@!%&! )',
+    " '-. .--'",
+    '    |/'
+  ],
+  'coming-soon-1': [
+    ".---. .---.",
+    "| ? | | A |",
+    "'---' '---'",
+    ".---. .---.",
+    "| A | | ? |",
+    "'---' '---'"
+  ],
+  'coming-soon-2': [
+    '+-+-+-+-+',
+    '|W|O|R|D|',
+    '+-+-+-+-+',
+    '    |U|',
+    '    +-+',
+    '    |N|',
+    '    +-+'
+  ]
+}

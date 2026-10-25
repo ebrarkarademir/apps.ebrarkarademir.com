@@ -447,6 +447,11 @@ postcss@^8.1.0, postcss@^8.4.49, postcss@^8.5.16, postcss@^8.5.29, postcss@^8.5.
     picocolors "^1.1.1"
     source-map-js "^1.2.2"
 
+qrcode-generator@^1.4.4:
+  version "1.4.4"
+  resolved "https://registry.npmjs.org/qrcode-generator/-/qrcode-generator-1.4.4.tgz"
+  integrity sha512-HM7yY8O2ilqhmULxGMpcHSF1EhJJ9yBj8gvDEuZ6M+KGJ0YY2hKpnXvRD+hZPLrDVck3ExIGhmPtSdcjC+guuw==
+
 rollup@^4.34.9:
   version "4.65.0"
   resolved "https://registry.npmjs.org/rollup/-/rollup-4.65.0.tgz"

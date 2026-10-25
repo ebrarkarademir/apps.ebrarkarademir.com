@@ -9,20 +9,29 @@ defineProps({
   t: {
     type: Object,
     required: true
+  },
+  // Id of the card turned over to its info side; one at a time
+  flipped: {
+    type: String,
+    default: null
   }
 })
 
-defineEmits(['select-game'])
+defineEmits(['select-game', 'update:flipped'])
 </script>
 
 <template>
   <div class="max-w-6xl mx-auto">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
       <GameCard
-        v-for="game in games"
+        v-for="(game, index) in games"
         :key="game.id"
         :game="game"
-        @click="$emit('select-game', game.id)"
+        :t="t"
+        :flipped="flipped === game.id"
+        :shortcut="index < 9 ? index + 1 : 0"
+        @flip="$emit('update:flipped', $event ? game.id : null)"
+        @run="$emit('select-game', game.id)"
       />
     </div>
   </div>

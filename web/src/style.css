@@ -245,6 +245,19 @@
     opacity: 0.4;
   }
 
+  /* Clickable parts of the ~/path prompt in the nav */
+  .term-crumb {
+    text-decoration: underline dotted var(--color-term-low);
+    text-underline-offset: 0.25em;
+    transition: background-color 80ms, color 80ms;
+  }
+  .term-crumb:hover {
+    background: var(--color-term);
+    color: var(--color-black);
+    text-shadow: none;
+    text-decoration-color: transparent;
+  }
+
   /* Small bracketed icon buttons: [?], [x], EN/TR */
   .term-icon-btn {
     display: inline-flex;
