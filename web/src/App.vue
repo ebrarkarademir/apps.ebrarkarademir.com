@@ -89,7 +89,7 @@ const games = computed(() => [
 ])
 
 // An invite link (?join=CODE&game=ID) opens that online game with the room code filled in
-const ONLINE_GAMES = ['quiz-race', 'bottle-spin', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const inviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
 const inviteCode = inviteGame ? (inviteParams.get('join') || '') : ''
@@ -257,7 +257,6 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'bottle-spin'"
         :isDarkMode="isDarkMode"
         :t="t"
-        :initialCode="inviteCodeFor('bottle-spin')"
         @go-back="selectedGame = null"
       />
 

@@ -1,8 +1,7 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { useOnlineRoom } from '../online/useOnlineRoom'
-import OnlineRoom from '../online/OnlineRoom.vue'
+import { ref, computed, onUnmounted } from 'vue'
 
+// Played on one phone passed around the table, so there is no online room
 const props = defineProps({
   isDarkMode: {
     type: Boolean,
@@ -11,9 +10,7 @@ const props = defineProps({
   t: {
     type: Object,
     required: true
-  },
-  // Room code from a shared invite link
-  initialCode: { type: String, default: '' }
+  }
 })
 
 defineEmits(['go-back'])
@@ -22,113 +19,42 @@ const PROMPT_COUNT = 10
 const SPIN_MS = 4200
 const REDUCED_SPIN_MS = 600
 
-const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
+// Game states
+const gamePhase = ref('setup') // setup, play
+const playerCount = ref(0)
+const players = ref([])
+const playerNames = ref([])
+const selectedPlayer = ref(null)
+const isSpinning = ref(false)
+const rotation = ref(0)
+const spinDuration = ref(SPIN_MS)
+const currentChoice = ref(null) // 'truth' or 'dare'
+const currentPromptKey = ref(null)
+let spinTimeout = null
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-// ---------- Host-side game rules ----------
-
-const randomPrompt = (choice, previous) => {
-  let key
-  do {
-    key = `${choice}Q${1 + Math.floor(Math.random() * PROMPT_COUNT)}`
-  } while (key === previous)
-  return key
+const selectPlayerCount = (count) => {
+  // Keep names already typed when the count changes
+  playerNames.value = Array.from({ length: count }, (_, i) => playerNames.value[i] || '')
+  playerCount.value = count
 }
 
-const isOnline = (s, id) => s.players.some(p => p.id === id && p.online)
-
-// The player the bottle last picked spins next; the host can always step in
-const maySpin = (s, playerId) =>
-  playerId === s.spinnerId || playerId === s.hostId || !isOnline(s, s.spinnerId)
-
-function spin (s) {
-  const seats = s.players
-  const candidates = seats.map((p, i) => (p.online ? i : -1)).filter(i => i >= 0)
-  if (!candidates.length) return
-  const target = candidates[Math.floor(Math.random() * candidates.length)]
-  const slice = 360 / seats.length
-  // Land somewhere inside the target's slice, not always dead center
-  const targetAngle = target * slice + (Math.random() - 0.5) * slice * 0.6
-  const current = ((s.rotation % 360) + 360) % 360
-  const delta = (((targetAngle - current) % 360) + 360) % 360
-  s.rotation += (4 + Math.floor(Math.random() * 3)) * 360 + delta
-  s.spinTarget = seats[target].id
-  s.selected = null
-  s.choice = null
-  s.promptKey = null
-  s.spinning = true
-  s.deadline = Date.now() + SPIN_MS
-}
-
-function onAction (s, playerId, action) {
-  const isHost = playerId === s.hostId
-  switch (action.type) {
-    case 'start':
-      if (isHost && s.phase === 'lobby') {
-        Object.assign(s, { phase: 'play', spinnerId: s.hostId, selected: null, choice: null, promptKey: null, spinning: false })
-      }
-      break
-    case 'spin':
-      if (s.phase === 'play' && !s.spinning && maySpin(s, playerId)) spin(s)
-      break
-    case 'choose':
-      if (s.phase === 'play' && !s.spinning && playerId === s.selected && ['truth', 'dare'].includes(action.choice)) {
-        s.choice = action.choice
-        s.promptKey = randomPrompt(action.choice, s.promptKey)
-      }
-      break
-    case 'another':
-      if (s.phase === 'play' && s.choice && (playerId === s.selected || isHost)) {
-        s.promptKey = randomPrompt(s.choice, s.promptKey)
-      }
-      break
-    case 'end':
-      if (isHost) {
-        s.players = s.players.filter(p => p.online)
-        Object.assign(s, { phase: 'lobby', spinning: false, selected: null, choice: null, promptKey: null, deadline: null })
-      }
-      break
-  }
-}
-
-const room = useOnlineRoom({
-  game: 'bottle-spin',
-  initialCode: props.initialCode,
-  initialState: () => ({
-    rotation: 0, spinning: false, spinTarget: null, deadline: null,
-    selected: null, spinnerId: null, choice: null, promptKey: null
-  }),
-  // Guests must not know where the bottle will stop before it does
-  project: ({ spinTarget, ...visible }) => visible,
-  onAction,
-  onTick: (s, now) => {
-    if (s.spinning && now >= s.deadline) {
-      s.spinning = false
-      s.selected = s.spinTarget
-      s.spinnerId = s.spinTarget
-      s.deadline = null
-    }
-  }
+const areAllNamesFilled = computed(() => {
+  return playerNames.value.length === playerCount.value &&
+         playerNames.value.every(name => name.trim() !== '')
 })
 
-// ---------- View ----------
-
-const view = computed(() => room.view)
-const players = computed(() => view.value?.players || [])
-const nameOf = (id) => players.value.find(p => p.id === id)?.name || ''
-const selectedIndex = computed(() => players.value.findIndex(p => p.id === view.value?.selected))
-const iWasPicked = computed(() => view.value?.selected === room.myId)
-const canSpin = computed(() => {
-  const v = view.value
-  if (!v || v.spinning) return false
-  return room.myId === v.spinnerId || room.isHost || !players.value.some(p => p.id === v.spinnerId && p.online)
-})
+const startGame = () => {
+  if (!areAllNamesFilled.value) return
+  players.value = playerNames.value.map(name => name.trim())
+  gamePhase.value = 'play'
+}
 
 // Each player sits at an angle measured clockwise from the top of the table
-const sliceAngle = computed(() => 360 / Math.max(1, players.value.length))
+const sliceAngle = computed(() => 360 / players.value.length)
 
 const getPlayerStyle = (index) => {
   const angle = (index * sliceAngle.value * Math.PI) / 180
@@ -140,46 +66,154 @@ const getPlayerStyle = (index) => {
 }
 
 const spotlightStyle = computed(() => {
-  if (selectedIndex.value < 0) return {}
-  const start = selectedIndex.value * sliceAngle.value - sliceAngle.value / 2
+  if (selectedPlayer.value === null) return {}
+  const start = selectedPlayer.value * sliceAngle.value - sliceAngle.value / 2
   const color = props.isDarkMode ? 'rgba(139, 92, 246, 0.25)' : 'rgba(139, 92, 246, 0.16)'
   return {
     background: `conic-gradient(from ${start}deg, ${color} 0deg ${sliceAngle.value}deg, transparent ${sliceAngle.value}deg)`
   }
 })
 
-// Animate each new spin over the time the host has left on it
-const spinDuration = ref(0)
-watch(() => view.value?.rotation, (next, previous) => {
-  if (previous === undefined || !view.value?.spinning) {
-    spinDuration.value = 0
-    return
-  }
-  const remaining = Math.max(0, (view.value.deadline || 0) - Date.now())
-  spinDuration.value = prefersReducedMotion() ? Math.min(remaining, REDUCED_SPIN_MS) : remaining
-})
-
 const bottleStyle = computed(() => ({
-  transform: `translate(-50%, -50%) rotate(${view.value?.rotation || 0}deg)`,
-  transition: spinDuration.value ? `transform ${spinDuration.value}ms cubic-bezier(0.12, 0.75, 0.2, 1)` : 'none'
+  transform: `translate(-50%, -50%) rotate(${rotation.value}deg)`,
+  transition: isSpinning.value
+    ? `transform ${spinDuration.value}ms cubic-bezier(0.12, 0.75, 0.2, 1)`
+    : 'none'
 }))
 
-const currentPrompt = computed(() => (view.value?.promptKey ? props.t[view.value.promptKey] : ''))
+const spinBottle = () => {
+  if (isSpinning.value || players.value.length === 0) return
+
+  const target = Math.floor(Math.random() * players.value.length)
+  // Land somewhere inside the target's slice, not always dead center
+  const jitter = (Math.random() - 0.5) * sliceAngle.value * 0.6
+  const targetAngle = target * sliceAngle.value + jitter
+  const current = ((rotation.value % 360) + 360) % 360
+  const delta = (((targetAngle - current) % 360) + 360) % 360
+  const fullTurns = 4 + Math.floor(Math.random() * 3)
+
+  spinDuration.value = prefersReducedMotion() ? REDUCED_SPIN_MS : SPIN_MS
+  selectedPlayer.value = null
+  currentChoice.value = null
+  currentPromptKey.value = null
+  isSpinning.value = true
+  rotation.value += fullTurns * 360 + delta
+
+  spinTimeout = setTimeout(() => {
+    isSpinning.value = false
+    selectedPlayer.value = target
+  }, spinDuration.value)
+}
+
+const pickPrompt = (choice) => {
+  let key
+  do {
+    key = `${choice}Q${1 + Math.floor(Math.random() * PROMPT_COUNT)}`
+  } while (key === currentPromptKey.value)
+  currentChoice.value = choice
+  currentPromptKey.value = key
+}
+
+const currentPrompt = computed(() =>
+  currentPromptKey.value ? props.t[currentPromptKey.value] : ''
+)
 
 const statusText = computed(() => {
-  const v = view.value
-  if (v.spinning) return props.t.spinning
-  if (v.selected) return iWasPicked.value ? props.t.bottleYouPicked : fmt(props.t.bottlePicked, { name: nameOf(v.selected) })
-  return canSpin.value ? props.t.tapBottleToSpin : fmt(props.t.bottleWaitSpin, { name: nameOf(v.spinnerId) })
+  if (isSpinning.value) return props.t.spinning
+  if (selectedPlayer.value !== null) {
+    return props.t.bottlePicked.replace('{name}', players.value[selectedPlayer.value])
+  }
+  return props.t.tapBottleToSpin
 })
 
+// Back to the name list, keeping the names for a quick edit
+const resetGame = () => {
+  clearTimeout(spinTimeout)
+  gamePhase.value = 'setup'
+  selectedPlayer.value = null
+  isSpinning.value = false
+  currentChoice.value = null
+  currentPromptKey.value = null
+  rotation.value = 0
+}
+
+onUnmounted(() => clearTimeout(spinTimeout))
+
 const muted = computed(() => (props.isDarkMode ? 'text-gray-400' : 'text-gray-500'))
-const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50 transition-colors'
+const label = computed(() => ['text-xs font-semibold uppercase tracking-wider', props.isDarkMode ? 'text-gray-400' : 'text-gray-500'])
+const inputClass = computed(() => [
+  'w-full h-11 px-3 rounded-lg border outline-none transition-colors focus:ring-2 focus:ring-violet-500/40',
+  props.isDarkMode ? 'bg-gray-950 border-gray-700 text-white focus:border-violet-400' : 'bg-white border-gray-300 focus:border-violet-500'
+])
+const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
 </script>
 
 <template>
-  <OnlineRoom :room="room" :t="t" :isDarkMode="isDarkMode" :title="t.bottleTitle" :minPlayers="2" @go-back="$emit('go-back')" @start="room.act('start')">
-    <div class="space-y-6">
+  <div
+    :class="[
+      'max-w-2xl mx-auto rounded-xl border p-5 sm:p-8 transition-colors duration-150',
+      isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-lg'
+    ]"
+  >
+    <!-- Header -->
+    <div class="flex justify-between items-center gap-3 mb-6">
+      <button
+        @click="$emit('go-back')"
+        :class="[
+          'px-3 py-2 rounded-lg transition-colors duration-150 flex items-center gap-2 text-sm font-medium',
+          isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+        ]"
+      >
+        <span class="text-lg">←</span>
+        <span>{{ t.back }}</span>
+      </button>
+      <h1 class="text-xl sm:text-2xl font-bold truncate">{{ t.bottleTitle }}</h1>
+    </div>
+
+    <!-- Setup Phase -->
+    <form v-if="gamePhase === 'setup'" class="space-y-6" @submit.prevent="startGame">
+      <div>
+        <h2 :class="[label, 'mb-3']">{{ t.selectPlayerCount }}</h2>
+        <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
+          <button
+            v-for="count in [2, 3, 4, 5, 6, 7, 8]"
+            :key="count"
+            type="button"
+            @click="selectPlayerCount(count)"
+            :class="[
+              'h-11 rounded-lg border font-semibold transition-colors',
+              playerCount === count
+                ? 'bg-violet-600 border-violet-600 text-white'
+                : isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'
+            ]"
+          >
+            {{ count }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="playerCount" class="space-y-3">
+        <h2 :class="label">{{ t.enterNames }}</h2>
+        <div class="grid sm:grid-cols-2 gap-2">
+          <input
+            v-for="(name, index) in playerNames"
+            :key="index"
+            v-model="playerNames[index]"
+            type="text"
+            maxlength="16"
+            :placeholder="t.playerNamePlaceholder + ' ' + (index + 1)"
+            :class="inputClass"
+          />
+        </div>
+      </div>
+
+      <button v-if="playerCount" type="submit" :disabled="!areAllNamesFilled" :class="primary">
+        {{ t.startGame }}
+      </button>
+    </form>
+
+    <!-- Game Phase -->
+    <div v-else class="space-y-6">
       <!-- Table -->
       <div class="relative mx-auto w-full max-w-sm aspect-square">
         <div
@@ -194,37 +228,36 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
         <!-- Spotlight towards the selected player -->
         <div
           class="absolute inset-[9%] rounded-full transition-opacity duration-500"
-          :class="selectedIndex < 0 ? 'opacity-0' : 'opacity-100'"
+          :class="selectedPlayer === null ? 'opacity-0' : 'opacity-100'"
           :style="spotlightStyle"
         ></div>
 
         <!-- Players -->
         <div
           v-for="(player, index) in players"
-          :key="player.id"
+          :key="index"
           :style="getPlayerStyle(index)"
           class="absolute -translate-x-1/2 -translate-y-1/2 z-10"
         >
           <div
             :class="[
               'max-w-[6.5rem] truncate px-3 py-1.5 rounded-lg text-sm font-semibold shadow-md transition-all duration-300',
-              selectedIndex === index
+              selectedPlayer === index
                 ? 'bg-violet-600 text-white scale-110 player-picked'
                 : isDarkMode
                   ? 'bg-gray-800 text-gray-200 border border-gray-700'
-                  : 'bg-white text-gray-700 border border-gray-200',
-              { 'opacity-40': !player.online, 'ring-2 ring-violet-400': player.id === room.myId && selectedIndex !== index }
+                  : 'bg-white text-gray-700 border border-gray-200'
             ]"
           >
-            {{ player.name }}
+            {{ player }}
           </div>
         </div>
 
         <!-- Bottle (drawn pointing up; the neck points at the chosen player) -->
         <button
           type="button"
-          @click="room.act('spin')"
-          :disabled="!canSpin"
+          @click="spinBottle"
+          :disabled="isSpinning"
           :aria-label="t.spin"
           class="absolute top-1/2 left-1/2 h-[52%] aspect-[1/3] cursor-pointer disabled:cursor-default focus:outline-none"
           :style="bottleStyle"
@@ -252,7 +285,7 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
 
       <!-- Status -->
       <p
-        :class="['text-center font-semibold transition-colors', view.selected && !view.spinning ? 'text-xl text-violet-500' : muted]"
+        :class="['text-center font-semibold transition-colors', selectedPlayer !== null ? 'text-xl text-violet-500' : muted]"
         aria-live="polite"
       >
         {{ statusText }}
@@ -260,51 +293,48 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
 
       <!-- Game Controls -->
       <div class="space-y-4">
-        <button v-if="!view.selected || view.spinning" @click="room.act('spin')" :disabled="!canSpin" :class="primary">
-          {{ view.spinning ? t.spinning : t.spin }}
+        <button v-if="selectedPlayer === null" @click="spinBottle" :disabled="isSpinning" :class="primary">
+          {{ isSpinning ? t.spinning : t.spin }}
         </button>
 
         <template v-else>
-          <div v-if="!view.choice && iWasPicked" class="flex gap-4">
+          <div v-if="!currentChoice" class="flex gap-4">
             <button
-              @click="room.act('choose', { choice: 'truth' })"
+              @click="pickPrompt('truth')"
               class="flex-1 px-6 py-4 rounded-lg font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
             >
               {{ t.truth }}
             </button>
             <button
-              @click="room.act('choose', { choice: 'dare' })"
+              @click="pickPrompt('dare')"
               class="flex-1 px-6 py-4 rounded-lg font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-colors"
             >
               {{ t.dare }}
             </button>
           </div>
-          <p v-else-if="!view.choice" :class="['text-center text-sm', muted]">
-            {{ fmt(t.bottleWaitChoose, { name: nameOf(view.selected) }) }}
-          </p>
 
           <!-- Question/Dare Display -->
           <Transition name="prompt" mode="out-in">
             <div
-              v-if="view.choice"
-              :key="view.promptKey"
+              v-if="currentChoice"
+              :key="currentPromptKey"
               :class="[
                 'p-6 rounded-lg text-center border',
-                view.choice === 'truth'
+                currentChoice === 'truth'
                   ? isDarkMode ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-100' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                   : isDarkMode ? 'bg-rose-500/10 border-rose-500/40 text-rose-100' : 'bg-rose-50 border-rose-200 text-rose-900'
               ]"
             >
               <p class="text-xs font-bold uppercase tracking-[0.18em] mb-2 opacity-70">
-                {{ nameOf(view.selected) }} · {{ view.choice === 'truth' ? t.truth : t.dare }}
+                {{ players[selectedPlayer] }} · {{ currentChoice === 'truth' ? t.truth : t.dare }}
               </p>
               <p class="text-lg font-medium">{{ currentPrompt }}</p>
             </div>
           </Transition>
 
-          <div v-if="view.choice && (iWasPicked || room.isHost)" class="flex gap-4">
+          <div v-if="currentChoice" class="flex gap-4">
             <button
-              @click="room.act('another')"
+              @click="pickPrompt(currentChoice)"
               :class="[
                 'flex-1 px-4 py-3 rounded-lg font-semibold border transition-colors',
                 isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'
@@ -313,29 +343,24 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
               {{ t.anotherPrompt }}
             </button>
             <button
-              v-if="canSpin"
-              @click="room.act('spin')"
+              @click="spinBottle"
               class="flex-1 px-4 py-3 rounded-lg font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors"
             >
               {{ t.spinAgain }}
             </button>
           </div>
-          <p v-else-if="view.choice" :class="['text-center text-sm', muted]">
-            {{ fmt(t.bottleWaitSpin, { name: nameOf(view.spinnerId) }) }}
-          </p>
         </template>
 
         <button
-          v-if="room.isHost"
-          @click="room.act('end')"
-          :disabled="view.spinning"
+          @click="resetGame"
+          :disabled="isSpinning"
           :class="['w-full text-sm disabled:opacity-50', isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700']"
         >
-          {{ t.onlineBackToLobby }}
+          {{ t.changePlayers }}
         </button>
       </div>
     </div>
-  </OnlineRoom>
+  </div>
 </template>
 
 <style scoped>

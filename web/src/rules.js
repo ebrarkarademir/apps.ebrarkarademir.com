@@ -111,35 +111,33 @@ export const rules = {
     EN: {
       icon: '🍾',
       title: 'Bottle Spin',
-      players: '2+ players, one device each',
+      players: '2+ players',
       duration: 'Unlimited',
       goal: 'Spin the bottle and take on a truth or a dare.',
       steps: [
-        'One player taps Create room; everyone else joins with the room code on their own phone or computer.',
-        'The host starts the game and spins first — the bottle spins on every screen at once.',
-        'Whoever the bottle picks chooses Truth or Dare on their device; the prompt appears for everyone.',
-        'The picked player spins the bottle next.'
+        'Choose how many people are playing and enter their names.',
+        'Spin the bottle — it lands on a random player.',
+        'That player picks Truth or Dare and completes the prompt.',
+        'Spin again for the next round.'
       ],
       tips: [
-        'Agree on house rules before you start — anyone can pass on a prompt.',
-        'If the next spinner drops out, the host can spin instead.'
+        'Agree on house rules before you start — anyone can pass on a prompt.'
       ]
     },
     TR: {
       icon: '🍾',
       title: 'Şişe Çevirmece',
-      players: '2+ oyuncu, herkes kendi cihazından',
+      players: '2+ oyuncu',
       duration: 'Sınırsız',
       goal: 'Şişeyi çevir; doğruluk mu cesaret mi, seçimi yap.',
       steps: [
-        'Bir oyuncu Oda oluştur’a basar; diğerleri kendi telefon veya bilgisayarından oda koduyla katılır.',
-        'Sunucu oyunu başlatır ve ilk çeviren olur — şişe herkesin ekranında aynı anda döner.',
-        'Şişenin seçtiği kişi kendi cihazından Doğruluk veya Cesaret’i seçer; görev herkese görünür.',
-        'Seçilen oyuncu şişeyi bir sonraki tur çevirir.'
+        'Kaç kişi oynayacağını seç ve isimleri gir.',
+        'Şişeyi çevir — rastgele bir oyuncuda durur.',
+        'Bu oyuncu Doğruluk veya Cesaret’i seçer ve görevi yapar.',
+        'Sonraki tur için şişeyi tekrar çevir.'
       ],
       tips: [
-        'Başlamadan önce kuralları konuşun — herkes bir görevi pas geçebilir.',
-        'Sıradaki çeviren ayrılırsa şişeyi sunucu çevirebilir.'
+        'Başlamadan önce kuralları konuşun — herkes bir görevi pas geçebilir.'
       ]
     }
   },
