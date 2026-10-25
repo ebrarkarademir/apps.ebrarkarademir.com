@@ -1,9 +1,9 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import ThemeToggle from './components/ThemeToggle.vue'
 import LanguageToggle from './components/LanguageToggle.vue'
 import GameMenu from './views/GameMenu.vue'
-import WordleGame from './games/WordleGame.vue'
+// import WordleGame from './games/WordleGame.vue' // under development
 import NumberGuessingGame from './games/NumberGuessingGame.vue'
 import BottleSpinGame from './games/BottleSpinGame.vue'
 import CasusKimGame from './games/CasusKimGame.vue'
@@ -11,6 +11,7 @@ import TabuGame from './games/TabuGame.vue'
 import CvAnalyzerGame from './games/CvAnalyzerGame.vue'
 import InstaCommentPickerGame from './games/InstaCommentPickerGame.vue'
 import { translations } from './translations'
+import { rules, rulesLabels } from './rules'
 
 // Initialize language from localStorage or default to 'EN'
 const currentLang = ref(localStorage.getItem('preferredLanguage') || 'EN')
@@ -89,88 +90,24 @@ const games = computed(() => [
 const selectedGame = ref(null)
 const showRules = ref(false)
 
-const rulesByGame = {
-  'number-guess': {
-    title: 'Number Guessing Game',
-    rules: [
-      'Pick a number between 1 and 100.',
-      'The game tells you whether your guess is too high or too low.',
-      'Keep guessing until you find the correct number.'
-    ]
-  },
-  wordle: {
-    title: 'Wordle Game',
-    rules: [
-      'Guess the hidden word using the selected word length.',
-      'Letters in the right place turn green.',
-      'Letters that exist but are in the wrong place turn yellow.'
-    ]
-  },
-  'bottle-spin': {
-    title: 'Bottle Spin Game',
-    rules: [
-      'Choose the player count and enter names.',
-      'Spin the bottle to decide who answers a truth or dare prompt.',
-      'The selected player completes the challenge or answer.'
-    ]
-  },
-  'casus-kim': {
-    title: 'Who Is the Spy?',
-    rules: [
-      'Each player receives a secret role and a topic word.',
-      'The spy does not know the topic word.',
-      'Discuss, ask questions, and vote to identify the spy.'
-    ]
-  },
-  tabu: {
-    title: 'Tabu',
-    rules: [
-      'One player explains the target word without saying the forbidden words.',
-      'If the team guesses correctly, they earn points.',
-      'Skipping or using a forbidden word ends the turn.'
-    ]
-  },
-  'insta-picker': {
-    title: 'Instagram Comment Picker',
-    rules: [
-      'Paste a public Instagram post URL or upload comments.',
-      'Filter comments by keyword or regex.',
-      'Choose how many winners you want and pick them.'
-    ]
-  },
-  'cv-analyzer': {
-    title: 'CV Analyzer',
-    rules: [
-      'Upload or paste a CV in plain text.',
-      'The app scans structure, skills, and common hiring signals.',
-      'Review the mock analysis and suggested improvements.'
-    ]
-  }
+const currentRules = computed(() => {
+  const entry = rules[selectedGame.value] || rules.menu
+  return entry[currentLang.value] || entry.EN
+})
+const rulesText = computed(() => rulesLabels[currentLang.value] || rulesLabels.EN)
+
+const legendColors = {
+  green: 'bg-green-500 text-white',
+  yellow: 'bg-yellow-400 text-gray-900',
+  gray: 'bg-gray-400 text-white'
 }
 
-const currentRules = computed(() => {
-  if (selectedGame.value && rulesByGame[selectedGame.value]) {
-    return rulesByGame[selectedGame.value]
-  }
+const onKeydown = (e) => {
+  if (e.key === 'Escape') showRules.value = false
+}
 
-  return currentLang.value === 'TR'
-    ? {
-        title: 'Oyun Seçimi',
-        rules: [
-          'Bir oyun kartı seç.',
-          'Seçtiğin oyunun kuralını burada görebilirsin.',
-          'İstediğin oyuna girip tekrar yardım butonunu kullanabilirsin.'
-        ]
-      }
-    : {
-        title: 'Game Selection',
-        rules: [
-          'Choose a game card from the menu.',
-          'You can review the rules for any selected game here.',
-          'Open a game and use the help button anytime.'
-        ]
-      }
-})
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 const toggleTheme = () => {
   isDarkMode.value = !isDarkMode.value
@@ -229,12 +166,14 @@ const toggleLanguage = () => {
         @go-back="selectedGame = null"
       />
 
+      <!-- Wordle is under development: re-enable this block to restore the game
       <WordleGame
         v-else-if="selectedGame === 'wordle'"
         :isDarkMode="isDarkMode"
         :t="t"
         @go-back="selectedGame = null"
       />
+      -->
 
       <BottleSpinGame
         v-else-if="selectedGame === 'bottle-spin'"
@@ -353,57 +292,151 @@ const toggleLanguage = () => {
       </div>
     </div>
 
-    <div
-      v-if="showRules"
-      class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4"
-      @click.self="showRules = false"
-    >
+    <Transition name="rules">
       <div
-        :class="[
-          'w-full max-w-lg rounded-2xl shadow-2xl p-6 border',
-          isDarkMode
-            ? 'bg-gray-800 border-gray-700 text-white'
-            : 'bg-white border-gray-200 text-gray-900'
-        ]"
+        v-if="showRules"
+        class="rules-backdrop fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+        @click.self="showRules = false"
       >
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-semibold">{{ currentRules.title }}</h2>
-          <button
-            @click="showRules = false"
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rules-title"
+          :class="[
+            'rules-panel w-full sm:max-w-lg max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl shadow-2xl border overflow-hidden',
+            isDarkMode
+              ? 'bg-gray-800 border-gray-700 text-white'
+              : 'bg-white border-gray-200 text-gray-900'
+          ]"
+        >
+          <div
             :class="[
-              'w-8 h-8 rounded-full flex items-center justify-center text-lg transition-colors',
+              'relative px-6 pt-6 pb-5 border-b',
               isDarkMode
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            ]"
-            aria-label="Close rules"
-          >
-            ×
-          </button>
-        </div>
-
-        <ul class="space-y-3">
-          <li
-            v-for="(rule, index) in currentRules.rules"
-            :key="index"
-            :class="[
-              'flex gap-3 items-start rounded-xl p-3 border',
-              isDarkMode
-                ? 'bg-gray-700/60 border-gray-600 text-gray-100'
-                : 'bg-gray-50 border-gray-200 text-gray-700'
+                ? 'bg-gradient-to-br from-purple-500/15 to-blue-500/15 border-gray-700'
+                : 'bg-gradient-to-br from-purple-50 to-blue-50 border-gray-100'
             ]"
           >
-            <span
+            <button
+              @click="showRules = false"
               :class="[
-                'mt-1.5 h-2.5 w-2.5 rounded-full shrink-0',
-                isDarkMode ? 'bg-blue-400' : 'bg-blue-500'
+                'absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-xl transition-colors',
+                isDarkMode
+                  ? 'bg-gray-700/70 hover:bg-gray-600 text-gray-200'
+                  : 'bg-white/80 hover:bg-white text-gray-600 shadow-sm'
               ]"
-            ></span>
-            <span class="leading-relaxed">{{ rule }}</span>
-          </li>
-        </ul>
+              :aria-label="rulesText.close"
+            >
+              ×
+            </button>
+
+            <div class="flex items-center gap-4 pr-10">
+              <div
+                :class="[
+                  'h-14 w-14 shrink-0 rounded-2xl flex items-center justify-center text-3xl shadow-sm',
+                  isDarkMode ? 'bg-gray-900/60' : 'bg-white'
+                ]"
+              >
+                {{ currentRules.icon }}
+              </div>
+              <div class="min-w-0">
+                <h2 id="rules-title" class="text-xl sm:text-2xl font-semibold leading-tight">
+                  {{ currentRules.title }}
+                </h2>
+                <div v-if="currentRules.players || currentRules.duration" class="mt-2 flex flex-wrap gap-2">
+                  <span
+                    v-for="chip in [currentRules.players && '👥 ' + currentRules.players, currentRules.duration && '⏱ ' + currentRules.duration].filter(Boolean)"
+                    :key="chip"
+                    :class="[
+                      'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
+                      isDarkMode ? 'bg-gray-900/50 text-gray-200' : 'bg-white text-gray-700 shadow-sm'
+                    ]"
+                  >
+                    {{ chip }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-y-auto px-6 py-5 space-y-6">
+            <div
+              :class="[
+                'rounded-2xl p-4 border-l-4',
+                isDarkMode
+                  ? 'bg-blue-500/10 border-blue-400 text-blue-100'
+                  : 'bg-blue-50 border-blue-500 text-blue-900'
+              ]"
+            >
+              <p class="text-xs font-bold uppercase tracking-[0.18em] mb-1 opacity-80">{{ rulesText.goal }}</p>
+              <p class="leading-relaxed">{{ currentRules.goal }}</p>
+            </div>
+
+            <section>
+              <h3 :class="['text-xs font-bold uppercase tracking-[0.18em] mb-3', isDarkMode ? 'text-gray-400' : 'text-gray-500']">
+                {{ rulesText.howToPlay }}
+              </h3>
+              <ol class="space-y-3">
+                <li
+                  v-for="(step, index) in currentRules.steps"
+                  :key="index"
+                  class="flex gap-3 items-start"
+                >
+                  <span
+                    :class="[
+                      'h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold',
+                      isDarkMode ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'
+                    ]"
+                  >
+                    {{ index + 1 }}
+                  </span>
+                  <span :class="['leading-relaxed pt-0.5', isDarkMode ? 'text-gray-200' : 'text-gray-700']">{{ step }}</span>
+                </li>
+              </ol>
+            </section>
+
+            <div v-if="currentRules.legend" class="grid gap-2">
+              <div
+                v-for="item in currentRules.legend"
+                :key="item.color"
+                class="flex items-center gap-3"
+              >
+                <span :class="['h-8 w-8 shrink-0 rounded-lg flex items-center justify-center font-bold', legendColors[item.color]]">A</span>
+                <span :class="['text-sm', isDarkMode ? 'text-gray-200' : 'text-gray-700']">{{ item.text }}</span>
+              </div>
+            </div>
+
+            <section v-if="currentRules.tips?.length">
+              <h3 :class="['text-xs font-bold uppercase tracking-[0.18em] mb-3', isDarkMode ? 'text-gray-400' : 'text-gray-500']">
+                {{ rulesText.tips }}
+              </h3>
+              <ul class="space-y-2">
+                <li
+                  v-for="(tip, index) in currentRules.tips"
+                  :key="index"
+                  :class="[
+                    'flex gap-3 items-start rounded-xl p-3 text-sm',
+                    isDarkMode ? 'bg-yellow-400/10 text-yellow-100' : 'bg-yellow-50 text-yellow-900'
+                  ]"
+                >
+                  <span class="shrink-0">💡</span>
+                  <span class="leading-relaxed">{{ tip }}</span>
+                </li>
+              </ul>
+            </section>
+          </div>
+
+          <div :class="['px-6 py-4 border-t', isDarkMode ? 'border-gray-700' : 'border-gray-100']">
+            <button
+              @click="showRules = false"
+              class="w-full rounded-xl py-3 font-semibold text-white bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-90 transition-opacity"
+            >
+              {{ rulesText.gotIt }}
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -429,6 +462,24 @@ html {
 /* Better button and input defaults */
 button, input {
   font-family: inherit;
+}
+
+/* Rules modal transition */
+.rules-enter-active,
+.rules-leave-active {
+  transition: opacity 0.2s ease;
+}
+.rules-enter-active .rules-panel,
+.rules-leave-active .rules-panel {
+  transition: transform 0.2s ease;
+}
+.rules-enter-from,
+.rules-leave-to {
+  opacity: 0;
+}
+.rules-enter-from .rules-panel,
+.rules-leave-to .rules-panel {
+  transform: translateY(16px) scale(0.98);
 }
 
 /* Remove tap highlight on mobile */

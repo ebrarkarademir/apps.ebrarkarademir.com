@@ -1,0 +1,283 @@
+// Help modal content per game, keyed by game id then language.
+// `menu` is shown when no game is selected.
+export const rules = {
+  menu: {
+    EN: {
+      icon: '🎮',
+      title: 'How it works',
+      goal: 'Pick a game, play right in your browser, and come back to the menu anytime.',
+      steps: [
+        'Choose any card from the menu to open that game.',
+        'Use the ← Back button inside a game to return to the menu.',
+        'Tap ? anytime to see the rules for the game you are playing.'
+      ],
+      tips: [
+        'Switch between English and Turkish with the flag button.',
+        'Your language and theme choices are remembered on this device.'
+      ]
+    },
+    TR: {
+      icon: '🎮',
+      title: 'Nasıl çalışır?',
+      goal: 'Bir oyun seç, doğrudan tarayıcında oyna ve istediğin zaman menüye dön.',
+      steps: [
+        'Menüden bir karta dokunarak oyunu aç.',
+        'Oyunun içindeki ← Geri butonuyla menüye dön.',
+        'Oynadığın oyunun kurallarını görmek için istediğin zaman ? butonuna bas.'
+      ],
+      tips: [
+        'Bayrak butonuyla Türkçe ve İngilizce arasında geçiş yap.',
+        'Dil ve tema tercihlerin bu cihazda hatırlanır.'
+      ]
+    }
+  },
+  'number-guess': {
+    EN: {
+      icon: '🎲',
+      title: 'Number Guessing',
+      players: '1 player',
+      duration: '1–3 min',
+      goal: 'Find the secret number between 1 and 100 in as few guesses as possible.',
+      steps: [
+        'Type a number from 1 to 100 and submit your guess.',
+        'The game tells you if the secret number is higher or lower.',
+        'Keep narrowing it down until you hit the exact number.'
+      ],
+      tips: [
+        'Start at 50 and halve the range each time — you can always win in 7 guesses or fewer.'
+      ]
+    },
+    TR: {
+      icon: '🎲',
+      title: 'Sayı Tahmin',
+      players: '1 oyuncu',
+      duration: '1–3 dk',
+      goal: '1 ile 100 arasındaki gizli sayıyı olabildiğince az denemede bul.',
+      steps: [
+        '1 ile 100 arasında bir sayı yaz ve tahminini gönder.',
+        'Oyun, gizli sayının daha büyük mü yoksa daha küçük mü olduğunu söyler.',
+        'Doğru sayıyı bulana kadar aralığı daralt.'
+      ],
+      tips: [
+        '50 ile başla ve her seferinde aralığı ikiye böl — en fazla 7 denemede kazanabilirsin.'
+      ]
+    }
+  },
+  wordle: {
+    EN: {
+      icon: '📝',
+      title: 'Wordle',
+      players: '1 player',
+      duration: '2–5 min',
+      goal: 'Guess the hidden word in 6 tries or fewer.',
+      steps: [
+        'Pick a language and a word length (5, 6 or 7 letters).',
+        'Type a word of that length and press Enter.',
+        'After each guess the tiles change color to give you hints.'
+      ],
+      legend: [
+        { color: 'green', text: 'Right letter, right spot' },
+        { color: 'yellow', text: 'In the word, wrong spot' },
+        { color: 'gray', text: 'Not in the word' }
+      ],
+      tips: [
+        'Open with a word that has many different vowels.',
+        'Letters can appear more than once.'
+      ]
+    },
+    TR: {
+      icon: '📝',
+      title: 'Kelime Oyunu',
+      players: '1 oyuncu',
+      duration: '2–5 dk',
+      goal: 'Gizli kelimeyi en fazla 6 denemede tahmin et.',
+      steps: [
+        'Bir dil ve kelime uzunluğu seç (5, 6 veya 7 harf).',
+        'Bu uzunlukta bir kelime yaz ve Enter’a bas.',
+        'Her tahminden sonra kutuların rengi sana ipucu verir.'
+      ],
+      legend: [
+        { color: 'green', text: 'Doğru harf, doğru yer' },
+        { color: 'yellow', text: 'Kelimede var, yeri yanlış' },
+        { color: 'gray', text: 'Kelimede yok' }
+      ],
+      tips: [
+        'Farklı ünlü harfler içeren bir kelimeyle başla.',
+        'Bir harf kelimede birden fazla kez geçebilir.'
+      ]
+    }
+  },
+  'bottle-spin': {
+    EN: {
+      icon: '🍾',
+      title: 'Bottle Spin',
+      players: '2+ players',
+      duration: 'Unlimited',
+      goal: 'Spin the bottle and take on a truth or a dare.',
+      steps: [
+        'Choose how many people are playing and enter their names.',
+        'Spin the bottle — it lands on a random player.',
+        'That player picks Truth or Dare and completes the prompt.',
+        'Spin again for the next round.'
+      ],
+      tips: [
+        'Agree on house rules before you start — anyone can pass on a prompt.'
+      ]
+    },
+    TR: {
+      icon: '🍾',
+      title: 'Şişe Çevirmece',
+      players: '2+ oyuncu',
+      duration: 'Sınırsız',
+      goal: 'Şişeyi çevir; doğruluk mu cesaret mi, seçimi yap.',
+      steps: [
+        'Kaç kişi oynayacağını seç ve isimleri gir.',
+        'Şişeyi çevir — rastgele bir oyuncuda durur.',
+        'Bu oyuncu Doğruluk veya Cesaret’i seçer ve görevi yapar.',
+        'Sonraki tur için şişeyi tekrar çevir.'
+      ],
+      tips: [
+        'Başlamadan önce kuralları konuşun — herkes bir görevi pas geçebilir.'
+      ]
+    }
+  },
+  'casus-kim': {
+    EN: {
+      icon: '🕵️',
+      title: 'Who Is the Spy?',
+      players: '3+ players',
+      duration: '~5 min',
+      goal: 'Everyone knows the secret word except the spy. Find the spy before time runs out.',
+      steps: [
+        'Add at least 3 players and choose a theme.',
+        'Pass the phone around — each player privately sees their role and the word.',
+        'Discuss for 2 minutes, asking each other questions about the word.',
+        'Vote for who you think the spy is.'
+      ],
+      tips: [
+        'Players: give hints vague enough that the spy can’t guess the word.',
+        'Spy: listen carefully and blend in — you win if you aren’t caught.'
+      ]
+    },
+    TR: {
+      icon: '🕵️',
+      title: 'Casus Kim?',
+      players: '3+ oyuncu',
+      duration: '~5 dk',
+      goal: 'Casus hariç herkes gizli kelimeyi bilir. Süre bitmeden casusu bulun.',
+      steps: [
+        'En az 3 oyuncu ekle ve bir tema seç.',
+        'Telefonu sırayla dolaştırın — herkes rolünü ve kelimeyi gizlice görür.',
+        '2 dakika boyunca kelimeyle ilgili birbirinize sorular sorun.',
+        'Casus olduğunu düşündüğünüz kişiye oy verin.'
+      ],
+      tips: [
+        'Oyuncular: casusun kelimeyi tahmin edemeyeceği kadar belirsiz ipuçları verin.',
+        'Casus: dikkatle dinle ve aralarına karış — yakalanmazsan kazanırsın.'
+      ]
+    }
+  },
+  tabu: {
+    EN: {
+      icon: '🎯',
+      title: 'Tabu',
+      players: '4+ players, 2 teams',
+      duration: '60 s per turn',
+      goal: 'Get your team to guess as many words as possible without saying the forbidden words.',
+      steps: [
+        'Split into two teams and enter the players.',
+        'One player explains the word on the card; their team guesses.',
+        'Press Correct for +1 point or Skip to move to the next card.',
+        'After 60 seconds the turn passes to the other team.',
+        'When the cards run out, the team with the most points wins.'
+      ],
+      tips: [
+        'No saying the word itself, its parts, or the forbidden words — and no gestures.'
+      ]
+    },
+    TR: {
+      icon: '🎯',
+      title: 'Tabu',
+      players: '4+ oyuncu, 2 takım',
+      duration: 'Tur başına 60 sn',
+      goal: 'Yasaklı kelimeleri söylemeden takımına olabildiğince çok kelime bildir.',
+      steps: [
+        'İki takıma ayrılın ve oyuncuları girin.',
+        'Bir oyuncu karttaki kelimeyi anlatır, takımı tahmin eder.',
+        '+1 puan için Doğru’ya, sonraki karta geçmek için Pas’a bas.',
+        '60 saniye sonunda sıra diğer takıma geçer.',
+        'Kartlar bitince en çok puanı olan takım kazanır.'
+      ],
+      tips: [
+        'Kelimenin kendisi, parçaları veya yasaklı kelimeler söylenmez — el hareketi de yok.'
+      ]
+    }
+  },
+  'insta-picker': {
+    EN: {
+      icon: '📷',
+      title: 'Instagram Comment Picker',
+      players: 'Giveaway tool',
+      goal: 'Pick fair, random winners from an Instagram post’s comments.',
+      steps: [
+        'Optionally paste the post URL to preview it.',
+        'Paste the comments or upload a .txt, .csv or .json file.',
+        'Filter by keyword or regex, and keep one entry per user if you like.',
+        'Choose 1–5 winners and draw them.'
+      ],
+      tips: [
+        'CSV format: username,comment — one comment per line.'
+      ]
+    },
+    TR: {
+      icon: '📷',
+      title: 'Instagram Yorum Çekilişi',
+      players: 'Çekiliş aracı',
+      goal: 'Bir Instagram gönderisinin yorumlarından adil ve rastgele kazananlar seç.',
+      steps: [
+        'İstersen önizleme için gönderi bağlantısını yapıştır.',
+        'Yorumları yapıştır veya .txt, .csv ya da .json dosyası yükle.',
+        'Anahtar kelime veya regex ile filtrele; istersen kullanıcı başına tek katılım bırak.',
+        '1–5 kazanan seç ve çekilişi yap.'
+      ],
+      tips: [
+        'CSV biçimi: kullanıcıadı,yorum — her satıra bir yorum.'
+      ]
+    }
+  },
+  'cv-analyzer': {
+    EN: {
+      icon: '📄',
+      title: 'CV Analyzer',
+      players: 'Career tool',
+      goal: 'Get a quick check of how well your CV is structured.',
+      steps: [
+        'Upload your CV as a .txt file or paste its text.',
+        'The analyzer checks sections, contact details, bullet points and dates.',
+        'Review your score and the suggested improvements.'
+      ],
+      tips: [
+        'This is a demo analysis — use it as a starting point, not a final verdict.'
+      ]
+    },
+    TR: {
+      icon: '📄',
+      title: 'CV Analizörü',
+      players: 'Kariyer aracı',
+      goal: 'CV’nin ne kadar iyi yapılandırıldığını hızlıca kontrol et.',
+      steps: [
+        'CV’ni .txt dosyası olarak yükle veya metnini yapıştır.',
+        'Analizör bölümleri, iletişim bilgilerini, madde işaretlerini ve tarihleri kontrol eder.',
+        'Puanını ve önerilen iyileştirmeleri incele.'
+      ],
+      tips: [
+        'Bu bir demo analizdir — kesin bir değerlendirme değil, başlangıç noktası olarak kullan.'
+      ]
+    }
+  }
+}
+
+export const rulesLabels = {
+  EN: { goal: 'Goal', howToPlay: 'How to play', tips: 'Tips', gotIt: 'Got it', close: 'Close rules' },
+  TR: { goal: 'Amaç', howToPlay: 'Nasıl oynanır', tips: 'İpuçları', gotIt: 'Anladım', close: 'Kuralları kapat' }
+}
