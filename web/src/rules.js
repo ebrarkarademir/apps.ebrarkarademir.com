@@ -3,37 +3,37 @@
 export const rules = {
   menu: {
     EN: {
-      icon: '🎮',
+      icon: '>_',
       title: 'How it works',
       goal: 'Pick a game, play right in your browser, and come back to the menu anytime.',
       steps: [
         'Choose any card from the menu to open that game.',
-        'Use the ← Back button inside a game to return to the menu.',
-        'Tap ? anytime to see the rules for the game you are playing.'
+        'Use the [<] Back command inside a game to return to the menu.',
+        'Tap [?] anytime to see the rules for the game you are playing.'
       ],
       tips: [
-        'Switch between English and Turkish with the flag button.',
-        'Your language and theme choices are remembered on this device.'
+        'Switch between English and Turkish with the EN/TR button.',
+        'Your language choice is remembered on this device.'
       ]
     },
     TR: {
-      icon: '🎮',
+      icon: '>_',
       title: 'Nasıl çalışır?',
       goal: 'Bir oyun seç, doğrudan tarayıcında oyna ve istediğin zaman menüye dön.',
       steps: [
         'Menüden bir karta dokunarak oyunu aç.',
-        'Oyunun içindeki ← Geri butonuyla menüye dön.',
-        'Oynadığın oyunun kurallarını görmek için istediğin zaman ? butonuna bas.'
+        'Oyunun içindeki [<] Geri komutuyla menüye dön.',
+        'Oynadığın oyunun kurallarını görmek için istediğin zaman [?] butonuna bas.'
       ],
       tips: [
-        'Bayrak butonuyla Türkçe ve İngilizce arasında geçiş yap.',
-        'Dil ve tema tercihlerin bu cihazda hatırlanır.'
+        'EN/TR butonuyla Türkçe ve İngilizce arasında geçiş yap.',
+        'Dil tercihin bu cihazda hatırlanır.'
       ]
     }
   },
   'number-guess': {
     EN: {
-      icon: '🎲',
+      icon: '[#]',
       title: 'Number Guessing',
       players: '1 player',
       duration: '1–3 min',
@@ -48,7 +48,7 @@ export const rules = {
       ]
     },
     TR: {
-      icon: '🎲',
+      icon: '[#]',
       title: 'Sayı Tahmin',
       players: '1 oyuncu',
       duration: '1–3 dk',
@@ -65,7 +65,7 @@ export const rules = {
   },
   wordle: {
     EN: {
-      icon: '📝',
+      icon: '[W]',
       title: 'Wordle',
       players: '1 player',
       duration: '2–5 min',
@@ -73,7 +73,7 @@ export const rules = {
       steps: [
         'Pick a language and a word length (5, 6 or 7 letters).',
         'Type a word of that length and press Enter.',
-        'After each guess the tiles change color to give you hints.'
+        'After each guess the tiles change to give you hints.'
       ],
       legend: [
         { color: 'green', text: 'Right letter, right spot' },
@@ -86,7 +86,7 @@ export const rules = {
       ]
     },
     TR: {
-      icon: '📝',
+      icon: '[W]',
       title: 'Kelime Oyunu',
       players: '1 oyuncu',
       duration: '2–5 dk',
@@ -94,7 +94,7 @@ export const rules = {
       steps: [
         'Bir dil ve kelime uzunluğu seç (5, 6 veya 7 harf).',
         'Bu uzunlukta bir kelime yaz ve Enter’a bas.',
-        'Her tahminden sonra kutuların rengi sana ipucu verir.'
+        'Her tahminden sonra kutular değişerek sana ipucu verir.'
       ],
       legend: [
         { color: 'green', text: 'Doğru harf, doğru yer' },
@@ -109,7 +109,7 @@ export const rules = {
   },
   'bottle-spin': {
     EN: {
-      icon: '🍾',
+      icon: '[@]',
       title: 'Bottle Spin',
       players: '2+ players',
       duration: 'Unlimited',
@@ -125,7 +125,7 @@ export const rules = {
       ]
     },
     TR: {
-      icon: '🍾',
+      icon: '[@]',
       title: 'Şişe Çevirmece',
       players: '2+ oyuncu',
       duration: 'Sınırsız',
@@ -143,7 +143,7 @@ export const rules = {
   },
   'casus-kim': {
     EN: {
-      icon: '🕵️',
+      icon: '[*]',
       title: 'Who Is the Spy?',
       players: '3–12 players, one device each',
       duration: '5–10 min',
@@ -163,7 +163,7 @@ export const rules = {
       ]
     },
     TR: {
-      icon: '🕵️',
+      icon: '[*]',
       title: 'Casus Kim?',
       players: '3–12 oyuncu, herkes kendi cihazından',
       duration: '5–10 dk',
@@ -185,7 +185,7 @@ export const rules = {
   },
   tabu: {
     EN: {
-      icon: '🎯',
+      icon: '[!]',
       title: 'Tabu',
       players: '2+ players, 2 teams, one device each',
       duration: '60 s per turn',
@@ -202,7 +202,7 @@ export const rules = {
       ]
     },
     TR: {
-      icon: '🎯',
+      icon: '[!]',
       title: 'Tabu',
       players: '2+ oyuncu, 2 takım, herkes kendi cihazından',
       duration: 'Tur başına 60 sn',
@@ -221,7 +221,7 @@ export const rules = {
   },
   'quiz-race': {
     EN: {
-      icon: '⚡',
+      icon: '[?]',
       title: 'Quiz Race',
       players: '1–10 players, any devices',
       duration: '5–10 min',
@@ -240,7 +240,7 @@ export const rules = {
       ]
     },
     TR: {
-      icon: '⚡',
+      icon: '[?]',
       title: 'Bilgi Yarışı',
       players: '1–10 oyuncu, her cihazdan',
       duration: '5–10 dk',

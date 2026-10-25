@@ -1,46 +1,401 @@
 @import "tailwindcss";
 
 /*
- * Design tokens: overriding Tailwind's defaults here restyles every screen at once.
- * - Inter for crisper type
- * - tighter corner radii for a sharper look
- * - cool zinc neutrals in place of the default blue-tinted grays
- * - thin, low-spread shadows instead of soft, blurry ones
+ * Design tokens: a green-phosphor CRT terminal.
+ * - the default palette is cleared, so black and these greens are the only colors a class can use
+ * - IBM Plex Mono for text, VT323 (`font-display`) for big terminal type: titles, timers, scores
+ * - no corner radius and no drop shadows: thin green wireframe lines and phosphor glow instead
  */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-sans: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-display: "VT323", "IBM Plex Mono", ui-monospace, monospace;
 
-  --radius-md: 0.3125rem;
-  --radius-lg: 0.375rem;
-  --radius-xl: 0.5rem;
-  --radius-2xl: 0.625rem;
-  --radius-3xl: 0.75rem;
+  --color-*: initial;
+  --color-black: #000000;
+  --color-term: #00ff00;      /* phosphor: text and active lines */
+  --color-term-dim: #00b300;  /* secondary text */
+  --color-term-low: #007a00;  /* resting borders, disabled */
+  --color-term-deep: #002600; /* hover and selection wash */
 
-  --color-gray-50: oklch(98.5% 0 0);
-  --color-gray-100: oklch(96.7% 0.001 286.375);
-  --color-gray-200: oklch(92% 0.004 286.32);
-  --color-gray-300: oklch(87.1% 0.006 286.286);
-  --color-gray-400: oklch(70.5% 0.015 286.067);
-  --color-gray-500: oklch(55.2% 0.016 285.938);
-  --color-gray-600: oklch(44.2% 0.017 285.786);
-  --color-gray-700: oklch(33% 0.012 285.805);
-  --color-gray-800: oklch(23.5% 0.006 286.033);
-  --color-gray-900: oklch(17% 0.005 285.885);
-  --color-gray-950: oklch(13% 0.005 285.823);
-
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 2px 6px -1px rgb(0 0 0 / 0.06);
-  --shadow-lg: 0 1px 2px 0 rgb(0 0 0 / 0.06), 0 4px 12px -2px rgb(0 0 0 / 0.08);
-  --shadow-xl: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 8px 20px -4px rgb(0 0 0 / 0.1);
-  --shadow-2xl: 0 2px 4px 0 rgb(0 0 0 / 0.08), 0 16px 40px -8px rgb(0 0 0 / 0.18);
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
 }
 
-body {
-  font-feature-settings: "cv11", "ss01";
-  letter-spacing: -0.006em;
+@layer base {
+  html {
+    background: var(--color-black);
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-black);
+    color: var(--color-term);
+    font-family: var(--font-mono);
+    text-shadow: 0 0 5px rgb(0 255 0 / 0.45);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: var(--color-term);
+    color: var(--color-black);
+    text-shadow: none;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 1px dashed var(--color-term);
+    outline-offset: 3px;
+  }
+
+  input {
+    caret-color: var(--color-term);
+  }
+
+  input::placeholder {
+    color: var(--color-term-low);
+    opacity: 1;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-term-low) var(--color-black);
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
-h1, h2, h3 {
-  letter-spacing: -0.02em;
+@layer components {
+  /* ---------- Frames ---------- */
+
+  .term-window {
+    position: relative;
+    border: 1px solid var(--color-term);
+    background: var(--color-black);
+    box-shadow: 0 0 14px rgb(0 255 0 / 0.2), inset 0 0 28px rgb(0 255 0 / 0.06);
+  }
+
+  .term-panel {
+    border: 1px solid var(--color-term-low);
+  }
+
+  .term-card {
+    border: 1px solid var(--color-term-low);
+    background: var(--color-black);
+    transition: border-color 80ms, background-color 80ms, box-shadow 80ms;
+  }
+  .term-card:hover,
+  .term-card:focus-visible {
+    border-color: var(--color-term);
+    background: var(--color-term-deep);
+    box-shadow: 0 0 14px rgb(0 255 0 / 0.25);
+  }
+
+  /* ---------- Text ---------- */
+
+  .term-label {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-term-dim);
+  }
+
+  .term-muted {
+    color: var(--color-term-dim);
+  }
+
+  .term-inverse {
+    background: var(--color-term);
+    color: var(--color-black);
+    text-shadow: none;
+  }
+
+  .term-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.125rem 0.375rem;
+    border: 1px solid var(--color-term-low);
+    color: var(--color-term-dim);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Buttons ---------- */
+
+  /* [ COMMAND ] buttons that light up (invert) on hover */
+  .term-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-term);
+    background: transparent;
+    color: var(--color-term);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-transform: uppercase;
+    transition: background-color 80ms, color 80ms, box-shadow 80ms;
+  }
+  .term-btn::before {
+    content: "[";
+  }
+  .term-btn::after {
+    content: "]";
+  }
+  .term-btn:hover:not(:disabled) {
+    background: var(--color-term);
+    color: var(--color-black);
+    text-shadow: none;
+  }
+  .term-btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .term-btn-primary {
+    background: var(--color-term);
+    color: var(--color-black);
+    text-shadow: none;
+    box-shadow: 0 0 12px rgb(0 255 0 / 0.35);
+  }
+  .term-btn-primary:hover:not(:disabled) {
+    background: var(--color-black);
+    color: var(--color-term);
+    text-shadow: 0 0 5px rgb(0 255 0 / 0.45);
+  }
+
+  .term-btn:disabled {
+    border-color: var(--color-term-low);
+    background: transparent;
+    color: var(--color-term-low);
+    box-shadow: none;
+    text-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* Selectable options: inverted when chosen */
+  .term-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-term-low);
+    background: transparent;
+    color: var(--color-term-dim);
+    font-weight: 500;
+    text-align: center;
+    transition: background-color 80ms, color 80ms, border-color 80ms;
+  }
+  .term-option:hover:not(:disabled) {
+    border-color: var(--color-term);
+    background: var(--color-term-deep);
+    color: var(--color-term);
+  }
+  .term-option.is-active,
+  .term-option.is-active:hover:not(:disabled) {
+    border-color: var(--color-term);
+    background: var(--color-term);
+    color: var(--color-black);
+    text-shadow: none;
+  }
+  .term-option:disabled {
+    cursor: default;
+  }
+  .term-option.is-off {
+    border-style: dashed;
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Text commands such as [<] BACK */
+  .term-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.375rem;
+    color: var(--color-term-dim);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: background-color 80ms, color 80ms;
+  }
+  .term-link:hover:not(:disabled) {
+    background: var(--color-term);
+    color: var(--color-black);
+    text-shadow: none;
+  }
+  .term-link:disabled {
+    opacity: 0.4;
+  }
+
+  /* Small bracketed icon buttons: [?], [x], EN/TR */
+  .term-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--color-term-low);
+    color: var(--color-term);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: background-color 80ms, border-color 80ms;
+  }
+  .term-icon-btn:hover {
+    border-color: var(--color-term);
+    background: var(--color-term-deep);
+  }
+
+  /* Nav categories */
+  .term-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding: 0 0.75rem;
+    color: var(--color-term-dim);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: background-color 80ms, color 80ms;
+  }
+  .term-tab:hover {
+    background: var(--color-term-deep);
+    color: var(--color-term);
+  }
+  .term-tab.is-active {
+    background: var(--color-term);
+    color: var(--color-black);
+    text-shadow: none;
+  }
+
+  /* ---------- Inputs ---------- */
+
+  .term-input {
+    width: 100%;
+    height: 2.75rem;
+    padding: 0 0.75rem;
+    border: 1px solid var(--color-term-low);
+    background: var(--color-black);
+    color: var(--color-term);
+    outline: none;
+    transition: border-color 80ms, box-shadow 80ms;
+  }
+  .term-input:focus {
+    border-color: var(--color-term);
+    box-shadow: 0 0 0 1px var(--color-term), 0 0 12px rgb(0 255 0 / 0.3);
+  }
+
+  /* ---------- Indicators ---------- */
+
+  /* Connection status: filled square online, hollow offline */
+  .term-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    flex-shrink: 0;
+    border: 1px solid var(--color-term);
+    background: var(--color-term);
+    box-shadow: 0 0 6px rgb(0 255 0 / 0.6);
+  }
+  .term-dot.is-off {
+    border-color: var(--color-term-low);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* Blinking block cursor */
+  .term-cursor::after {
+    content: "";
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-left: 0.2em;
+    vertical-align: -0.15em;
+    background: currentColor;
+    box-shadow: 0 0 6px rgb(0 255 0 / 0.6);
+    animation: term-blink 1.05s steps(1) infinite;
+  }
+
+  .term-blink {
+    animation: term-blink 1.05s steps(1) infinite;
+  }
+
+  /* | / - \ spinner */
+  .term-spinner::before {
+    content: "|";
+    animation: term-spin 0.6s steps(1) infinite;
+  }
+}
+
+@keyframes term-blink {
+  50% { opacity: 0; }
+}
+
+@keyframes term-spin {
+  0% { content: "|"; }
+  25% { content: "/"; }
+  50% { content: "-"; }
+  75% { content: "\\"; }
+}
+
+/* CRT glass over the whole app: scanlines and a dark vignette, plus a faint band rolling down */
+.crt::before,
+.crt::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+.crt::before {
+  top: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 58%, rgb(0 0 0 / 0.55) 100%),
+    repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / 0.3) 2px 3px);
+}
+.crt::after {
+  top: 0;
+  height: 30vh;
+  background: linear-gradient(to bottom, transparent, rgb(0 255 0 / 0.05) 50%, transparent);
+  transform: translateY(-30vh);
+  animation: crt-roll 9s linear infinite;
+}
+
+@keyframes crt-roll {
+  to { transform: translateY(100vh); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt::after {
+    display: none;
+  }
+  .term-cursor::after,
+  .term-blink,
+  .term-spinner::before {
+    animation: none;
+  }
 }

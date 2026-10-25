@@ -5,7 +5,6 @@ import { useOnlineRoom } from '../online/useOnlineRoom'
 import OnlineRoom from '../online/OnlineRoom.vue'
 
 const props = defineProps({
-  isDarkMode: { type: Boolean, default: false },
   t: { type: Object, required: true },
   // Room code from a shared invite link
   initialCode: { type: String, default: '' }
@@ -15,13 +14,8 @@ defineEmits(['go-back'])
 
 const QUESTION_MS = 20000
 const ROUND_OPTIONS = [5, 10, 15]
-
-const answerStyles = [
-  { shape: '▲', color: 'bg-rose-500 hover:bg-rose-600' },
-  { shape: '◆', color: 'bg-sky-500 hover:bg-sky-600' },
-  { shape: '●', color: 'bg-amber-500 hover:bg-amber-600' },
-  { shape: '■', color: 'bg-emerald-500 hover:bg-emerald-600' }
-]
+const ANSWER_KEYS = ['A', 'B', 'C', 'D']
+const TIMER_CELLS = 24
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 
@@ -137,6 +131,11 @@ const currentQuestion = computed(() => {
 const msLeft = computed(() => Math.max(0, (view.value?.deadline || 0) - room.now))
 const secondsLeft = computed(() => Math.ceil(msLeft.value / 1000))
 const timeFraction = computed(() => Math.min(1, msLeft.value / QUESTION_MS))
+// [#################.......] draining as the clock runs
+const timerBar = computed(() => {
+  const filled = view.value?.phase === 'question' ? Math.ceil(timeFraction.value * TIMER_CELLS) : 0
+  return '#'.repeat(filled) + '.'.repeat(TIMER_CELLS - filled)
+})
 
 function answer (choice) {
   if (view.value?.phase !== 'question' || hasAnswered.value) return
@@ -154,27 +153,30 @@ const optionState = (option) => {
   return 'idle'
 }
 
-const muted = computed(() => (props.isDarkMode ? 'text-gray-400' : 'text-gray-600'))
-const listClass = computed(() => ['rounded-lg border divide-y', props.isDarkMode ? 'border-gray-800 divide-gray-800' : 'border-gray-200 divide-gray-200'])
-const primary = 'w-full h-12 rounded-lg bg-violet-600 text-white font-semibold hover:bg-violet-500 transition-colors'
+const optionClass = {
+  idle: 'border-term-low hover:border-term hover:bg-term-deep',
+  chosen: 'border-term bg-term-deep',
+  correct: 'term-inverse border-term',
+  wrong: 'border-dashed border-term-low text-term-low line-through',
+  dim: 'border-term-low opacity-40'
+}
+const optionMark = { idle: '', chosen: '<', correct: '[ok]', wrong: '[x]', dim: '' }
+
+const listClass = 'border border-term-low divide-y divide-term-low'
+const primary = 'term-btn term-btn-primary w-full min-h-12'
 </script>
 
 <template>
-  <OnlineRoom :room="room" :t="t" :isDarkMode="isDarkMode" :title="t.quizTitle" @go-back="$emit('go-back')" @start="room.act('start')">
+  <OnlineRoom :room="room" :t="t" :title="t.quizTitle" @go-back="$emit('go-back')" @start="room.act('start')">
     <template #lobby="{ view: lobby, isHost }">
       <div class="flex items-center gap-2 text-sm">
-        <span :class="muted">{{ t.quizRounds }}</span>
+        <span class="term-label mr-1">&gt; {{ t.quizRounds }}</span>
         <button
           v-for="count in ROUND_OPTIONS"
           :key="count"
           @click="room.act('setRounds', { n: count })"
           :disabled="!isHost"
-          :class="[
-            'h-8 w-10 rounded-md border text-sm font-semibold tabular-nums transition-colors disabled:cursor-default',
-            lobby.rounds === count
-              ? (isDarkMode ? 'bg-white text-gray-900 border-white' : 'bg-gray-900 text-white border-gray-900')
-              : (isDarkMode ? 'border-gray-700 enabled:hover:bg-gray-800' : 'border-gray-300 enabled:hover:bg-gray-100')
-          ]"
+          :class="['term-option min-h-8 w-12 px-0 text-sm font-semibold tabular-nums', { 'is-active': lobby.rounds === count }]"
         >
           {{ count }}
         </button>
@@ -183,20 +185,17 @@ const primary = 'w-full h-12 rounded-lg bg-violet-600 text-white font-semibold h
 
     <!-- Question / reveal -->
     <div v-if="(view.phase === 'question' || view.phase === 'reveal') && currentQuestion" class="space-y-5">
-      <div class="flex items-center justify-between text-sm">
-        <span :class="muted">{{ fmt(t.quizQuestionOf, { n: view.round, total: view.totalRounds }) }}</span>
-        <span v-if="view.phase === 'question'" class="font-mono font-semibold tabular-nums">{{ secondsLeft }}s</span>
-        <span v-else :class="muted">{{ t.quizTimeUpOrDone }}</span>
+      <div class="flex items-center justify-between gap-3 text-sm">
+        <span class="term-label">{{ fmt(t.quizQuestionOf, { n: view.round, total: view.totalRounds }) }}</span>
+        <span v-if="view.phase === 'question'" :class="['font-display text-3xl leading-none tabular-nums', { 'term-blink': secondsLeft <= 5 }]">
+          {{ String(secondsLeft).padStart(2, '0') }}s
+        </span>
+        <span v-else class="term-muted">{{ t.quizTimeUpOrDone }}</span>
       </div>
 
-      <div :class="['h-1 w-full rounded-full overflow-hidden', isDarkMode ? 'bg-gray-800' : 'bg-gray-200']">
-        <div
-          class="h-full bg-violet-500 transition-[width] duration-200 ease-linear"
-          :style="{ width: (view.phase === 'question' ? timeFraction * 100 : 0) + '%' }"
-        ></div>
-      </div>
+      <p class="text-sm whitespace-pre overflow-hidden" aria-hidden="true">[{{ timerBar }}]</p>
 
-      <h2 class="text-xl sm:text-2xl font-semibold leading-snug min-h-[3.5rem]">{{ currentQuestion.text }}</h2>
+      <h2 class="text-xl sm:text-2xl font-semibold leading-snug min-h-[3.5rem]">&gt; {{ currentQuestion.text }}</h2>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
@@ -205,77 +204,76 @@ const primary = 'w-full h-12 rounded-lg bg-violet-600 text-white font-semibold h
           @click="answer(option.original)"
           :disabled="view.phase !== 'question' || hasAnswered"
           :class="[
-            'relative flex items-center gap-3 min-h-[3.75rem] px-4 py-3 rounded-lg text-left text-white font-semibold transition-all duration-150',
-            answerStyles[slot].color,
-            isDarkMode ? 'ring-offset-gray-900' : 'ring-offset-white',
-            {
-              'opacity-30': optionState(option) === 'dim',
-              'ring-4 ring-offset-2 ring-violet-400': optionState(option) === 'chosen',
-              'ring-4 ring-offset-2 ring-emerald-400': optionState(option) === 'correct',
-              'opacity-50 line-through': optionState(option) === 'wrong',
-              'active:scale-[0.98]': optionState(option) === 'idle'
-            }
+            'flex items-center gap-3 min-h-[3.75rem] px-4 py-3 border text-left font-semibold transition-colors duration-100 disabled:cursor-default',
+            optionClass[optionState(option)]
           ]"
         >
-          <span class="text-lg opacity-80 w-5 text-center" aria-hidden="true">{{ answerStyles[slot].shape }}</span>
+          <span class="shrink-0" aria-hidden="true">[{{ ANSWER_KEYS[slot] }}]</span>
           <span class="flex-1">{{ option.label }}</span>
-          <span v-if="optionState(option) === 'correct'" aria-hidden="true">✓</span>
+          <span v-if="optionMark[optionState(option)]" class="shrink-0" aria-hidden="true">{{ optionMark[optionState(option)] }}</span>
         </button>
       </div>
 
-      <div v-if="view.phase === 'question'" :class="['text-center text-sm', muted]">
-        <span v-if="hasAnswered">{{ t.quizLocked }} · </span>
+      <div v-if="view.phase === 'question'" class="term-muted text-center text-sm">
+        <span v-if="hasAnswered">{{ t.quizLocked }} :: </span>
         {{ fmt(t.quizAnswered, { n: answeredCount, total: onlinePlayers.length }) }}
       </div>
 
       <template v-else>
-        <div
-          :class="[
-            'rounded-lg border px-4 py-3 text-center font-semibold',
-            myResult.lastPoints > 0
-              ? (isDarkMode ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : 'border-emerald-200 bg-emerald-50 text-emerald-800')
-              : (isDarkMode ? 'border-rose-500/40 bg-rose-500/10 text-rose-200' : 'border-rose-200 bg-rose-50 text-rose-800')
-          ]"
-        >
-          {{ myResult.lastPoints > 0 ? fmt(t.quizCorrect, { points: myResult.lastPoints }) : (myResult.answered ? t.quizWrong : t.quizNoAnswer) }}
+        <div :class="['px-4 py-3 text-center font-semibold', myResult.lastPoints > 0 ? 'term-inverse' : 'border border-dashed border-term']">
+          {{ myResult.lastPoints > 0 ? '[+] ' + fmt(t.quizCorrect, { points: myResult.lastPoints }) : '[x] ' + (myResult.answered ? t.quizWrong : t.quizNoAnswer) }}
         </div>
 
         <ol :class="listClass">
-          <li v-for="(player, index) in leaderboard" :key="player.id" class="flex items-center gap-3 px-4 py-2.5 text-sm">
-            <span :class="['w-5 tabular-nums', isDarkMode ? 'text-gray-500' : 'text-gray-400']">{{ index + 1 }}</span>
+          <li v-for="(player, index) in leaderboard" :key="player.id" :class="['flex items-center gap-3 px-4 py-2.5 text-sm', { 'bg-term-deep': player.id === room.myId }]">
+            <span class="w-6 term-muted tabular-nums">{{ String(index + 1).padStart(2, '0') }}</span>
             <span :class="['truncate', { 'font-semibold': player.id === room.myId, 'opacity-40': !player.online }]">{{ player.name }}</span>
-            <span v-if="player.lastPoints" class="text-emerald-500 text-xs font-semibold">+{{ player.lastPoints }}</span>
-            <span class="ml-auto font-mono font-semibold tabular-nums">{{ player.score }}</span>
+            <span v-if="player.lastPoints" class="text-xs font-semibold">+{{ player.lastPoints }}</span>
+            <span class="ml-auto font-semibold tabular-nums">{{ player.score }}</span>
           </li>
         </ol>
 
         <button v-if="room.isHost" @click="room.act('next')" :class="primary">
           {{ view.round >= view.totalRounds ? t.quizSeeResults : t.quizNext }}
         </button>
-        <p v-else :class="['text-center text-sm', muted]">{{ t.onlineWaitingNext }}</p>
+        <p v-else class="term-muted text-center text-sm"><span class="term-cursor">{{ t.onlineWaitingNext }}</span></p>
       </template>
     </div>
 
     <!-- Final results -->
     <div v-else-if="view.phase === 'final'" class="space-y-6">
       <div class="text-center">
-        <div class="text-5xl mb-3">🏆</div>
-        <h2 class="text-2xl font-bold">{{ t.quizFinalTitle }}</h2>
-        <p v-if="leaderboard[0]" :class="['mt-1', muted]">
-          {{ isTie ? t.quizTie : fmt(t.quizWinner, { name: leaderboard[0].name }) }}
+        <pre class="inline-block text-left text-xs sm:text-sm leading-tight mb-3" aria-hidden="true">
+ ___________
+'._==_==_=_.'
+.-\:      /-.
+| (|:.     |) |
+ '-|:.     |-'
+   \::.    /
+    '::. .'
+      ) (
+    _.' '._
+   '-------'</pre>
+        <h2 class="font-display text-5xl leading-none uppercase">{{ t.quizFinalTitle }}</h2>
+        <p v-if="leaderboard[0]" class="term-muted mt-2">
+          &gt; {{ isTie ? t.quizTie : fmt(t.quizWinner, { name: leaderboard[0].name }) }}
         </p>
       </div>
 
       <ol :class="listClass">
-        <li v-for="(player, index) in leaderboard" :key="player.id" class="flex items-center gap-3 px-4 py-3">
-          <span class="w-7 text-lg">{{ ['🥇', '🥈', '🥉'][index] || index + 1 }}</span>
+        <li
+          v-for="(player, index) in leaderboard"
+          :key="player.id"
+          :class="['flex items-center gap-3 px-4 py-3', { 'term-inverse': index === 0, 'bg-term-deep': index > 0 && player.id === room.myId }]"
+        >
+          <span class="w-8 tabular-nums font-semibold">#{{ index + 1 }}</span>
           <span :class="['truncate', { 'font-semibold': player.id === room.myId }]">{{ player.name }}</span>
-          <span class="ml-auto font-mono font-bold tabular-nums">{{ player.score }}</span>
+          <span class="ml-auto font-bold tabular-nums">{{ player.score }}</span>
         </li>
       </ol>
 
       <button v-if="room.isHost" @click="room.act('again')" :class="primary">{{ t.playAgain }}</button>
-      <p v-else :class="['text-center text-sm', muted]">{{ t.onlineWaitingHost }}</p>
+      <p v-else class="term-muted text-center text-sm"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
     </div>
   </OnlineRoom>
 </template>

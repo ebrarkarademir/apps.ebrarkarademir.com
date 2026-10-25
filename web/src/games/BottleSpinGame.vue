@@ -1,12 +1,9 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
+import TermWindow from '../components/TermWindow.vue'
 
 // Played on one phone passed around the table, so there is no online room
 const props = defineProps({
-  isDarkMode: {
-    type: Boolean,
-    default: false
-  },
   t: {
     type: Object,
     required: true
@@ -68,9 +65,8 @@ const getPlayerStyle = (index) => {
 const spotlightStyle = computed(() => {
   if (selectedPlayer.value === null) return {}
   const start = selectedPlayer.value * sliceAngle.value - sliceAngle.value / 2
-  const color = props.isDarkMode ? 'rgba(139, 92, 246, 0.25)' : 'rgba(139, 92, 246, 0.16)'
   return {
-    background: `conic-gradient(from ${start}deg, ${color} 0deg ${sliceAngle.value}deg, transparent ${sliceAngle.value}deg)`
+    background: `conic-gradient(from ${start}deg, rgba(0, 255, 0, 0.18) 0deg ${sliceAngle.value}deg, transparent ${sliceAngle.value}deg)`
   }
 })
 
@@ -138,54 +134,22 @@ const resetGame = () => {
 }
 
 onUnmounted(() => clearTimeout(spinTimeout))
-
-const muted = computed(() => (props.isDarkMode ? 'text-gray-400' : 'text-gray-500'))
-const label = computed(() => ['text-xs font-semibold uppercase tracking-wider', props.isDarkMode ? 'text-gray-400' : 'text-gray-500'])
-const inputClass = computed(() => [
-  'w-full h-11 px-3 rounded-lg border outline-none transition-colors focus:ring-2 focus:ring-violet-500/40',
-  props.isDarkMode ? 'bg-gray-950 border-gray-700 text-white focus:border-violet-400' : 'bg-white border-gray-300 focus:border-violet-500'
-])
-const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
 </script>
 
 <template>
-  <div
-    :class="[
-      'max-w-2xl mx-auto rounded-xl border p-5 sm:p-8 transition-colors duration-150',
-      isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-lg'
-    ]"
-  >
-    <!-- Header -->
-    <div class="flex justify-between items-center gap-3 mb-6">
-      <button
-        @click="$emit('go-back')"
-        :class="[
-          'px-3 py-2 rounded-lg transition-colors duration-150 flex items-center gap-2 text-sm font-medium',
-          isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-        ]"
-      >
-        <span class="text-lg">←</span>
-        <span>{{ t.back }}</span>
-      </button>
-      <h1 class="text-xl sm:text-2xl font-bold truncate">{{ t.bottleTitle }}</h1>
-    </div>
-
+  <TermWindow class="max-w-2xl" :title="t.bottleTitle" :backLabel="t.back" @back="$emit('go-back')">
     <!-- Setup Phase -->
     <form v-if="gamePhase === 'setup'" class="space-y-6" @submit.prevent="startGame">
       <div>
-        <h2 :class="[label, 'mb-3']">{{ t.selectPlayerCount }}</h2>
+        <h2 class="term-label mb-3">&gt; {{ t.selectPlayerCount }}</h2>
         <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
           <button
             v-for="count in [2, 3, 4, 5, 6, 7, 8]"
             :key="count"
             type="button"
             @click="selectPlayerCount(count)"
-            :class="[
-              'h-11 rounded-lg border font-semibold transition-colors',
-              playerCount === count
-                ? 'bg-violet-600 border-violet-600 text-white'
-                : isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'
-            ]"
+            :class="['term-option font-semibold tabular-nums', { 'is-active': playerCount === count }]"
+            :aria-pressed="playerCount === count"
           >
             {{ count }}
           </button>
@@ -193,37 +157,37 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
       </div>
 
       <div v-if="playerCount" class="space-y-3">
-        <h2 :class="label">{{ t.enterNames }}</h2>
+        <h2 class="term-label">&gt; {{ t.enterNames }}</h2>
         <div class="grid sm:grid-cols-2 gap-2">
-          <input
-            v-for="(name, index) in playerNames"
-            :key="index"
-            v-model="playerNames[index]"
-            type="text"
-            maxlength="16"
-            :placeholder="t.playerNamePlaceholder + ' ' + (index + 1)"
-            :class="inputClass"
-          />
+          <label v-for="(name, index) in playerNames" :key="index" class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 term-muted text-sm tabular-nums" aria-hidden="true">
+              {{ String(index + 1).padStart(2, '0') }}
+            </span>
+            <input
+              v-model="playerNames[index]"
+              type="text"
+              maxlength="16"
+              :placeholder="t.playerNamePlaceholder + ' ' + (index + 1)"
+              class="term-input pl-11"
+            />
+          </label>
         </div>
       </div>
 
-      <button v-if="playerCount" type="submit" :disabled="!areAllNamesFilled" :class="primary">
+      <button v-if="playerCount" type="submit" :disabled="!areAllNamesFilled" class="term-btn term-btn-primary w-full min-h-12">
         {{ t.startGame }}
       </button>
     </form>
 
     <!-- Game Phase -->
     <div v-else class="space-y-6">
-      <!-- Table -->
+      <!-- Table: a wireframe radar scope -->
       <div class="relative mx-auto w-full max-w-sm aspect-square">
-        <div
-          :class="[
-            'absolute inset-[9%] rounded-full border-4 shadow-inner',
-            isDarkMode
-              ? 'bg-gradient-to-br from-emerald-900/60 to-gray-900 border-gray-700'
-              : 'bg-gradient-to-br from-emerald-100 to-emerald-50 border-emerald-200'
-          ]"
-        ></div>
+        <div class="absolute inset-[9%] rounded-full border border-term scope-glow"></div>
+        <div class="absolute inset-[24%] rounded-full border border-dashed border-term-low"></div>
+        <div class="absolute inset-[39%] rounded-full border border-dashed border-term-low"></div>
+        <div class="absolute left-[9%] right-[9%] top-1/2 h-px bg-term-low"></div>
+        <div class="absolute top-[9%] bottom-[9%] left-1/2 w-px bg-term-low"></div>
 
         <!-- Spotlight towards the selected player -->
         <div
@@ -241,74 +205,55 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
         >
           <div
             :class="[
-              'max-w-[6.5rem] truncate px-3 py-1.5 rounded-lg text-sm font-semibold shadow-md transition-all duration-300',
-              selectedPlayer === index
-                ? 'bg-violet-600 text-white scale-110 player-picked'
-                : isDarkMode
-                  ? 'bg-gray-800 text-gray-200 border border-gray-700'
-                  : 'bg-white text-gray-700 border border-gray-200'
+              'max-w-[6.5rem] truncate px-2 py-1 text-xs sm:text-sm font-semibold uppercase transition-colors duration-150',
+              selectedPlayer === index ? 'term-inverse player-picked' : 'bg-black border border-term-low term-muted'
             ]"
           >
             {{ player }}
           </div>
         </div>
 
-        <!-- Bottle (drawn pointing up; the neck points at the chosen player) -->
+        <!-- Bottle (drawn pointing up; the solid cap points at the chosen player) -->
         <button
           type="button"
           @click="spinBottle"
           :disabled="isSpinning"
           :aria-label="t.spin"
-          class="absolute top-1/2 left-1/2 h-[52%] aspect-[1/3] cursor-pointer disabled:cursor-default focus:outline-none"
+          class="absolute top-1/2 left-1/2 h-[52%] aspect-[1/3] text-term cursor-pointer disabled:cursor-default focus:outline-none"
           :style="bottleStyle"
         >
-          <svg viewBox="0 0 40 120" class="h-full w-full bottle-shadow" aria-hidden="true">
-            <defs>
-              <linearGradient id="bottle-glass" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0%" stop-color="#065f46" />
-                <stop offset="45%" stop-color="#10b981" />
-                <stop offset="100%" stop-color="#064e3b" />
-              </linearGradient>
-            </defs>
-            <rect x="15" y="2" width="10" height="7" rx="2" fill="#f59e0b" />
+          <svg viewBox="0 0 40 120" class="h-full w-full bottle-glow" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter" aria-hidden="true">
+            <rect x="15" y="2" width="10" height="7" fill="currentColor" />
             <path
               d="M15 9 h10 v24 c0 6 11 10 11 22 v55 a8 8 0 0 1 -8 8 h-16 a8 8 0 0 1 -8 -8 v-55 c0 -12 11 -16 11 -22 z"
-              fill="url(#bottle-glass)"
+              fill="#000"
             />
-            <rect x="8" y="66" width="24" height="26" rx="3" fill="#fef3c7" opacity="0.9" />
-            <rect x="11" y="74" width="18" height="3" rx="1.5" fill="#b45309" opacity="0.6" />
-            <rect x="13" y="80" width="14" height="2" rx="1" fill="#b45309" opacity="0.4" />
-            <path d="M10 56 v48" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.35" />
+            <rect x="8" y="66" width="24" height="26" stroke-dasharray="3 2" />
+            <path d="M12 75 h16 M14 81 h12" stroke-width="1" />
           </svg>
         </button>
       </div>
 
       <!-- Status -->
       <p
-        :class="['text-center font-semibold transition-colors', selectedPlayer !== null ? 'text-xl text-violet-500' : muted]"
+        :class="['text-center', selectedPlayer !== null ? 'font-display text-4xl leading-none' : 'term-muted text-sm font-semibold uppercase tracking-wider']"
         aria-live="polite"
       >
-        {{ statusText }}
+        &gt; {{ statusText }}
       </p>
 
       <!-- Game Controls -->
       <div class="space-y-4">
-        <button v-if="selectedPlayer === null" @click="spinBottle" :disabled="isSpinning" :class="primary">
+        <button v-if="selectedPlayer === null" @click="spinBottle" :disabled="isSpinning" class="term-btn term-btn-primary w-full min-h-14">
           {{ isSpinning ? t.spinning : t.spin }}
         </button>
 
         <template v-else>
-          <div v-if="!currentChoice" class="flex gap-4">
-            <button
-              @click="pickPrompt('truth')"
-              class="flex-1 px-6 py-4 rounded-lg font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
-            >
+          <div v-if="!currentChoice" class="grid grid-cols-2 gap-4">
+            <button @click="pickPrompt('truth')" class="term-btn min-h-14">
               {{ t.truth }}
             </button>
-            <button
-              @click="pickPrompt('dare')"
-              class="flex-1 px-6 py-4 rounded-lg font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-colors"
-            >
+            <button @click="pickPrompt('dare')" class="term-btn min-h-14">
               {{ t.dare }}
             </button>
           </div>
@@ -318,54 +263,43 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
             <div
               v-if="currentChoice"
               :key="currentPromptKey"
-              :class="[
-                'p-6 rounded-lg text-center border',
-                currentChoice === 'truth'
-                  ? isDarkMode ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-100' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                  : isDarkMode ? 'bg-rose-500/10 border-rose-500/40 text-rose-100' : 'bg-rose-50 border-rose-200 text-rose-900'
-              ]"
+              :class="['p-6 text-center border border-term', currentChoice === 'dare' ? 'border-dashed' : '']"
             >
-              <p class="text-xs font-bold uppercase tracking-[0.18em] mb-2 opacity-70">
-                {{ players[selectedPlayer] }} · {{ currentChoice === 'truth' ? t.truth : t.dare }}
+              <p class="term-label mb-3">
+                {{ players[selectedPlayer] }} :: {{ currentChoice === 'truth' ? t.truth : t.dare }}
               </p>
-              <p class="text-lg font-medium">{{ currentPrompt }}</p>
+              <p class="text-lg font-medium leading-relaxed">{{ currentPrompt }}</p>
             </div>
           </Transition>
 
-          <div v-if="currentChoice" class="flex gap-4">
-            <button
-              @click="pickPrompt(currentChoice)"
-              :class="[
-                'flex-1 px-4 py-3 rounded-lg font-semibold border transition-colors',
-                isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'
-              ]"
-            >
+          <div v-if="currentChoice" class="grid grid-cols-2 gap-4">
+            <button @click="pickPrompt(currentChoice)" class="term-btn text-sm">
               {{ t.anotherPrompt }}
             </button>
-            <button
-              @click="spinBottle"
-              class="flex-1 px-4 py-3 rounded-lg font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors"
-            >
+            <button @click="spinBottle" class="term-btn term-btn-primary text-sm">
               {{ t.spinAgain }}
             </button>
           </div>
         </template>
 
-        <button
-          @click="resetGame"
-          :disabled="isSpinning"
-          :class="['w-full text-sm disabled:opacity-50', isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700']"
-        >
-          {{ t.changePlayers }}
-        </button>
+        <div class="text-center">
+          <button @click="resetGame" :disabled="isSpinning" class="term-link">
+            <span aria-hidden="true">[~]</span>
+            <span>{{ t.changePlayers }}</span>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  </TermWindow>
 </template>
 
 <style scoped>
-.bottle-shadow {
-  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.3));
+.scope-glow {
+  box-shadow: 0 0 18px rgba(0, 255, 0, 0.2), inset 0 0 30px rgba(0, 255, 0, 0.12);
+}
+
+.bottle-glow {
+  filter: drop-shadow(0 0 4px rgba(0, 255, 0, 0.7));
 }
 
 .player-picked {
@@ -373,8 +307,8 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
 }
 
 @keyframes picked-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.5); }
-  50% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.6); }
+  50% { box-shadow: 0 0 0 8px rgba(0, 255, 0, 0); }
 }
 
 .prompt-enter-active,

@@ -1,6 +1,6 @@
 # Game Collection Web App
 
-A modern, responsive web application featuring a collection of interactive games built with Vue.js and Tailwind CSS. The app includes a beautiful UI with dark mode support and smooth transitions.
+A modern, responsive web application featuring a collection of interactive games built with Vue.js and Tailwind CSS. The app is styled as a classic green CRT terminal: pitch-black screen, neon green monospace text and thin wireframe borders.
 
 ## 🎮 Featured Games
 
@@ -32,17 +32,12 @@ A modern, responsive web application featuring a collection of interactive games
 
 ## 🚀 Features
 
-- **Modern UI/UX**
+- **Retro Terminal UI**
 
-  - Clean and intuitive interface
+  - Black and phosphor-green palette with scanlines and glow
+  - Sharp, unrounded wireframe components and text icons like [+] and [x]
   - Responsive design for all screen sizes
-  - Glass morphism effects
-  - Smooth animations and transitions
-- **Theme Support**
-
-  - Light/Dark mode toggle
-  - Persistent theme preference
-  - Smooth theme transitions
+  - Design tokens and shared `term-*` classes in `src/style.css`
 - **Accessibility**
 
   - Keyboard navigation support

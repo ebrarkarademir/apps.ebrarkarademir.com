@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import ThemeToggle from './components/ThemeToggle.vue'
 import LanguageToggle from './components/LanguageToggle.vue'
+import TermWindow from './components/TermWindow.vue'
 import GameMenu from './views/GameMenu.vue'
 // import WordleGame from './games/WordleGame.vue' // under development
 import NumberGuessingGame from './games/NumberGuessingGame.vue'
@@ -14,20 +14,15 @@ import { rules, rulesLabels } from './rules'
 
 // Initialize language from localStorage or default to 'EN'
 const currentLang = ref(localStorage.getItem('preferredLanguage') || 'EN')
-const isDarkMode = ref(localStorage.getItem('darkMode') === 'true')
 
 // Translation helper
 const t = computed(() => translations[currentLang.value])
 
-// Persist language preference
+// Persist language preference; the page language also makes uppercase text correct in Turkish
 watch(currentLang, (newLang) => {
   localStorage.setItem('preferredLanguage', newLang)
-})
-
-// Persist theme preference
-watch(isDarkMode, (newMode) => {
-  localStorage.setItem('darkMode', newMode)
-})
+  document.documentElement.lang = newLang.toLowerCase()
+}, { immediate: true })
 
 const games = computed(() => [
   {
@@ -35,56 +30,56 @@ const games = computed(() => [
     category: 'party',
     title: t.value.quizTitle,
     description: t.value.quizDesc,
-    icon: '⚡'
+    icon: '[?]'
   },
   {
     id: 'number-guess',
     category: 'solo',
     title: t.value.numberGuessTitle,
     description: t.value.numberGuessDesc,
-    icon: '🎲'
+    icon: '[#]'
   },
   {
     id: 'wordle',
     category: 'solo',
     title: t.value.wordleTitle,
     description: t.value.wordleDesc,
-    icon: '📝'
+    icon: '[W]'
   },
   {
     id: 'bottle-spin',
     category: 'party',
     title: t.value.bottleTitle,
     description: t.value.bottleDesc,
-    icon: '🍾'
+    icon: '[@]'
   },
   {
     id: 'casus-kim',
     category: 'party',
     title: t.value.casusTitle,
     description: t.value.casusDesc,
-    icon: '🕵️'
+    icon: '[*]'
   },
   {
     id: 'tabu',
     category: 'party',
     title: t.value.tabuTitle,
     description: t.value.tabuDesc,
-    icon: '🎯'
+    icon: '[!]'
   },
   {
     id: 'coming-soon-1',
     category: 'solo',
     title: t.value.memoryMatchTitle,
     description: t.value.comingSoonDesc,
-    icon: '🎮'
+    icon: '[=]'
   },
   {
     id: 'coming-soon-2',
     category: 'solo',
     title: t.value.wordPuzzleTitle,
     description: t.value.comingSoonDesc,
-    icon: '📚'
+    icon: '[A]'
   }
 ])
 
@@ -104,9 +99,9 @@ const showRules = ref(false)
 const selectedCategory = ref('all')
 
 const categories = computed(() => [
-  { key: 'all', label: t.value.navAll, icon: '🏠' },
-  { key: 'party', label: t.value.navParty, icon: '🎉' },
-  { key: 'solo', label: t.value.navSolo, icon: '🧩' }
+  { key: 'all', label: t.value.navAll },
+  { key: 'party', label: t.value.navParty },
+  { key: 'solo', label: t.value.navSolo }
 ])
 
 // Inside a game, highlight the category that game belongs to
@@ -121,6 +116,16 @@ const filteredGames = computed(() =>
     : games.value.filter(game => game.category === selectedCategory.value)
 )
 
+const selectedGameTitle = computed(() => games.value.find(game => game.id === selectedGame.value)?.title || '')
+
+// The shell prompt in the nav doubles as a breadcrumb: ~, ~/party, ~/party/tabu
+const promptPath = computed(() => {
+  const parts = ['~']
+  if (activeCategory.value !== 'all') parts.push(activeCategory.value)
+  if (selectedGame.value) parts.push(selectedGame.value)
+  return parts.join('/')
+})
+
 const selectCategory = (key) => {
   selectedCategory.value = key
   selectedGame.value = null
@@ -133,10 +138,11 @@ const currentRules = computed(() => {
 })
 const rulesText = computed(() => rulesLabels[currentLang.value] || rulesLabels.EN)
 
-const legendColors = {
-  green: 'bg-green-500 text-white',
-  yellow: 'bg-yellow-400 text-gray-900',
-  gray: 'bg-gray-400 text-white'
+// Same tile styles as Wordle: inverted = right spot, dashed = wrong spot, faint = not in word
+const legendStyles = {
+  green: 'term-inverse',
+  yellow: 'border border-dashed border-term',
+  gray: 'border border-term-low text-term-low'
 }
 
 const onKeydown = (e) => {
@@ -146,75 +152,46 @@ const onKeydown = (e) => {
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
-const toggleTheme = () => {
-  isDarkMode.value = !isDarkMode.value
-}
-
 const toggleLanguage = () => {
   currentLang.value = currentLang.value === 'EN' ? 'TR' : 'EN'
 }
 </script>
 
 <template>
-  <div :class="[
-    'min-h-screen transition-colors duration-150 font-sans antialiased',
-    isDarkMode
-      ? 'bg-gray-950 text-gray-100'
-      : 'bg-gray-50 text-gray-900'
-  ]">
-    <nav
-      :aria-label="t.navLabel"
-      :class="[
-        'sticky top-0 z-30 backdrop-blur-md border-b transition-colors duration-50',
-        isDarkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'
-      ]"
-    >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap md:flex-nowrap items-center gap-3">
-        <!-- Category items: own scrollable row on phones, left side on desktop -->
-        <ul class="order-2 md:order-1 w-full md:w-auto md:flex-1 flex gap-1 overflow-x-auto no-scrollbar">
+  <div class="crt min-h-screen bg-black text-term font-mono">
+    <nav :aria-label="t.navLabel" class="sticky top-0 z-30 bg-black/90 border-b border-term-low">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap md:flex-nowrap items-center gap-x-6 gap-y-3">
+        <!-- Shell prompt -->
+        <p class="order-1 flex-1 basis-0 md:flex-none md:basis-auto min-w-0 truncate text-sm font-semibold" aria-hidden="true">
+          <span class="term-muted">guest@apps</span>:<span>{{ promptPath }}</span>$<span class="term-cursor"></span>
+        </p>
+
+        <!-- Category items: own scrollable row on phones, middle on desktop -->
+        <ul class="order-3 md:order-2 w-full md:w-auto md:flex-1 flex gap-1 overflow-x-auto no-scrollbar">
           <li v-for="category in categories" :key="category.key" class="shrink-0">
             <button
               @click="selectCategory(category.key)"
               :aria-current="activeCategory === category.key ? 'page' : undefined"
-              :class="[
-                'flex items-center gap-2 h-9 px-3 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-150',
-                activeCategory === category.key
-                  ? isDarkMode
-                    ? 'bg-white text-gray-900'
-                    : 'bg-gray-900 text-white'
-                  : isDarkMode
-                    ? 'text-gray-400 hover:bg-gray-900 hover:text-white'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              ]"
+              :class="['term-tab px-2 sm:px-3 text-xs sm:text-sm', { 'is-active': activeCategory === category.key }]"
             >
-              <span aria-hidden="true">{{ category.icon }}</span>
+              <span aria-hidden="true">{{ activeCategory === category.key ? '(*)' : '( )' }}</span>
               <span>{{ category.label }}</span>
             </button>
           </li>
         </ul>
 
-        <div class="order-1 md:order-2 ml-auto flex items-center gap-2">
+        <div class="order-2 md:order-3 ml-auto flex items-center gap-2">
           <button
             @click="showRules = true"
-            :class="[
-              'w-10 h-10 rounded-lg border transition-colors duration-150 flex items-center justify-center font-semibold text-base',
-              isDarkMode
-                ? 'bg-gray-900 border-gray-800 text-gray-200 hover:bg-gray-800 hover:border-gray-700'
-                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
-            ]"
+            class="term-icon-btn"
             :aria-label="t.gameRules"
             :title="t.gameRules"
           >
-            ?
+            [?]
           </button>
           <LanguageToggle
             :currentLang="currentLang"
-            :isDarkMode="isDarkMode"
             @toggle="toggleLanguage"
-          />
-          <ThemeToggle
-            :isDarkMode="isDarkMode"
-            @toggle="toggleTheme"
           />
         </div>
       </div>
@@ -224,14 +201,12 @@ const toggleLanguage = () => {
       <GameMenu
         v-if="!selectedGame"
         :games="filteredGames"
-        :isDarkMode="isDarkMode"
         :t="t"
         @select-game="selectedGame = $event"
       />
 
       <QuizRaceGame
         v-else-if="selectedGame === 'quiz-race'"
-        :isDarkMode="isDarkMode"
         :t="t"
         :initialCode="inviteCodeFor('quiz-race')"
         @go-back="selectedGame = null"
@@ -239,7 +214,6 @@ const toggleLanguage = () => {
 
       <NumberGuessingGame
         v-else-if="selectedGame === 'number-guess'"
-        :isDarkMode="isDarkMode"
         :t="t"
         @go-back="selectedGame = null"
       />
@@ -247,7 +221,6 @@ const toggleLanguage = () => {
       <!-- Wordle is under development: re-enable this block to restore the game
       <WordleGame
         v-else-if="selectedGame === 'wordle'"
-        :isDarkMode="isDarkMode"
         :t="t"
         @go-back="selectedGame = null"
       />
@@ -255,14 +228,12 @@ const toggleLanguage = () => {
 
       <BottleSpinGame
         v-else-if="selectedGame === 'bottle-spin'"
-        :isDarkMode="isDarkMode"
         :t="t"
         @go-back="selectedGame = null"
       />
 
       <CasusKimGame
         v-else-if="selectedGame === 'casus-kim'"
-        :isDarkMode="isDarkMode"
         :t="t"
         :initialCode="inviteCodeFor('casus-kim')"
         @go-back="selectedGame = null"
@@ -270,153 +241,66 @@ const toggleLanguage = () => {
 
       <TabuGame
         v-else-if="selectedGame === 'tabu'"
-        :isDarkMode="isDarkMode"
         :t="t"
         :initialCode="inviteCodeFor('tabu')"
         @go-back="selectedGame = null"
       />
 
       <!-- Placeholder for other games -->
-      <div v-else
-        :class="[
-          'max-w-lg mx-auto rounded-xl border overflow-hidden transition-colors duration-150',
-          isDarkMode
-            ? 'bg-gray-900 border-gray-800'
-            : 'bg-white border-gray-200 shadow-lg'
-        ]"
-      >
-        <div
-          :class="[
-            'px-5 py-4 sm:px-6 border-b',
-            isDarkMode ? 'border-gray-800' : 'border-gray-200'
-          ]"
-        >
-          <div class="flex items-center justify-between gap-4">
-            <button
-              @click="selectedGame = null"
-              :class="[
-                'px-3 py-2 rounded-lg transition-colors duration-150 flex items-center gap-2 text-sm font-medium',
-                isDarkMode
-                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              ]"
-            >
-              <span class="text-lg">←</span>
-              <span>{{ t.back }}</span>
-            </button>
+      <TermWindow v-else class="max-w-lg" :title="selectedGameTitle" :backLabel="t.back" @back="selectedGame = null">
+        <template #status>
+          <span class="term-chip">beta</span>
+        </template>
 
-            <span
-              :class="[
-                'inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-                isDarkMode
-                  ? 'bg-violet-500/10 text-violet-300 border-violet-500/40'
-                  : 'bg-violet-50 text-violet-700 border-violet-200'
-              ]"
-            >
-              beta
-            </span>
-          </div>
-        </div>
-
-        <div class="p-6 sm:p-8 text-center">
-          <div
-            :class="[
-              'mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl border text-3xl',
-              isDarkMode
-                ? 'bg-gray-800 border-gray-700'
-                : 'bg-gray-50 border-gray-200'
-            ]"
-          >
-            🚧
-          </div>
-
-          <h1 class="text-2xl sm:text-3xl font-semibold mb-3">{{ t.comingSoon }}</h1>
-
-          <p
-            :class="[
-              'text-sm sm:text-base leading-relaxed max-w-md mx-auto',
-              isDarkMode ? 'text-gray-300' : 'text-gray-600'
-            ]"
-          >
+        <div class="text-center">
+          <p class="font-display text-6xl leading-none term-blink mb-4" aria-hidden="true">/!\</p>
+          <h2 class="font-display text-4xl leading-none uppercase mb-3">{{ t.comingSoon }}</h2>
+          <p class="term-muted text-sm leading-relaxed max-w-md mx-auto">
             {{ t.comingSoonDesc }}
           </p>
 
-          <div
-            :class="[
-              'mt-6 rounded-lg p-4 border text-left',
-              isDarkMode
-                ? 'bg-gray-950/60 border-gray-800 text-gray-200'
-                : 'bg-gray-50 border-gray-200 text-gray-700'
-            ]"
-          >
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] mb-2 opacity-80">{{ t.comingSoonStatus }}</p>
-            <p class="text-sm leading-relaxed">
-              {{ t.comingSoonStatusText }}
-            </p>
+          <div class="term-panel mt-6 p-4 text-left">
+            <p class="term-label mb-2">{{ t.comingSoonStatus }}</p>
+            <p class="text-sm leading-relaxed">&gt; {{ t.comingSoonStatusText }}</p>
           </div>
         </div>
-      </div>
+      </TermWindow>
     </div>
 
     <Transition name="rules">
       <div
         v-if="showRules"
-        class="rules-backdrop fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+        class="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4"
         @click.self="showRules = false"
       >
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="rules-title"
-          :class="[
-            'rules-panel w-full sm:max-w-lg max-h-[90vh] flex flex-col rounded-t-xl sm:rounded-xl shadow-2xl border overflow-hidden',
-            isDarkMode
-              ? 'bg-gray-900 border-gray-800 text-white'
-              : 'bg-white border-gray-200 text-gray-900'
-          ]"
+          class="rules-panel term-window w-full sm:max-w-lg max-h-[90vh] flex flex-col"
         >
-          <div
-            :class="[
-              'relative px-6 pt-6 pb-5 border-b',
-              isDarkMode
-                ? 'border-gray-800'
-                : 'border-gray-200'
-            ]"
-          >
+          <div class="relative px-5 pt-5 pb-4 border-b border-term-low">
             <button
               @click="showRules = false"
-              :class="[
-                'absolute top-4 right-4 w-8 h-8 rounded-lg border flex items-center justify-center text-lg transition-colors',
-                isDarkMode
-                  ? 'border-gray-800 hover:bg-gray-800 text-gray-300'
-                  : 'border-gray-200 hover:bg-gray-100 text-gray-600'
-              ]"
+              class="term-icon-btn absolute top-3 right-3"
               :aria-label="rulesText.close"
             >
-              ×
+              [x]
             </button>
 
-            <div class="flex items-center gap-4 pr-10">
-              <div
-                :class="[
-                  'h-12 w-12 shrink-0 rounded-lg border flex items-center justify-center text-2xl',
-                  isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
-                ]"
-              >
+            <div class="flex items-center gap-4 pr-12">
+              <div class="h-12 w-12 shrink-0 border border-term flex items-center justify-center font-display text-2xl" aria-hidden="true">
                 {{ currentRules.icon }}
               </div>
               <div class="min-w-0">
-                <h2 id="rules-title" class="text-xl sm:text-2xl font-semibold leading-tight">
+                <h2 id="rules-title" class="font-display text-3xl leading-none uppercase">
                   {{ currentRules.title }}
                 </h2>
                 <div v-if="currentRules.players || currentRules.duration" class="mt-2 flex flex-wrap gap-2">
                   <span
-                    v-for="chip in [currentRules.players && '👥 ' + currentRules.players, currentRules.duration && '⏱ ' + currentRules.duration].filter(Boolean)"
+                    v-for="chip in [currentRules.players, currentRules.duration].filter(Boolean)"
                     :key="chip"
-                    :class="[
-                      'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
-                      isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-600'
-                    ]"
+                    class="term-chip"
                   >
                     {{ chip }}
                   </span>
@@ -425,21 +309,14 @@ const toggleLanguage = () => {
             </div>
           </div>
 
-          <div class="overflow-y-auto px-6 py-5 space-y-6">
-            <div
-              :class="[
-                'rounded-lg p-4 border-l-2',
-                isDarkMode
-                  ? 'bg-violet-500/10 border-violet-400 text-violet-100'
-                  : 'bg-violet-50 border-violet-500 text-violet-950'
-              ]"
-            >
-              <p class="text-xs font-bold uppercase tracking-[0.18em] mb-1 opacity-80">{{ rulesText.goal }}</p>
+          <div class="overflow-y-auto px-5 py-5 space-y-6">
+            <div class="border-l-2 border-term pl-4 py-1">
+              <p class="term-label mb-1">{{ rulesText.goal }}</p>
               <p class="leading-relaxed">{{ currentRules.goal }}</p>
             </div>
 
             <section>
-              <h3 :class="['text-xs font-bold uppercase tracking-[0.18em] mb-3', isDarkMode ? 'text-gray-400' : 'text-gray-500']">
+              <h3 class="term-label mb-3">
                 {{ rulesText.howToPlay }}
               </h3>
               <ol class="space-y-3">
@@ -448,15 +325,8 @@ const toggleLanguage = () => {
                   :key="index"
                   class="flex gap-3 items-start"
                 >
-                  <span
-                    :class="[
-                      'h-6 w-6 shrink-0 rounded-md border flex items-center justify-center text-xs font-semibold tabular-nums',
-                      isDarkMode ? 'border-gray-700 bg-gray-800 text-gray-200' : 'border-gray-200 bg-gray-50 text-gray-700'
-                    ]"
-                  >
-                    {{ index + 1 }}
-                  </span>
-                  <span :class="['leading-relaxed pt-0.5', isDarkMode ? 'text-gray-200' : 'text-gray-700']">{{ step }}</span>
+                  <span class="shrink-0 term-muted tabular-nums">{{ String(index + 1).padStart(2, '0') }}.</span>
+                  <span class="leading-relaxed">{{ step }}</span>
                 </li>
               </ol>
             </section>
@@ -467,39 +337,30 @@ const toggleLanguage = () => {
                 :key="item.color"
                 class="flex items-center gap-3"
               >
-                <span :class="['h-8 w-8 shrink-0 rounded-lg flex items-center justify-center font-bold', legendColors[item.color]]">A</span>
-                <span :class="['text-sm', isDarkMode ? 'text-gray-200' : 'text-gray-700']">{{ item.text }}</span>
+                <span :class="['h-8 w-8 shrink-0 flex items-center justify-center font-bold', legendStyles[item.color]]">A</span>
+                <span class="text-sm">{{ item.text }}</span>
               </div>
             </div>
 
             <section v-if="currentRules.tips?.length">
-              <h3 :class="['text-xs font-bold uppercase tracking-[0.18em] mb-3', isDarkMode ? 'text-gray-400' : 'text-gray-500']">
+              <h3 class="term-label mb-3">
                 {{ rulesText.tips }}
               </h3>
               <ul class="space-y-2">
                 <li
                   v-for="(tip, index) in currentRules.tips"
                   :key="index"
-                  :class="[
-                    'flex gap-3 items-start rounded-lg p-3 text-sm',
-                    isDarkMode ? 'bg-yellow-400/10 text-yellow-100' : 'bg-yellow-50 text-yellow-900'
-                  ]"
+                  class="flex gap-3 items-start border border-dashed border-term-low p-3 text-sm"
                 >
-                  <span class="shrink-0">💡</span>
-                  <span class="leading-relaxed">{{ tip }}</span>
+                  <span class="shrink-0" aria-hidden="true">[i]</span>
+                  <span class="leading-relaxed term-muted">{{ tip }}</span>
                 </li>
               </ul>
             </section>
           </div>
 
-          <div :class="['px-6 py-4 border-t', isDarkMode ? 'border-gray-800' : 'border-gray-200']">
-            <button
-              @click="showRules = false"
-              :class="[
-                'w-full rounded-lg py-2.5 text-sm font-semibold transition-colors',
-                isDarkMode ? 'bg-white text-gray-900 hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-700'
-              ]"
-            >
+          <div class="px-5 py-4 border-t border-term-low">
+            <button @click="showRules = false" class="term-btn term-btn-primary w-full">
               {{ rulesText.gotIt }}
             </button>
           </div>
@@ -510,42 +371,38 @@ const toggleLanguage = () => {
 </template>
 
 <style>
-/* Global styles */
-:root {
-  --app-blur: blur(20px);
-}
-
-body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Better button and input defaults */
-button, input {
-  font-family: inherit;
-}
-
-/* Rules modal transition */
+/* Rules dialog: the backdrop fades while the panel switches on like a CRT */
 .rules-enter-active,
 .rules-leave-active {
-  transition: opacity 0.15s ease;
-}
-.rules-enter-active .rules-panel,
-.rules-leave-active .rules-panel {
-  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: opacity 0.18s ease;
 }
 .rules-enter-from,
 .rules-leave-to {
   opacity: 0;
 }
-.rules-enter-from .rules-panel,
-.rules-leave-to .rules-panel {
-  transform: translateY(8px) scale(0.99);
+.rules-enter-active .rules-panel {
+  animation: crt-on 0.22s ease-out;
+}
+.rules-leave-active .rules-panel {
+  animation: crt-off 0.16s ease-in forwards;
+}
+
+@keyframes crt-on {
+  0% { transform: scale(1, 0.01); filter: brightness(3); }
+  60% { transform: scale(1, 1.03); filter: brightness(1.4); }
+  100% { transform: none; filter: none; }
+}
+@keyframes crt-off {
+  0% { transform: none; }
+  60% { transform: scale(1, 0.01); filter: brightness(3); }
+  100% { transform: scale(0, 0.01); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rules-enter-active .rules-panel,
+  .rules-leave-active .rules-panel {
+    animation: none;
+  }
 }
 
 /* Horizontally scrollable nav items without a visible scrollbar */
@@ -555,11 +412,4 @@ button, input {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
-
-/* Remove tap highlight on mobile */
-* {
-  -webkit-tap-highlight-color: transparent;
-}
 </style>
-
-

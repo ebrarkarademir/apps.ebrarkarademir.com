@@ -4,10 +4,6 @@ import { useOnlineRoom } from '../online/useOnlineRoom'
 import OnlineRoom from '../online/OnlineRoom.vue'
 
 const props = defineProps({
-  isDarkMode: {
-    type: Boolean,
-    default: false
-  },
   t: {
     type: Object,
     required: true
@@ -178,16 +174,13 @@ const winnerText = computed(() => {
   return fmt(props.t.tabuTeamWins, { team: teamName(first > second ? 0 : 1) })
 })
 
-const muted = computed(() => (props.isDarkMode ? 'text-gray-400' : 'text-gray-600'))
-const panel = computed(() => ['rounded-lg border', props.isDarkMode ? 'border-gray-800 bg-gray-950/40' : 'border-gray-200 bg-gray-50'])
-const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50 transition-colors'
+const primary = 'term-btn term-btn-primary w-full min-h-14'
 </script>
 
 <template>
   <OnlineRoom
     :room="room"
     :t="t"
-    :isDarkMode="isDarkMode"
     :title="t.tabuTitle"
     :minPlayers="2"
     :canStart="bothTeamsReady"
@@ -199,15 +192,15 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
     <template #players>
       <div class="space-y-3">
         <div class="grid grid-cols-2 gap-3">
-          <div v-for="team in [0, 1]" :key="team" :class="[panel, 'p-3 space-y-2']">
-            <div class="flex items-center justify-between gap-2">
-              <h2 class="font-semibold">{{ teamName(team) }}</h2>
+          <div v-for="team in [0, 1]" :key="team" :class="['term-panel p-3 space-y-2', { 'border-term': myTeam === team }]">
+            <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+              <h2 class="font-display text-2xl leading-none uppercase whitespace-nowrap">{{ teamName(team) }}</h2>
               <button
                 v-if="myTeam !== team"
                 @click="room.act('setTeam', { team })"
-                class="h-7 px-2.5 rounded-md bg-violet-600 text-white text-xs font-semibold hover:bg-violet-500 transition-colors"
+                class="term-link text-xs"
               >
-                {{ t.tabuJoinTeam }}
+                [+] {{ t.tabuJoinTeam }}
               </button>
             </div>
             <ul class="space-y-1.5">
@@ -216,19 +209,18 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
                 :key="player.id"
                 :class="['flex items-center gap-2 text-sm', { 'font-semibold': player.id === room.myId, 'opacity-40': !player.online }]"
               >
-                <span :class="['h-2 w-2 rounded-full shrink-0', player.online ? 'bg-emerald-500' : 'bg-gray-400']"></span>
+                <span :class="['term-dot', { 'is-off': !player.online }]"></span>
                 <span class="truncate">{{ player.name }}</span>
               </li>
             </ul>
           </div>
         </div>
-        <button
-          v-if="room.isHost"
-          @click="room.act('shuffleTeams')"
-          :class="['w-full text-sm', isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800']"
-        >
-          🔀 {{ t.tabuShuffleTeams }}
-        </button>
+        <div v-if="room.isHost" class="text-center">
+          <button @click="room.act('shuffleTeams')" class="term-link">
+            <span aria-hidden="true">[~]</span>
+            <span>{{ t.tabuShuffleTeams }}</span>
+          </button>
+        </div>
       </div>
     </template>
 
@@ -239,102 +231,94 @@ const primary = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-wh
         <div
           v-for="team in [0, 1]"
           :key="team"
-          :class="[
-            'rounded-lg px-4 py-2 flex items-center justify-between border transition-colors',
-            team === view.currentTeam
-              ? 'border-violet-500'
-              : isDarkMode ? 'border-gray-800 bg-gray-950/40' : 'border-gray-200 bg-gray-50'
-          ]"
+          :class="['px-4 py-2 flex items-center justify-between gap-2 border', team === view.currentTeam ? 'border-term bg-term-deep' : 'border-term-low']"
         >
-          <span class="font-medium truncate">
-            {{ teamName(team) }}<span v-if="myTeam === team" :class="['text-xs font-normal', muted]"> · {{ t.tabuYourTeam }}</span>
+          <span class="min-w-0">
+            <span class="block text-sm font-semibold uppercase truncate">
+              <span v-if="team === view.currentTeam" aria-hidden="true">&gt; </span>{{ teamName(team) }}
+            </span>
+            <span v-if="myTeam === team" class="block term-muted text-xs truncate">{{ t.tabuYourTeam }}</span>
           </span>
-          <span class="text-xl font-bold tabular-nums">{{ view.scores[team] }}</span>
+          <span class="font-display text-3xl leading-none tabular-nums">{{ view.scores[team] }}</span>
         </div>
       </div>
 
       <!-- Game Info -->
-      <div class="flex justify-between items-center">
-        <div>
-          <h2 class="text-xl font-semibold">{{ teamName(view.currentTeam) }}</h2>
-          <p class="text-sm opacity-75">{{ fmt(t.tabuPlayerTurn, { name: nameOf(view.explainer) }) }}</p>
-          <p class="text-xs opacity-60">{{ fmt(t.tabuCardsLeft, { n: view.cardsLeft }) }}</p>
+      <div class="flex justify-between items-center gap-4">
+        <div class="min-w-0">
+          <h2 class="font-display text-3xl leading-none uppercase">{{ teamName(view.currentTeam) }}</h2>
+          <p class="text-sm mt-1">{{ fmt(t.tabuPlayerTurn, { name: nameOf(view.explainer) }) }}</p>
+          <p class="term-muted text-xs mt-0.5">{{ fmt(t.tabuCardsLeft, { n: view.cardsLeft }) }}</p>
         </div>
-        <div :class="['text-4xl font-bold tabular-nums', view.playing && secondsLeft <= 10 ? 'text-rose-500' : '']">
+        <div :class="['font-display text-6xl leading-none tabular-nums', { 'term-blink': view.playing && secondsLeft <= 10 }]">
           {{ formattedTime }}
         </div>
       </div>
 
       <!-- Before the round -->
       <template v-if="!view.playing">
-        <div :class="[panel, 'p-6 text-center text-lg']">
-          {{ amExplainer ? t.tabuYouExplain : fmt(t.tabuGetReady, { name: nameOf(view.explainer), team: teamName(view.currentTeam) }) }}
+        <div class="term-panel p-6 text-center text-lg">
+          &gt; {{ amExplainer ? t.tabuYouExplain : fmt(t.tabuGetReady, { name: nameOf(view.explainer), team: teamName(view.currentTeam) }) }}
         </div>
         <button v-if="amExplainer || room.isHost" @click="room.act('startRound')" :class="primary">
           {{ t.startRound }}
         </button>
-        <p v-else :class="['text-center text-sm', muted]">{{ fmt(t.tabuWaitStart, { name: nameOf(view.explainer) }) }}</p>
+        <p v-else class="term-muted text-center text-sm"><span class="term-cursor">{{ fmt(t.tabuWaitStart, { name: nameOf(view.explainer) }) }}</span></p>
       </template>
 
       <!-- During the round: explainer and the other team see the card -->
       <template v-else-if="shownCard">
-        <div :class="[panel, 'p-6 text-center']">
-          <p v-if="amWatcher" :class="['text-xs font-semibold uppercase tracking-wider mb-3', muted]">
+        <div class="term-window p-6 text-center">
+          <p v-if="amWatcher" class="term-label mb-3">
             {{ fmt(t.tabuWatch, { name: nameOf(view.explainer) }) }}
           </p>
-          <h3 class="text-3xl font-bold mb-6">{{ shownCard.word }}</h3>
-          <div class="space-y-2">
-            <div v-for="(word, index) in shownCard.taboo" :key="index" class="text-lg font-medium text-rose-500">
-              {{ word }}
+          <h3 class="font-display text-6xl leading-none mb-5 break-words">{{ shownCard.word }}</h3>
+          <div class="border-t border-dashed border-term-low pt-4 space-y-1.5">
+            <div v-for="(word, index) in shownCard.taboo" :key="index" class="text-lg font-medium">
+              <span class="term-muted" aria-hidden="true">[x] </span>{{ word }}
             </div>
           </div>
         </div>
 
-        <div v-if="amExplainer" class="flex gap-4">
-          <button
-            @click="room.act('skip')"
-            class="flex-1 px-6 py-4 rounded-lg font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-colors"
-          >
+        <div v-if="amExplainer" class="grid grid-cols-2 gap-4">
+          <button @click="room.act('skip')" class="term-btn min-h-14">
             {{ t.skip }}
           </button>
-          <button
-            @click="room.act('correct')"
-            class="flex-1 px-6 py-4 rounded-lg font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
-          >
+          <button @click="room.act('correct')" class="term-btn term-btn-primary min-h-14">
             {{ t.correct }}
           </button>
         </div>
-        <button
-          v-else
-          @click="room.act('taboo')"
-          class="w-full px-6 py-4 rounded-lg font-bold bg-amber-500 text-white hover:bg-amber-600 transition-colors"
-        >
-          🚫 {{ t.tabuBuzz }}
+        <button v-else @click="room.act('taboo')" class="term-btn term-btn-primary w-full min-h-14 text-lg">
+          {{ t.tabuBuzz }}
         </button>
       </template>
 
       <!-- Guessers never get the card -->
-      <div v-else :class="[panel, 'p-10 text-center space-y-2']">
-        <div class="text-5xl">🤔</div>
+      <div v-else class="term-panel p-10 text-center space-y-3">
+        <div class="font-display text-7xl leading-none term-blink" aria-hidden="true">???</div>
         <p class="text-xl font-semibold">{{ fmt(t.tabuGuess, { name: nameOf(view.explainer) }) }}</p>
       </div>
     </div>
 
     <!-- Score Phase -->
     <div v-else-if="view.phase === 'score'" class="space-y-6 text-center">
-      <h2 class="text-2xl font-bold">{{ t.gameOver }}</h2>
+      <h2 class="font-display text-5xl leading-none uppercase">{{ t.gameOver }}</h2>
 
       <div class="grid grid-cols-2 gap-3">
-        <div v-for="team in [0, 1]" :key="team" :class="[panel, 'p-6']">
-          <h3 class="text-lg font-semibold mb-2">{{ teamName(team) }}</h3>
-          <p class="text-3xl font-bold tabular-nums">{{ view.scores[team] }}</p>
+        <div
+          v-for="team in [0, 1]"
+          :key="team"
+          :class="['p-6 border', view.scores[team] > view.scores[1 - team] ? 'term-inverse border-term' : 'border-term-low']"
+        >
+          <h3 class="text-sm font-semibold uppercase tracking-wider mb-2">{{ teamName(team) }}</h3>
+          <p class="font-display text-6xl leading-none tabular-nums">{{ view.scores[team] }}</p>
         </div>
       </div>
 
-      <div class="text-xl font-bold">{{ winnerText }}</div>
+      <div class="text-xl font-bold">&gt; {{ winnerText }}</div>
 
       <button v-if="room.isHost" @click="room.act('again')" :class="primary">{{ t.playAgain }}</button>
-      <p v-else :class="['text-sm', muted]">{{ t.onlineWaitingHost }}</p>
+      <p v-else class="term-muted text-sm"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
     </div>
   </OnlineRoom>
 </template>

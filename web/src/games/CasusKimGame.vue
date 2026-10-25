@@ -5,10 +5,6 @@ import { useOnlineRoom } from '../online/useOnlineRoom'
 import OnlineRoom from '../online/OnlineRoom.vue'
 
 const props = defineProps({
-  isDarkMode: {
-    type: Boolean,
-    default: false
-  },
   t: {
     type: Object,
     required: true
@@ -25,41 +21,36 @@ const TWO_SPIES_MIN_PLAYERS = 6
 const ACCUSE_REVEAL_MS = 1200
 const GUESS_OPTION_COUNT = 8
 const ADD_TIME_MS = 30000
+const BAR_CELLS = 24
+const TALLY_CELLS = 12
 
 // Same index in EN and TR refers to the same word, so every device can show its own language
 const themeWords = {
   animals: {
-    icon: '🦁',
     EN: ['Lion', 'Elephant', 'Giraffe', 'Penguin', 'Kangaroo', 'Dolphin', 'Owl', 'Crocodile', 'Panda', 'Horse', 'Octopus', 'Butterfly'],
     TR: ['Aslan', 'Fil', 'Zürafa', 'Penguen', 'Kanguru', 'Yunus', 'Baykuş', 'Timsah', 'Panda', 'At', 'Ahtapot', 'Kelebek']
   },
   countries: {
-    icon: '🌍',
     EN: ['Turkey', 'Japan', 'Brazil', 'Egypt', 'France', 'India', 'Italy', 'Mexico', 'Canada', 'Australia', 'Norway', 'Greece'],
     TR: ['Türkiye', 'Japonya', 'Brezilya', 'Mısır', 'Fransa', 'Hindistan', 'İtalya', 'Meksika', 'Kanada', 'Avustralya', 'Norveç', 'Yunanistan']
   },
   jobs: {
-    icon: '💼',
     EN: ['Doctor', 'Teacher', 'Chef', 'Pilot', 'Painter', 'Engineer', 'Firefighter', 'Lawyer', 'Farmer', 'Dentist', 'Photographer', 'Police officer'],
     TR: ['Doktor', 'Öğretmen', 'Aşçı', 'Pilot', 'Ressam', 'Mühendis', 'İtfaiyeci', 'Avukat', 'Çiftçi', 'Diş hekimi', 'Fotoğrafçı', 'Polis']
   },
   foods: {
-    icon: '🍕',
     EN: ['Pizza', 'Sushi', 'Kebab', 'Pasta', 'Burger', 'Taco', 'Baklava', 'Soup', 'Pancake', 'Salad', 'Ice cream', 'Popcorn'],
     TR: ['Pizza', 'Suşi', 'Kebap', 'Makarna', 'Hamburger', 'Tako', 'Baklava', 'Çorba', 'Pankek', 'Salata', 'Dondurma', 'Patlamış mısır']
   },
   sports: {
-    icon: '⚽',
     EN: ['Football', 'Basketball', 'Tennis', 'Swimming', 'Boxing', 'Golf', 'Volleyball', 'Skiing', 'Cycling', 'Chess', 'Archery', 'Surfing'],
     TR: ['Futbol', 'Basketbol', 'Tenis', 'Yüzme', 'Boks', 'Golf', 'Voleybol', 'Kayak', 'Bisiklet', 'Satranç', 'Okçuluk', 'Sörf']
   },
   places: {
-    icon: '📍',
     EN: ['Beach', 'Hospital', 'School', 'Airport', 'Cinema', 'Library', 'Supermarket', 'Museum', 'Zoo', 'Restaurant', 'Gym', 'Train station'],
     TR: ['Plaj', 'Hastane', 'Okul', 'Havalimanı', 'Sinema', 'Kütüphane', 'Süpermarket', 'Müze', 'Hayvanat bahçesi', 'Restoran', 'Spor salonu', 'Tren garı']
   },
   objects: {
-    icon: '🧸',
     EN: ['Umbrella', 'Mirror', 'Guitar', 'Clock', 'Toothbrush', 'Candle', 'Backpack', 'Scissors', 'Pillow', 'Camera', 'Key', 'Glasses'],
     TR: ['Şemsiye', 'Ayna', 'Gitar', 'Saat', 'Diş fırçası', 'Mum', 'Sırt çantası', 'Makas', 'Yastık', 'Fotoğraf makinesi', 'Anahtar', 'Gözlük']
   }
@@ -319,7 +310,6 @@ watch(() => view.value?.roundNumber, () => {
 })
 
 // Discussion
-const RING_CIRCUMFERENCE = 2 * Math.PI * 52
 const msLeft = computed(() => {
   const v = view.value
   if (!v) return 0
@@ -328,7 +318,11 @@ const msLeft = computed(() => {
 })
 const timeLeft = computed(() => Math.ceil(msLeft.value / 1000))
 const totalTime = computed(() => Math.max((view.value?.minutes || 1) * 60, timeLeft.value))
-const ringOffset = computed(() => RING_CIRCUMFERENCE * (1 - timeLeft.value / totalTime.value))
+// [#################.......] draining as the clock runs
+const timeBar = computed(() => {
+  const filled = Math.ceil((timeLeft.value / totalTime.value) * BAR_CELLS)
+  return '#'.repeat(filled) + '.'.repeat(BAR_CELLS - filled)
+})
 const formattedTime = computed(() => `${Math.floor(timeLeft.value / 60)}:${(timeLeft.value % 60).toString().padStart(2, '0')}`)
 const isPaused = computed(() => view.value?.pausedLeft !== null)
 const isLowTime = computed(() => timeLeft.value <= 10)
@@ -352,6 +346,10 @@ watch(() => view.value?.phase, (phase) => {
 onUnmounted(() => clearTimeout(revealTimer))
 
 const maxVotes = computed(() => Math.max(1, ...(view.value?.tally || []).map(row => row.count)))
+const tallyBar = (count) => {
+  const filled = Math.round((count / maxVotes.value) * TALLY_CELLS)
+  return '#'.repeat(filled) + '.'.repeat(TALLY_CELLS - filled)
+}
 const leaders = computed(() => {
   const rows = view.value?.tally || []
   return rows.filter(row => row.count === rows[0]?.count).map(row => row.id)
@@ -366,7 +364,7 @@ const guessCorrect = computed(() => view.value?.guessed !== null && view.value?.
 const spyTeamWon = computed(() => view.value?.outcome === 'spy' || view.value?.outcome === 'spyGuess')
 watch(() => view.value?.phase, (phase) => {
   if (phase === 'result' && view.value.outcome === 'group' && !prefersReducedMotion()) {
-    confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 } })
+    confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
   }
 })
 
@@ -377,34 +375,17 @@ const scoreboard = computed(() =>
 )
 
 // Shared button styles
-const optionClass = (active, disabled = false) => [
-  'px-4 py-3 rounded-lg font-medium border transition-colors',
-  disabled
-    ? 'opacity-40 cursor-not-allowed ' + (props.isDarkMode ? 'border-gray-800 text-gray-500' : 'border-gray-200 text-gray-400')
-    : active
-      ? 'bg-violet-600 border-violet-600 text-white'
-      : props.isDarkMode
-        ? 'border-gray-700 text-gray-200 hover:bg-gray-800'
-        : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-]
-const primaryClass = 'w-full px-6 py-4 rounded-lg font-semibold bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-const secondaryClass = computed(() => [
-  'w-full px-6 py-3 rounded-lg font-semibold border transition-colors',
-  props.isDarkMode ? 'border-gray-700 hover:bg-gray-800 text-gray-100' : 'border-gray-300 hover:bg-gray-100 text-gray-700'
-])
-const mutedText = computed(() => (props.isDarkMode ? 'text-gray-400' : 'text-gray-500'))
-const panelClass = computed(() => [
-  'rounded-lg p-4 border',
-  props.isDarkMode ? 'bg-gray-950/40 border-gray-800' : 'bg-gray-50 border-gray-200'
-])
+const optionClass = (active, unavailable = false) => ['term-option', { 'is-active': active, 'is-off': unavailable }]
+const primaryClass = 'term-btn term-btn-primary w-full min-h-14'
+const secondaryClass = 'term-btn w-full'
+const panelClass = 'term-panel p-4'
 </script>
 
 <template>
   <OnlineRoom
     :room="room"
     :t="t"
-    :isDarkMode="isDarkMode"
-    :title="'🕵️ ' + t.casusTitle"
+    :title="t.casusTitle"
     :minPlayers="MIN_PLAYERS"
     :canStart="onlineCount <= MAX_PLAYERS"
     :startHint="t.spyMaxPlayers"
@@ -415,40 +396,40 @@ const panelClass = computed(() => [
     <template #lobby="{ view: lobby, isHost }">
       <div class="space-y-6">
         <section class="space-y-3">
-          <h2 class="font-semibold">{{ t.selectTheme }}</h2>
+          <h2 class="term-label">&gt; {{ t.selectTheme }}</h2>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <button @click="room.act('setTheme', { value: 'random' })" :disabled="!isHost" :class="[optionClass(lobby.themeChoice === 'random'), 'disabled:cursor-default']">
-              🎲 {{ t.spyRandomTheme }}
+            <button @click="room.act('setTheme', { value: 'random' })" :disabled="!isHost" :class="optionClass(lobby.themeChoice === 'random')">
+              [?] {{ t.spyRandomTheme }}
             </button>
             <button
               v-for="key in themeKeys"
               :key="key"
               @click="room.act('setTheme', { value: key })"
               :disabled="!isHost"
-              :class="[optionClass(lobby.themeChoice === key), 'disabled:cursor-default']"
+              :class="optionClass(lobby.themeChoice === key)"
             >
-              {{ themeWords[key].icon }} {{ t[key] }}
+              {{ t[key] }}
             </button>
           </div>
         </section>
 
         <section class="grid sm:grid-cols-2 gap-6">
           <div class="space-y-3">
-            <h2 class="font-semibold">{{ t.spyDiscussionLength }}</h2>
+            <h2 class="term-label">&gt; {{ t.spyDiscussionLength }}</h2>
             <div class="grid grid-cols-4 gap-2">
               <button
                 v-for="minutes in [1, 2, 3, 5]"
                 :key="minutes"
                 @click="room.act('setMinutes', { value: minutes })"
                 :disabled="!isHost"
-                :class="[optionClass(lobby.minutes === minutes), 'disabled:cursor-default px-2']"
+                :class="[optionClass(lobby.minutes === minutes), 'px-1']"
               >
                 {{ fmt(t.spyMinutes, { n: minutes }) }}
               </button>
             </div>
           </div>
           <div class="space-y-3">
-            <h2 class="font-semibold">{{ t.spySpyCount }}</h2>
+            <h2 class="term-label">&gt; {{ t.spySpyCount }}</h2>
             <div class="grid grid-cols-2 gap-2">
               <button
                 v-for="count in [1, 2]"
@@ -460,21 +441,21 @@ const panelClass = computed(() => [
                   count === 2 && onlineCount < TWO_SPIES_MIN_PLAYERS
                 )"
               >
-                {{ '🕵️'.repeat(count) }} {{ count }}
+                {{ '[*]'.repeat(count) }} {{ count }}
               </button>
             </div>
-            <p v-if="onlineCount < TWO_SPIES_MIN_PLAYERS" :class="['text-xs', mutedText]">{{ t.spyTwoSpiesHint }}</p>
+            <p v-if="onlineCount < TWO_SPIES_MIN_PLAYERS" class="term-muted text-xs">{{ t.spyTwoSpiesHint }}</p>
           </div>
         </section>
       </div>
     </template>
 
     <div class="space-y-6">
-      <p :class="['text-sm text-center', mutedText]">{{ fmt(t.spyRound, { n: view.roundNumber }) }}</p>
+      <p class="term-label text-center">{{ fmt(t.spyRound, { n: view.roundNumber }) }}</p>
 
       <!-- Joined mid-round: no card until the next one -->
-      <div v-if="!me.inRound && view.phase !== 'result'" :class="[panelClass, 'text-center py-10 space-y-2']">
-        <div class="text-5xl">⏳</div>
+      <div v-if="!me.inRound && view.phase !== 'result'" class="term-panel text-center py-10 space-y-3">
+        <div class="term-spinner font-display text-6xl leading-none" aria-hidden="true"></div>
         <p class="font-semibold">{{ t.spyNotInRound }}</p>
       </div>
 
@@ -489,30 +470,25 @@ const panelClass = computed(() => [
         >
           <div class="flip-card-inner">
             <!-- Front (face down) -->
-            <div class="flip-card-face rounded-xl shadow-xl flex flex-col items-center justify-center gap-4 p-6 border border-violet-400/40 bg-gradient-to-br from-violet-600 to-indigo-800 text-white">
-              <span class="text-6xl">🕵️</span>
-              <span class="font-semibold">{{ t.spyTapToReveal }}</span>
-              <span class="text-sm text-white/70">{{ t.spyKeepSecret }}</span>
+            <div class="flip-card-face term-window flex flex-col items-center justify-center gap-4 p-6">
+              <span class="font-display text-7xl leading-none" aria-hidden="true">[***]</span>
+              <span class="font-semibold uppercase tracking-wider term-cursor">{{ t.spyTapToReveal }}</span>
+              <span class="term-muted text-sm">{{ t.spyKeepSecret }}</span>
             </div>
             <!-- Back (role) -->
-            <div
-              :class="[
-                'flip-card-face flip-card-back rounded-xl shadow-xl flex flex-col items-center justify-center gap-3 p-6 text-white',
-                me.isSpy ? 'bg-gradient-to-br from-rose-500 to-rose-800' : 'bg-gradient-to-br from-emerald-500 to-teal-800'
-              ]"
-            >
+            <div :class="['flip-card-face flip-card-back flex flex-col items-center justify-center gap-3 p-6', me.isSpy ? 'term-inverse' : 'term-window']">
               <template v-if="me.isSpy">
-                <span class="text-6xl">🕶️</span>
-                <span class="text-2xl font-bold">{{ t.youAreSpy }}</span>
-                <span class="text-sm uppercase tracking-[0.18em] opacity-80 mt-2">{{ t.spyTheme }}</span>
-                <span class="text-xl font-semibold">{{ theme.icon }} {{ themeLabel }}</span>
-                <span class="text-sm opacity-90 mt-2">{{ t.spyHint }}</span>
+                <span class="font-display text-7xl leading-none" aria-hidden="true">[*]</span>
+                <span class="font-display text-4xl leading-none uppercase">{{ t.youAreSpy }}</span>
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] mt-3">{{ t.spyTheme }}</span>
+                <span class="text-xl font-semibold">{{ themeLabel }}</span>
+                <span class="text-sm mt-2">{{ t.spyHint }}</span>
               </template>
               <template v-else>
-                <span class="text-sm uppercase tracking-[0.18em] opacity-80">{{ t.spyTheme }}</span>
-                <span class="text-lg font-semibold">{{ theme.icon }} {{ themeLabel }}</span>
-                <span class="text-sm uppercase tracking-[0.18em] opacity-80 mt-4">{{ t.spySecretWord }}</span>
-                <span class="text-3xl font-bold break-words">{{ word }}</span>
+                <span class="term-label">{{ t.spyTheme }}</span>
+                <span class="text-lg font-semibold">{{ themeLabel }}</span>
+                <span class="term-label mt-4">{{ t.spySecretWord }}</span>
+                <span class="font-display text-5xl leading-none uppercase break-words">{{ word }}</span>
               </template>
             </div>
           </div>
@@ -521,59 +497,52 @@ const panelClass = computed(() => [
         <button v-if="!isReady" @click="cardFlipped = false; room.act('ready')" :disabled="!cardFlipped" :class="primaryClass">
           {{ t.spyReady }}
         </button>
-        <p :class="['text-sm', mutedText]">{{ fmt(t.spyReadyCount, { n: readyCount, total: rosterOnline.length }) }}</p>
+        <p class="term-muted text-sm">{{ fmt(t.spyReadyCount, { n: readyCount, total: rosterOnline.length }) }}</p>
         <button v-if="room.isHost" @click="room.act('startDiscussion')" :class="secondaryClass">{{ t.spyStartDiscussion }}</button>
       </div>
 
       <!-- Discussion -->
       <div v-else-if="view.phase === 'discussion'" class="space-y-6 text-center">
-        <h2 class="text-xl font-semibold">{{ t.discussionTime }}</h2>
+        <h2 class="font-display text-3xl leading-none uppercase">{{ t.discussionTime }}</h2>
 
-        <div class="relative mx-auto w-52 h-52" :class="{ 'low-time': isLowTime && !isPaused }">
-          <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90" aria-hidden="true">
-            <circle cx="60" cy="60" r="52" fill="none" stroke-width="8" :class="isDarkMode ? 'stroke-gray-800' : 'stroke-gray-200'" />
-            <circle
-              cx="60" cy="60" r="52" fill="none" stroke-width="8" stroke-linecap="round"
-              :class="isLowTime ? 'stroke-rose-500' : 'stroke-violet-500'"
-              :stroke-dasharray="RING_CIRCUMFERENCE"
-              :stroke-dashoffset="ringOffset"
-              style="transition: stroke-dashoffset 1s linear"
-            />
-          </svg>
-          <div class="absolute inset-0 flex flex-col items-center justify-center">
-            <span :class="['text-5xl font-bold tabular-nums', isLowTime ? 'text-rose-500' : '']" role="timer" aria-live="off">
-              {{ formattedTime }}
-            </span>
-            <span v-if="isPaused" :class="['text-sm font-medium mt-1', mutedText]">{{ t.spyPaused }}</span>
-          </div>
+        <div>
+          <span
+            :class="['font-display text-8xl leading-none tabular-nums', { 'term-blink': isLowTime && !isPaused }]"
+            role="timer"
+            aria-live="off"
+          >
+            {{ formattedTime }}
+          </span>
+          <p class="text-sm whitespace-pre overflow-hidden mt-2" aria-hidden="true">[{{ timeBar }}]</p>
+          <p v-if="isPaused" class="term-label term-blink mt-2">[||] {{ t.spyPaused }}</p>
         </div>
 
-        <div :class="[panelClass, 'text-lg']">
-          🎤 {{ fmt(t.spyFirstAsker, { name: nameOf(view.firstAsker) }) }}
+        <div class="term-panel border-term p-4 text-lg">
+          &gt; {{ fmt(t.spyFirstAsker, { name: nameOf(view.firstAsker) }) }}
         </div>
 
         <!-- Peek at your own role again -->
-        <button @click="showMyCard = !showMyCard" :class="secondaryClass">👁 {{ t.spyMyCard }}</button>
-        <div
-          v-if="showMyCard"
-          :class="['rounded-lg p-4 text-white', me.isSpy ? 'bg-gradient-to-br from-rose-500 to-rose-800' : 'bg-gradient-to-br from-emerald-500 to-teal-800']"
-        >
-          <p class="text-sm opacity-80">{{ theme.icon }} {{ themeLabel }}</p>
-          <p class="text-2xl font-bold">{{ me.isSpy ? t.youAreSpy : word }}</p>
+        <button @click="showMyCard = !showMyCard" :class="secondaryClass" :aria-expanded="showMyCard">{{ t.spyMyCard }}</button>
+        <div v-if="showMyCard" :class="['p-4', me.isSpy ? 'term-inverse' : 'border border-term']">
+          <p class="text-sm">{{ themeLabel }}</p>
+          <p class="font-display text-4xl leading-none uppercase mt-1">{{ me.isSpy ? t.youAreSpy : word }}</p>
         </div>
 
         <div v-if="room.isHost" class="grid grid-cols-2 gap-3">
-          <button @click="room.act(isPaused ? 'resume' : 'pause')" :class="secondaryClass">
-            {{ isPaused ? '▶ ' + t.spyResume : '⏸ ' + t.spyPause }}
+          <button @click="room.act(isPaused ? 'resume' : 'pause')" :class="[secondaryClass, 'text-sm']">
+            {{ isPaused ? t.spyResume : t.spyPause }}
           </button>
-          <button @click="room.act('addTime')" :class="secondaryClass">⏱ {{ t.spyAddTime }}</button>
+          <button @click="room.act('addTime')" :class="[secondaryClass, 'text-sm normal-case']">{{ t.spyAddTime }}</button>
         </div>
 
-        <details :class="[panelClass, 'text-left']">
-          <summary class="cursor-pointer font-medium">💡 {{ t.spyNeedIdeas }}</summary>
+        <details class="group term-panel p-4 text-left">
+          <summary class="cursor-pointer list-none font-medium [&::-webkit-details-marker]:hidden">
+            <span aria-hidden="true"><span class="group-open:hidden">[+]</span><span class="hidden group-open:inline">[-]</span></span>
+            {{ t.spyNeedIdeas }}
+          </summary>
           <ul class="mt-3 space-y-2">
-            <li v-for="question in exampleQuestions" :key="question" :class="['text-sm', isDarkMode ? 'text-gray-300' : 'text-gray-600']">
-              “{{ question }}”
+            <li v-for="question in exampleQuestions" :key="question" class="term-muted text-sm">
+              &gt; “{{ question }}”
             </li>
           </ul>
         </details>
@@ -585,12 +554,12 @@ const panelClass = computed(() => [
 
       <!-- Voting: everyone votes on their own device at the same time -->
       <div v-else-if="view.phase === 'voting'" class="space-y-6 text-center">
-        <p v-if="view.runoff" class="inline-block px-3 py-1 rounded-md text-xs font-bold uppercase tracking-[0.18em] bg-amber-500/20 text-amber-600">
-          {{ t.spyRunoff }}
+        <p v-if="view.runoff" class="term-inverse inline-block px-3 py-1 text-xs font-bold uppercase tracking-[0.18em]">
+          [!] {{ t.spyRunoff }}
         </p>
 
         <template v-if="!hasVoted">
-          <h2 class="text-xl font-semibold">{{ fmt(t.spyVoteFor, { name: room.me?.name || '' }) }}</h2>
+          <h2 class="font-display text-3xl leading-none uppercase">{{ fmt(t.spyVoteFor, { name: room.me?.name || '' }) }}</h2>
           <div class="grid grid-cols-2 gap-3">
             <button
               v-for="id in voteOptions"
@@ -606,61 +575,55 @@ const panelClass = computed(() => [
             {{ t.spyConfirmVote }}
           </button>
         </template>
-        <div v-else :class="[panelClass, 'py-8 space-y-2']">
-          <div class="text-5xl">🗳️</div>
-          <p class="font-semibold">{{ t.spyVoteCast }}</p>
+        <div v-else class="term-panel py-8 space-y-3">
+          <div class="font-display text-6xl leading-none" aria-hidden="true">[OK]</div>
+          <p class="font-semibold term-cursor">{{ t.spyVoteCast }}</p>
         </div>
-        <p :class="['text-sm', mutedText]">{{ fmt(t.spyVotedCount, { n: votedCount, total: rosterOnline.length }) }}</p>
+        <p class="term-muted text-sm">{{ fmt(t.spyVotedCount, { n: votedCount, total: rosterOnline.length }) }}</p>
       </div>
 
       <!-- Tally -->
       <div v-else-if="view.phase === 'tally'" class="space-y-6 text-center">
-        <h2 class="text-2xl font-bold">{{ t.spyVotesIn }}</h2>
+        <h2 class="font-display text-5xl leading-none uppercase">{{ t.spyVotesIn }}</h2>
 
         <ul class="space-y-2 text-left">
-          <li v-for="row in view.tally" :key="row.id" class="flex items-center gap-3">
-            <span class="w-24 shrink-0 truncate font-medium">{{ nameOf(row.id) }}</span>
-            <div :class="['flex-1 h-8 rounded-md overflow-hidden', isDarkMode ? 'bg-gray-800' : 'bg-gray-100']">
-              <div
-                class="tally-bar h-full rounded-md flex items-center justify-end px-2 text-sm font-bold text-white"
-                :class="leaders.includes(row.id) ? 'bg-rose-500' : 'bg-violet-400'"
-                :style="{ width: `${Math.max(row.count / maxVotes * 100, row.count ? 12 : 0)}%` }"
-              >
-                <span v-if="row.count">{{ row.count }}</span>
-              </div>
-            </div>
+          <li v-for="row in view.tally" :key="row.id" :class="['flex items-center gap-3 text-sm', leaders.includes(row.id) ? '' : 'term-muted']">
+            <span class="w-24 shrink-0 truncate font-semibold">{{ nameOf(row.id) }}</span>
+            <span class="whitespace-pre" aria-hidden="true">[{{ tallyBar(row.count) }}]</span>
+            <span class="ml-auto font-display text-2xl leading-none tabular-nums">{{ row.count }}</span>
           </li>
         </ul>
 
         <div aria-live="polite" class="space-y-4">
           <template v-if="isTie">
-            <p class="text-lg font-semibold text-amber-500">{{ view.runoff ? t.spyNoOneCaught : t.spyTie }}</p>
+            <p class="text-lg font-semibold">[!] {{ view.runoff ? t.spyNoOneCaught : t.spyTie }}</p>
             <template v-if="room.isHost">
               <button v-if="!view.runoff" @click="room.act('runoff')" :class="primaryClass">{{ t.spyStartRunoff }}</button>
               <button v-else @click="room.act('continue')" :class="primaryClass">{{ t.spyContinue }}</button>
             </template>
           </template>
           <template v-else>
-            <p class="text-xl font-semibold">{{ fmt(t.spyAccused, { name: nameOf(view.accused) }) }}</p>
+            <p class="text-xl font-semibold">&gt; {{ fmt(t.spyAccused, { name: nameOf(view.accused) }) }}</p>
+            <p v-if="!accusedRevealed" class="font-display text-4xl leading-none term-blink" aria-hidden="true">. . .</p>
             <Transition name="pop">
               <div v-if="accusedRevealed" class="space-y-4">
-                <p :class="['text-2xl font-bold', view.accusedIsSpy ? 'text-emerald-500' : 'text-rose-500']">
-                  {{ view.accusedIsSpy ? '🎯 ' + t.spyWasSpy : '😬 ' + t.spyWasNotSpy }}
+                <p :class="['font-display text-4xl leading-none uppercase px-4 py-3', view.accusedIsSpy ? 'term-inverse' : 'border border-dashed border-term']">
+                  {{ view.accusedIsSpy ? '[ok] ' + t.spyWasSpy : '[x] ' + t.spyWasNotSpy }}
                 </p>
                 <button v-if="room.isHost" @click="room.act('continue')" :class="primaryClass">{{ t.spyContinue }}</button>
               </div>
             </Transition>
           </template>
-          <p v-if="!room.isHost" :class="['text-sm', mutedText]">{{ t.onlineWaitingNext }}</p>
+          <p v-if="!room.isHost" class="term-muted text-sm"><span class="term-cursor">{{ t.onlineWaitingNext }}</span></p>
         </div>
       </div>
 
       <!-- Spy's last chance: only the caught spy can pick -->
       <div v-else-if="view.phase === 'spyGuess'" class="space-y-6 text-center">
-        <div class="text-6xl">🕶️</div>
-        <h2 class="text-2xl font-bold">{{ t.spyLastChance }}</h2>
+        <div class="font-display text-7xl leading-none term-blink" aria-hidden="true">[*]</div>
+        <h2 class="font-display text-4xl leading-none uppercase">{{ t.spyLastChance }}</h2>
         <p class="text-lg">
-          {{ amAccused ? fmt(t.spyGuessWord, { name: nameOf(view.accused) }) : fmt(t.spyGuessing, { name: nameOf(view.accused) }) }}
+          &gt; {{ amAccused ? fmt(t.spyGuessWord, { name: nameOf(view.accused) }) : fmt(t.spyGuessing, { name: nameOf(view.accused) }) }}
         </p>
 
         <div class="grid grid-cols-2 gap-3">
@@ -670,14 +633,14 @@ const panelClass = computed(() => [
             @click="room.act('guess', { index: option })"
             :disabled="!amAccused || view.guessed !== null"
             :class="[
-              'px-4 py-3 rounded-lg font-medium border transition-colors',
+              'px-4 py-3 border font-medium transition-colors disabled:cursor-default',
               view.guessed === null
-                ? (isDarkMode ? 'border-gray-700 text-gray-100' : 'border-gray-300 text-gray-800') + (amAccused ? (isDarkMode ? ' hover:bg-gray-800' : ' hover:bg-gray-100') : ' cursor-default')
+                ? 'border-term-low' + (amAccused ? ' hover:border-term hover:bg-term-deep' : '')
                 : option === view.wordIndex
-                  ? 'bg-emerald-500 border-emerald-500 text-white'
+                  ? 'term-inverse border-term'
                   : option === view.guessed
-                    ? 'bg-rose-500 border-rose-500 text-white'
-                    : 'opacity-40 ' + (isDarkMode ? 'border-gray-800 text-gray-400' : 'border-gray-200 text-gray-500')
+                    ? 'border-dashed border-term-low text-term-low line-through'
+                    : 'border-term-low opacity-40'
             ]"
           >
             {{ themeWords[view.themeKey][lang][option] }}
@@ -685,9 +648,9 @@ const panelClass = computed(() => [
         </div>
 
         <Transition name="pop">
-          <div v-if="view.guessed !== null" class="space-y-4" aria-live="polite">
-            <p :class="['text-2xl font-bold', guessCorrect ? 'text-rose-500' : 'text-emerald-500']">
-              {{ guessCorrect ? t.spyGuessedRight : t.spyGuessedWrong }}
+          <div v-if="view.guessed !== null" aria-live="polite">
+            <p :class="['font-display text-4xl leading-none uppercase px-4 py-3', guessCorrect ? 'term-inverse' : 'border border-dashed border-term']">
+              {{ guessCorrect ? '[ok] ' + t.spyGuessedRight : '[x] ' + t.spyGuessedWrong }}
             </p>
           </div>
         </Transition>
@@ -698,61 +661,56 @@ const panelClass = computed(() => [
 
       <!-- Result -->
       <div v-else-if="view.phase === 'result'" class="space-y-6">
-        <div
-          :class="[
-            'rounded-xl p-6 text-center text-white shadow-lg',
-            spyTeamWon ? 'bg-gradient-to-br from-rose-500 to-rose-800' : 'bg-gradient-to-br from-emerald-500 to-teal-800'
-          ]"
-        >
-          <div class="text-6xl mb-2">{{ spyTeamWon ? '🕶️' : '🎉' }}</div>
-          <h2 class="text-3xl font-bold">{{ spyTeamWon ? t.spyWins : t.groupWins }}</h2>
-          <p v-if="view.outcome === 'spyGuess'" class="mt-2 opacity-90">{{ t.spyGuessedRight }}</p>
+        <div class="term-inverse p-6 text-center">
+          <div class="font-display text-7xl leading-none mb-2" aria-hidden="true">{{ spyTeamWon ? '[*]' : '[+]' }}</div>
+          <h2 class="font-display text-5xl leading-none uppercase">{{ spyTeamWon ? t.spyWins : t.groupWins }}</h2>
+          <p v-if="view.outcome === 'spyGuess'" class="mt-2 font-semibold">{{ t.spyGuessedRight }}</p>
         </div>
 
         <div class="grid sm:grid-cols-2 gap-3">
           <div :class="panelClass">
-            <p :class="['text-xs font-bold uppercase tracking-[0.18em] mb-1', mutedText]">
+            <p class="term-label mb-1">
               {{ view.spies.length > 1 ? t.spySpiesWere : t.spyWas }}
             </p>
-            <p class="text-lg font-semibold">🕵️ {{ view.spies.map(nameOf).join(', ') }}</p>
+            <p class="text-lg font-semibold">[*] {{ view.spies.map(nameOf).join(', ') }}</p>
           </div>
           <div :class="panelClass">
-            <p :class="['text-xs font-bold uppercase tracking-[0.18em] mb-1', mutedText]">{{ t.wordWas }}</p>
-            <p class="text-lg font-semibold">{{ theme.icon }} {{ word }}</p>
+            <p class="term-label mb-1">{{ t.wordWas }}</p>
+            <p class="text-lg font-semibold">&gt; {{ word }}</p>
           </div>
         </div>
 
         <div v-if="Object.keys(view.lastVotes).length" :class="panelClass">
-          <p :class="['text-xs font-bold uppercase tracking-[0.18em] mb-2', mutedText]">{{ t.spyVotes }}</p>
+          <p class="term-label mb-2">{{ t.spyVotes }}</p>
           <ul class="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
             <li v-for="(target, voter) in view.lastVotes" :key="voter" class="flex gap-2">
               <span class="font-medium truncate">{{ nameOf(voter) }}</span>
-              <span :class="mutedText">{{ t.spyVotedFor }}</span>
-              <span :class="['truncate', isSpy(target) ? 'text-emerald-500 font-semibold' : '']">{{ nameOf(target) }}</span>
+              <span class="term-muted">{{ t.spyVotedFor }}</span>
+              <span :class="['truncate', isSpy(target) ? 'font-bold underline underline-offset-4' : 'term-muted']">{{ nameOf(target) }}</span>
             </li>
           </ul>
         </div>
 
         <div :class="panelClass">
-          <p :class="['text-xs font-bold uppercase tracking-[0.18em] mb-3', mutedText]">🏆 {{ t.spyScoreboard }}</p>
+          <p class="term-label mb-3">{{ t.spyScoreboard }}</p>
           <ol class="space-y-2">
-            <li v-for="(row, rank) in scoreboard" :key="row.id" class="flex items-center gap-3">
-              <span class="w-6 text-center">{{ ['🥇', '🥈', '🥉'][rank] || rank + 1 }}</span>
+            <li v-for="(row, rank) in scoreboard" :key="row.id" :class="['flex items-center gap-3', { 'bg-term-deep -mx-2 px-2': row.id === room.myId }]">
+              <span class="w-8 tabular-nums font-semibold">#{{ rank + 1 }}</span>
               <span :class="['flex-1 truncate font-medium', { 'font-bold': row.id === room.myId }]">
                 {{ row.name }}
-                <span v-if="isSpy(row.id)" class="text-xs">🕵️</span>
+                <span v-if="isSpy(row.id)" class="text-xs term-muted">[*]</span>
               </span>
               <span class="font-bold tabular-nums">{{ row.points }} {{ t.spyPoints }}</span>
             </li>
           </ol>
-          <p :class="['text-xs mt-3', mutedText]">{{ t.spyScoringInfo }}</p>
+          <p class="term-muted text-xs mt-3">{{ t.spyScoringInfo }}</p>
         </div>
 
         <div v-if="room.isHost" class="grid sm:grid-cols-2 gap-3">
           <button @click="room.act('newGame')" :class="secondaryClass">{{ t.spyNewGame }}</button>
           <button @click="room.act('nextRound')" :class="primaryClass">{{ t.spyNextRound }}</button>
         </div>
-        <p v-else :class="['text-center text-sm', mutedText]">{{ t.onlineWaitingNext }}</p>
+        <p v-else class="term-muted text-center text-sm"><span class="term-cursor">{{ t.onlineWaitingNext }}</span></p>
       </div>
     </div>
   </OnlineRoom>
@@ -786,24 +744,6 @@ const panelClass = computed(() => [
   transform: rotateY(8deg);
 }
 
-/* Last 10 seconds */
-.low-time {
-  animation: low-time-pulse 1s ease-in-out infinite;
-}
-@keyframes low-time-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.04); }
-}
-
-.tally-bar {
-  animation: grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  transform-origin: left;
-}
-@keyframes grow {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
-
 .pop-enter-active {
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1.4);
 }
@@ -816,10 +756,6 @@ const panelClass = computed(() => [
   .flip-card-inner,
   .pop-enter-active {
     transition: none;
-  }
-  .low-time,
-  .tally-bar {
-    animation: none;
   }
 }
 </style>
