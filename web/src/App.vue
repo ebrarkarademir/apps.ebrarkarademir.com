@@ -88,11 +88,16 @@ const games = computed(() => [
   }
 ])
 
-// A shared quiz link (?quiz=CODE) opens the quiz straight away with the code filled in
-const quizInviteCode = new URLSearchParams(window.location.search).get('quiz') || ''
-if (quizInviteCode) window.history.replaceState(null, '', window.location.pathname)
+// An invite link (?join=CODE&game=ID) opens that online game with the room code filled in
+const ONLINE_GAMES = ['quiz-race', 'bottle-spin', 'casus-kim', 'tabu']
+const inviteParams = new URLSearchParams(window.location.search)
+const inviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
+const inviteCode = inviteGame ? (inviteParams.get('join') || '') : ''
+if (inviteParams.has('join')) window.history.replaceState(null, '', window.location.pathname)
 
-const selectedGame = ref(quizInviteCode ? 'quiz-race' : null)
+const selectedGame = ref(inviteGame)
+// The invite code only applies to the game the link was for
+const inviteCodeFor = (gameId) => (gameId === inviteGame ? inviteCode : '')
 const showRules = ref(false)
 
 // Nav bar categories
@@ -228,7 +233,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'quiz-race'"
         :isDarkMode="isDarkMode"
         :t="t"
-        :initialCode="quizInviteCode"
+        :initialCode="inviteCodeFor('quiz-race')"
         @go-back="selectedGame = null"
       />
 
@@ -252,6 +257,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'bottle-spin'"
         :isDarkMode="isDarkMode"
         :t="t"
+        :initialCode="inviteCodeFor('bottle-spin')"
         @go-back="selectedGame = null"
       />
 
@@ -259,6 +265,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'casus-kim'"
         :isDarkMode="isDarkMode"
         :t="t"
+        :initialCode="inviteCodeFor('casus-kim')"
         @go-back="selectedGame = null"
       />
 
@@ -266,6 +273,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'tabu'"
         :isDarkMode="isDarkMode"
         :t="t"
+        :initialCode="inviteCodeFor('tabu')"
         @go-back="selectedGame = null"
       />
 

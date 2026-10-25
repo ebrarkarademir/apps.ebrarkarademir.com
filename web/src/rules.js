@@ -111,33 +111,35 @@ export const rules = {
     EN: {
       icon: '🍾',
       title: 'Bottle Spin',
-      players: '2+ players',
+      players: '2+ players, one device each',
       duration: 'Unlimited',
       goal: 'Spin the bottle and take on a truth or a dare.',
       steps: [
-        'Choose how many people are playing and enter their names.',
-        'Spin the bottle — it lands on a random player.',
-        'That player picks Truth or Dare and completes the prompt.',
-        'Spin again for the next round.'
+        'One player taps Create room; everyone else joins with the room code on their own phone or computer.',
+        'The host starts the game and spins first — the bottle spins on every screen at once.',
+        'Whoever the bottle picks chooses Truth or Dare on their device; the prompt appears for everyone.',
+        'The picked player spins the bottle next.'
       ],
       tips: [
-        'Agree on house rules before you start — anyone can pass on a prompt.'
+        'Agree on house rules before you start — anyone can pass on a prompt.',
+        'If the next spinner drops out, the host can spin instead.'
       ]
     },
     TR: {
       icon: '🍾',
       title: 'Şişe Çevirmece',
-      players: '2+ oyuncu',
+      players: '2+ oyuncu, herkes kendi cihazından',
       duration: 'Sınırsız',
       goal: 'Şişeyi çevir; doğruluk mu cesaret mi, seçimi yap.',
       steps: [
-        'Kaç kişi oynayacağını seç ve isimleri gir.',
-        'Şişeyi çevir — rastgele bir oyuncuda durur.',
-        'Bu oyuncu Doğruluk veya Cesaret’i seçer ve görevi yapar.',
-        'Sonraki tur için şişeyi tekrar çevir.'
+        'Bir oyuncu Oda oluştur’a basar; diğerleri kendi telefon veya bilgisayarından oda koduyla katılır.',
+        'Sunucu oyunu başlatır ve ilk çeviren olur — şişe herkesin ekranında aynı anda döner.',
+        'Şişenin seçtiği kişi kendi cihazından Doğruluk veya Cesaret’i seçer; görev herkese görünür.',
+        'Seçilen oyuncu şişeyi bir sonraki tur çevirir.'
       ],
       tips: [
-        'Başlamadan önce kuralları konuşun — herkes bir görevi pas geçebilir.'
+        'Başlamadan önce kuralları konuşun — herkes bir görevi pas geçebilir.',
+        'Sıradaki çeviren ayrılırsa şişeyi sunucu çevirebilir.'
       ]
     }
   },
@@ -145,38 +147,40 @@ export const rules = {
     EN: {
       icon: '🕵️',
       title: 'Who Is the Spy?',
-      players: '3–12 players',
+      players: '3–12 players, one device each',
       duration: '5–10 min',
       goal: 'Everyone knows the secret word except the spy. Civilians must find the spy; the spy must blend in or guess the word.',
       steps: [
-        'Add players, pick a theme (or Random), the discussion time and 1–2 spies.',
-        'Pass the phone around — each player taps the card to see their role, then hides it before passing.',
-        'Discuss: take turns asking each other questions about the word. The timer can be paused or extended.',
-        'Everyone votes secretly for the player they suspect. A tie leads to one runoff vote.',
-        'If the spy is caught, they get one last chance to guess the word and steal the win.'
+        'One player creates a room and picks a theme (or Random), the discussion time and 1–2 spies; everyone else joins with the code.',
+        'Each player taps their own card to see their role privately, then presses “I’ve seen my card”.',
+        'Discuss: take turns asking each other questions about the word. The host can pause or extend the timer.',
+        'Everyone votes secretly on their own device. A tie leads to one runoff vote.',
+        'If the spy is caught, they get one last chance to guess the word on their device and steal the win.'
       ],
       tips: [
         'Civilians: be specific enough to prove you know the word, but vague enough not to give it away.',
         'Spy: listen closely, keep answers short, and accuse someone else first.',
+        'Forgot your word? Tap “Show my card” during the discussion.',
         'Scoring: civilians +1 on a group win, spy +2 on a spy win, +3 for guessing the word.'
       ]
     },
     TR: {
       icon: '🕵️',
       title: 'Casus Kim?',
-      players: '3–12 oyuncu',
+      players: '3–12 oyuncu, herkes kendi cihazından',
       duration: '5–10 dk',
       goal: 'Casus hariç herkes gizli kelimeyi bilir. Siviller casusu bulmalı; casus ise aralarına karışmalı ya da kelimeyi tahmin etmeli.',
       steps: [
-        'Oyuncuları ekle; bir tema (veya Rastgele), tartışma süresi ve 1–2 casus seç.',
-        'Telefonu dolaştırın — herkes rolünü görmek için karta dokunur, vermeden önce gizler.',
-        'Tartışın: sırayla kelimeyle ilgili birbirinize sorular sorun. Süre duraklatılabilir veya uzatılabilir.',
-        'Herkes şüphelendiği kişiye gizlice oy verir. Beraberlikte bir kez ikinci tur yapılır.',
-        'Casus yakalanırsa kelimeyi tahmin edip kazanmak için son bir şansı olur.'
+        'Bir oyuncu oda oluşturur; tema (veya Rastgele), tartışma süresi ve 1–2 casus seçer. Diğerleri kodla katılır.',
+        'Herkes rolünü gizlice görmek için kendi kartına dokunur, sonra “Kartımı gördüm”e basar.',
+        'Tartışın: sırayla kelimeyle ilgili birbirinize sorular sorun. Sunucu süreyi duraklatabilir veya uzatabilir.',
+        'Herkes kendi cihazından gizlice oy verir. Beraberlikte bir kez ikinci tur yapılır.',
+        'Casus yakalanırsa kendi cihazından kelimeyi tahmin edip kazanmak için son bir şansı olur.'
       ],
       tips: [
         'Siviller: kelimeyi bildiğinizi gösterecek kadar net, ama ele vermeyecek kadar belirsiz olun.',
         'Casus: dikkatle dinle, kısa cevap ver ve önce sen başkasını suçla.',
+        'Kelimeyi mi unuttun? Tartışma sırasında “Kartımı göster”e dokun.',
         'Puanlama: grup kazanırsa siviller +1, casus kazanırsa +2, kelimeyi bilirse +3.'
       ]
     }
@@ -185,15 +189,15 @@ export const rules = {
     EN: {
       icon: '🎯',
       title: 'Tabu',
-      players: '4+ players, 2 teams',
+      players: '2+ players, 2 teams, one device each',
       duration: '60 s per turn',
       goal: 'Get your team to guess as many words as possible without saying the forbidden words.',
       steps: [
-        'Split into two teams and enter the players.',
-        'One player explains the word on the card; their team guesses.',
-        'Press Correct for +1 point or Skip to move to the next card.',
-        'After 60 seconds the turn passes to the other team.',
-        'When the cards run out, the team with the most points wins.'
+        'One player creates a room; everyone joins with the code and picks a team on their own device.',
+        'Each turn one player explains: only they and the other team see the card — their own team guesses.',
+        'The explainer presses Correct for +1 point or Skip to move to the next card.',
+        'The other team watches the forbidden words and presses Taboo! if one slips out — the card is discarded.',
+        'After 60 seconds the turn passes to the other team. When the cards run out, the team with the most points wins.'
       ],
       tips: [
         'No saying the word itself, its parts, or the forbidden words — and no gestures.'
@@ -202,15 +206,15 @@ export const rules = {
     TR: {
       icon: '🎯',
       title: 'Tabu',
-      players: '4+ oyuncu, 2 takım',
+      players: '2+ oyuncu, 2 takım, herkes kendi cihazından',
       duration: 'Tur başına 60 sn',
       goal: 'Yasaklı kelimeleri söylemeden takımına olabildiğince çok kelime bildir.',
       steps: [
-        'İki takıma ayrılın ve oyuncuları girin.',
-        'Bir oyuncu karttaki kelimeyi anlatır, takımı tahmin eder.',
-        '+1 puan için Doğru’ya, sonraki karta geçmek için Pas’a bas.',
-        '60 saniye sonunda sıra diğer takıma geçer.',
-        'Kartlar bitince en çok puanı olan takım kazanır.'
+        'Bir oyuncu oda oluşturur; herkes kodla katılır ve kendi cihazından takımını seçer.',
+        'Her turda bir oyuncu anlatır: kartı sadece o ve rakip takım görür — kendi takımı tahmin eder.',
+        'Anlatıcı +1 puan için Doğru’ya, sonraki karta geçmek için Pas’a basar.',
+        'Rakip takım yasaklı kelimeleri izler; biri söylenirse Tabu!’ya basar ve kart iptal olur.',
+        '60 saniye sonunda sıra diğer takıma geçer. Kartlar bitince en çok puanı olan takım kazanır.'
       ],
       tips: [
         'Kelimenin kendisi, parçaları veya yasaklı kelimeler söylenmez — el hareketi de yok.'
@@ -233,7 +237,7 @@ export const rules = {
       ],
       tips: [
         'The host has to keep the page open — if the host leaves, the room closes.',
-        'Got disconnected? Join again with the same name and your score comes back.',
+        'Got disconnected? Join again from the same browser tab and your score comes back.',
         'Each device shows the questions in its own language.'
       ]
     },
@@ -252,7 +256,7 @@ export const rules = {
       ],
       tips: [
         'Sunucu sayfayı açık tutmalı — sunucu çıkarsa oda kapanır.',
-        'Bağlantın mı koptu? Aynı adla tekrar katıl, puanın geri gelir.',
+        'Bağlantın mı koptu? Aynı tarayıcı sekmesinden tekrar katıl, puanın geri gelir.',
         'Her cihaz soruları kendi dil ayarında gösterir.'
       ]
     }
