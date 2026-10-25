@@ -3,13 +3,13 @@
 /*
  * Design tokens: a green-phosphor CRT terminal.
  * - the default palette is cleared, so black and these greens are the only colors a class can use
- * - IBM Plex Mono for text, VT323 (`font-display`) for big terminal type: titles, timers, scores
+ * - JetBrains Mono for text, VT323 (`font-display`) for big terminal type: titles, timers, scores
  * - no corner radius and no drop shadows: thin green wireframe lines and phosphor glow instead
  */
 @theme {
-  --font-sans: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --font-display: "VT323", "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-display: "VT323", "JetBrains Mono", ui-monospace, monospace;
 
   --color-*: initial;
   --color-black: #000000;

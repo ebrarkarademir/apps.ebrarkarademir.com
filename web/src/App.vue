@@ -83,20 +83,75 @@ const games = computed(() => [
   }
 ])
 
-// An invite link (?join=CODE&game=ID) opens that online game with the room code filled in
+// ---------- URL routing ----------
+// /            menu, all games
+// /party       menu, one category (also /solo)
+// /quiz-race   a game, by its id
+// Unknown paths fall back to the menu. Firebase serves index.html for every path.
+
+const CATEGORY_KEYS = ['all', 'party', 'solo']
+const GAME_IDS = games.value.map(game => game.id)
+
+const parsePath = (pathname) => {
+  const slug = decodeURIComponent(pathname).replace(/^\/+|\/+$/g, '').toLowerCase()
+  if (GAME_IDS.includes(slug)) return { category: null, game: slug }
+  if (CATEGORY_KEYS.includes(slug) && slug !== 'all') return { category: slug, game: null }
+  return { category: 'all', game: null }
+}
+
+const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
+
+// An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
+// Older links used /?join=CODE&game=quiz-race.
 const ONLINE_GAMES = ['quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
-const inviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
+const initialRoute = parsePath(window.location.pathname)
+const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
+const inviteGame = legacyInviteGame || (ONLINE_GAMES.includes(initialRoute.game) ? initialRoute.game : null)
 const inviteCode = inviteGame ? (inviteParams.get('join') || '') : ''
-if (inviteParams.has('join')) window.history.replaceState(null, '', window.location.pathname)
+if (legacyInviteGame) initialRoute.game = legacyInviteGame
 
-const selectedGame = ref(inviteGame)
+const selectedGame = ref(initialRoute.game)
 // The invite code only applies to the game the link was for
 const inviteCodeFor = (gameId) => (gameId === inviteGame ? inviteCode : '')
 const showRules = ref(false)
 
 // Nav bar categories
-const selectedCategory = ref('all')
+const selectedCategory = ref(initialRoute.category || 'all')
+
+// Show the canonical address for where we landed: drops the invite query and unknown paths
+window.history.replaceState(
+  { inApp: false },
+  '',
+  initialRoute.game ? `/${initialRoute.game}` : categoryPath(selectedCategory.value)
+)
+
+const applyRoute = ({ category, game }) => {
+  if (category) selectedCategory.value = category
+  selectedGame.value = game
+  showRules.value = false
+}
+
+const navigate = (path) => {
+  if (path === window.location.pathname) return
+  // inApp marks entries opened from inside the app, so a game's Back can use history.back()
+  window.history.pushState({ inApp: true }, '', path)
+  applyRoute(parsePath(path))
+  window.scrollTo({ top: 0 })
+}
+
+const openGame = (id) => navigate(`/${id}`)
+
+// A game's Back goes to the list it was opened from; on a direct link, to that game's menu
+const closeGame = () => {
+  if (window.history.state?.inApp) window.history.back()
+  else navigate(categoryPath(selectedCategory.value))
+}
+
+const onPopState = () => {
+  applyRoute(parsePath(window.location.pathname))
+  window.scrollTo({ top: 0 })
+}
 
 const categories = computed(() => [
   { key: 'all', label: t.value.navAll },
@@ -126,11 +181,12 @@ const promptPath = computed(() => {
   return parts.join('/')
 })
 
-const selectCategory = (key) => {
-  selectedCategory.value = key
-  selectedGame.value = null
-  window.scrollTo({ top: 0 })
-}
+const selectCategory = (key) => navigate(categoryPath(key))
+
+// Tab title follows the page
+watch([selectedGame, selectedGameTitle], () => {
+  document.title = selectedGame.value ? `${selectedGameTitle.value} | Games & Tools` : 'Games & Tools'
+}, { immediate: true })
 
 const currentRules = computed(() => {
   const entry = rules[selectedGame.value] || rules.menu
@@ -149,8 +205,14 @@ const onKeydown = (e) => {
   if (e.key === 'Escape') showRules.value = false
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  window.addEventListener('popstate', onPopState)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('popstate', onPopState)
+})
 
 const toggleLanguage = () => {
   currentLang.value = currentLang.value === 'EN' ? 'TR' : 'EN'
@@ -202,52 +264,52 @@ const toggleLanguage = () => {
         v-if="!selectedGame"
         :games="filteredGames"
         :t="t"
-        @select-game="selectedGame = $event"
+        @select-game="openGame"
       />
 
       <QuizRaceGame
         v-else-if="selectedGame === 'quiz-race'"
         :t="t"
         :initialCode="inviteCodeFor('quiz-race')"
-        @go-back="selectedGame = null"
+        @go-back="closeGame"
       />
 
       <NumberGuessingGame
         v-else-if="selectedGame === 'number-guess'"
         :t="t"
-        @go-back="selectedGame = null"
+        @go-back="closeGame"
       />
 
       <!-- Wordle is under development: re-enable this block to restore the game
       <WordleGame
         v-else-if="selectedGame === 'wordle'"
         :t="t"
-        @go-back="selectedGame = null"
+        @go-back="closeGame"
       />
       -->
 
       <BottleSpinGame
         v-else-if="selectedGame === 'bottle-spin'"
         :t="t"
-        @go-back="selectedGame = null"
+        @go-back="closeGame"
       />
 
       <CasusKimGame
         v-else-if="selectedGame === 'casus-kim'"
         :t="t"
         :initialCode="inviteCodeFor('casus-kim')"
-        @go-back="selectedGame = null"
+        @go-back="closeGame"
       />
 
       <TabuGame
         v-else-if="selectedGame === 'tabu'"
         :t="t"
         :initialCode="inviteCodeFor('tabu')"
-        @go-back="selectedGame = null"
+        @go-back="closeGame"
       />
 
       <!-- Placeholder for other games -->
-      <TermWindow v-else class="max-w-lg" :title="selectedGameTitle" :backLabel="t.back" @back="selectedGame = null">
+      <TermWindow v-else class="max-w-lg" :title="selectedGameTitle" :backLabel="t.back" @back="closeGame">
         <template #status>
           <span class="term-chip">beta</span>
         </template>

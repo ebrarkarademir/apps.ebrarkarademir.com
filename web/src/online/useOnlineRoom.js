@@ -118,7 +118,7 @@ export function useOnlineRoom (options) {
   })
   const me = computed(() => view.value?.players.find(p => p.id === myId) || null)
   const isHost = computed(() => role.value === 'host')
-  const shareLink = computed(() => `${window.location.origin}/?join=${roomCode.value}&game=${game}`)
+  const shareLink = computed(() => `${window.location.origin}/${game}?join=${roomCode.value}`)
 
   const peerId = (code) => `${PEER_PREFIX}${game}-${code}`
   const hostTopic = (code) => relayTopic(game, code, 'host')
