@@ -156,6 +156,10 @@ const selectedGame = ref(initialRoute.game)
 const inviteCodeFor = (gameId) => (gameId === inviteGame ? inviteCode : '')
 const showRules = ref(false)
 
+// The dev Firebase site (apps-76619-dev.web.app) and the local dev server get a DEV mark
+// so they can't be mistaken for the live site
+const isDevSite = import.meta.env.DEV || window.location.hostname.includes('-dev.')
+
 // Menu card turned over to its info side
 const flippedGame = ref(null)
 
@@ -233,7 +237,8 @@ const selectCategory = (key) => navigate(categoryPath(key))
 
 // Tab title follows the page
 watch([selectedGame, selectedGameTitle], () => {
-  document.title = selectedGame.value ? `${selectedGameTitle.value} | Games & Tools` : 'Games & Tools'
+  const title = selectedGame.value ? `${selectedGameTitle.value} | Games & Tools` : 'Games & Tools'
+  document.title = isDevSite ? `[DEV] ${title}` : title
 }, { immediate: true })
 
 const currentRules = computed(() => {
@@ -295,6 +300,8 @@ const toggleLanguage = () => {
   <div class="crt min-h-screen bg-black text-term font-mono">
     <nav :aria-label="t.navLabel" class="sticky top-0 z-30 bg-black/90 border-b border-term-low">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap md:flex-nowrap items-center gap-x-6 gap-y-3">
+        <span v-if="isDevSite" class="order-1 -mr-3 term-inverse px-1.5 text-xs font-bold tracking-widest" title="Development site">DEV</span>
+
         <!-- Shell prompt -->
         <p class="order-1 flex-1 basis-0 md:flex-none md:basis-auto min-w-0 truncate text-sm font-semibold">
           <span aria-hidden="true"><span class="term-muted">guest@apps</span>:</span>
