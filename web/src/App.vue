@@ -8,8 +8,6 @@ import NumberGuessingGame from './games/NumberGuessingGame.vue'
 import BottleSpinGame from './games/BottleSpinGame.vue'
 import CasusKimGame from './games/CasusKimGame.vue'
 import TabuGame from './games/TabuGame.vue'
-import CvAnalyzerGame from './games/CvAnalyzerGame.vue'
-import InstaCommentPickerGame from './games/InstaCommentPickerGame.vue'
 import QuizRaceGame from './games/QuizRaceGame.vue'
 import { translations } from './translations'
 import { rules, rulesLabels } from './rules'
@@ -75,20 +73,6 @@ const games = computed(() => [
     icon: '🎯'
   },
   {
-    id: 'insta-picker',
-    category: 'tools',
-    title: t.value.instaMenuTitle,
-    description: t.value.instaMenuDesc,
-    icon: '📷'
-  },
-  {
-    id: 'cv-analyzer',
-    category: 'tools',
-    title: t.value.cvMenuTitle,
-    description: t.value.cvMenuDesc,
-    icon: '📄'
-  },
-  {
     id: 'coming-soon-1',
     category: 'solo',
     title: t.value.memoryMatchTitle,
@@ -117,8 +101,7 @@ const selectedCategory = ref('all')
 const categories = computed(() => [
   { key: 'all', label: t.value.navAll, icon: '🏠' },
   { key: 'party', label: t.value.navParty, icon: '🎉' },
-  { key: 'solo', label: t.value.navSolo, icon: '🧩' },
-  { key: 'tools', label: t.value.navTools, icon: '🛠️' }
+  { key: 'solo', label: t.value.navSolo, icon: '🧩' }
 ])
 
 // Inside a game, highlight the category that game belongs to
@@ -281,20 +264,6 @@ const toggleLanguage = () => {
 
       <TabuGame
         v-else-if="selectedGame === 'tabu'"
-        :isDarkMode="isDarkMode"
-        :t="t"
-        @go-back="selectedGame = null"
-      />
-
-      <InstaCommentPickerGame
-        v-else-if="selectedGame === 'insta-picker'"
-        :isDarkMode="isDarkMode"
-        :t="t"
-        @go-back="selectedGame = null"
-      />
-
-      <CvAnalyzerGame
-        v-else-if="selectedGame === 'cv-analyzer'"
         :isDarkMode="isDarkMode"
         :t="t"
         @go-back="selectedGame = null"

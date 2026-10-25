@@ -217,68 +217,6 @@ export const rules = {
       ]
     }
   },
-  'insta-picker': {
-    EN: {
-      icon: '📷',
-      title: 'Instagram Comment Picker',
-      players: 'Giveaway tool',
-      goal: 'Pick fair, random winners from an Instagram post’s comments.',
-      steps: [
-        'Optionally paste the post URL to preview it.',
-        'Paste the comments or upload a .txt, .csv or .json file.',
-        'Filter by keyword or regex, and keep one entry per user if you like.',
-        'Choose 1–5 winners and draw them.'
-      ],
-      tips: [
-        'CSV format: username,comment — one comment per line.'
-      ]
-    },
-    TR: {
-      icon: '📷',
-      title: 'Instagram Yorum Çekilişi',
-      players: 'Çekiliş aracı',
-      goal: 'Bir Instagram gönderisinin yorumlarından adil ve rastgele kazananlar seç.',
-      steps: [
-        'İstersen önizleme için gönderi bağlantısını yapıştır.',
-        'Yorumları yapıştır veya .txt, .csv ya da .json dosyası yükle.',
-        'Anahtar kelime veya regex ile filtrele; istersen kullanıcı başına tek katılım bırak.',
-        '1–5 kazanan seç ve çekilişi yap.'
-      ],
-      tips: [
-        'CSV biçimi: kullanıcıadı,yorum — her satıra bir yorum.'
-      ]
-    }
-  },
-  'cv-analyzer': {
-    EN: {
-      icon: '📄',
-      title: 'CV Analyzer',
-      players: 'Career tool',
-      goal: 'Get a quick check of how well your CV is structured.',
-      steps: [
-        'Upload your CV as a .txt file or paste its text.',
-        'The analyzer checks sections, contact details, bullet points and dates.',
-        'Review your score and the suggested improvements.'
-      ],
-      tips: [
-        'This is a demo analysis — use it as a starting point, not a final verdict.'
-      ]
-    },
-    TR: {
-      icon: '📄',
-      title: 'CV Analizörü',
-      players: 'Kariyer aracı',
-      goal: 'CV’nin ne kadar iyi yapılandırıldığını hızlıca kontrol et.',
-      steps: [
-        'CV’ni .txt dosyası olarak yükle veya metnini yapıştır.',
-        'Analizör bölümleri, iletişim bilgilerini, madde işaretlerini ve tarihleri kontrol eder.',
-        'Puanını ve önerilen iyileştirmeleri incele.'
-      ],
-      tips: [
-        'Bu bir demo analizdir — kesin bir değerlendirme değil, başlangıç noktası olarak kullan.'
-      ]
-    }
-  },
   'quiz-race': {
     EN: {
       icon: '⚡',
