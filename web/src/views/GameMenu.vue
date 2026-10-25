@@ -21,13 +21,6 @@ defineEmits(['select-game'])
 
 <template>
   <div class="max-w-6xl mx-auto">
-    <h1 class="text-3xl sm:text-4xl font-medium text-center mb-4">
-      {{ t.menuTitle }}
-    </h1>
-    <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'"
-       class="text-center text-lg mb-12 leading-relaxed">
-      {{ t.menuSubtitle }}
-    </p>
     
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
       <GameCard

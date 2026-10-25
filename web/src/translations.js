@@ -19,6 +19,11 @@ export const translations = {
     // Menu translations
     menuTitle: 'Game Collection test',
     menuSubtitle: 'Choose a game to begin your adventure',
+    navLabel: 'App categories',
+    navAll: 'All',
+    navParty: 'Party Games',
+    navSolo: 'Solo Games',
+    navTools: 'Tools',
     
     // Number Guessing Game
     numberGuessTitle: 'Number Guessing Game',
@@ -286,6 +291,11 @@ export const translations = {
     // Menu translations
     menuTitle: 'Oyun Koleksiyonu',
     menuSubtitle: 'Macerana başlamak için bir oyun seç',
+    navLabel: 'Uygulama kategorileri',
+    navAll: 'Tümü',
+    navParty: 'Parti Oyunları',
+    navSolo: 'Tek Kişilik',
+    navTools: 'Araçlar',
     
     // Number Guessing Game
     numberGuessTitle: 'Sayı Tahmin Oyunu',

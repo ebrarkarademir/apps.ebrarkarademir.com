@@ -33,54 +33,63 @@ watch(isDarkMode, (newMode) => {
 const games = computed(() => [
   {
     id: 'number-guess',
+    category: 'solo',
     title: t.value.numberGuessTitle,
     description: t.value.numberGuessDesc,
     icon: '🎲'
   },
   {
     id: 'wordle',
+    category: 'solo',
     title: t.value.wordleTitle,
     description: t.value.wordleDesc,
     icon: '📝'
   },
   {
     id: 'bottle-spin',
+    category: 'party',
     title: t.value.bottleTitle,
     description: t.value.bottleDesc,
     icon: '🍾'
   },
   {
     id: 'casus-kim',
+    category: 'party',
     title: t.value.casusTitle,
     description: t.value.casusDesc,
     icon: '🕵️'
   },
   {
     id: 'tabu',
+    category: 'party',
     title: t.value.tabuTitle,
     description: t.value.tabuDesc,
     icon: '🎯'
   },
   {
     id: 'insta-picker',
+    category: 'tools',
     title: t.value.instaMenuTitle,
     description: t.value.instaMenuDesc,
     icon: '📷'
   },
   {
     id: 'cv-analyzer',
+    category: 'tools',
     title: t.value.cvMenuTitle,
     description: t.value.cvMenuDesc,
     icon: '📄'
   },
   {
     id: 'coming-soon-1',
+    category: 'solo',
     title: t.value.memoryMatchTitle,
     description: t.value.comingSoonDesc,
     icon: '🎮'
   },
   {
     id: 'coming-soon-2',
+    category: 'solo',
     title: t.value.wordPuzzleTitle,
     description: t.value.comingSoonDesc,
     icon: '📚'
@@ -89,6 +98,34 @@ const games = computed(() => [
 
 const selectedGame = ref(null)
 const showRules = ref(false)
+
+// Nav bar categories
+const selectedCategory = ref('all')
+
+const categories = computed(() => [
+  { key: 'all', label: t.value.navAll, icon: '🏠' },
+  { key: 'party', label: t.value.navParty, icon: '🎉' },
+  { key: 'solo', label: t.value.navSolo, icon: '🧩' },
+  { key: 'tools', label: t.value.navTools, icon: '🛠️' }
+])
+
+// Inside a game, highlight the category that game belongs to
+const activeCategory = computed(() => {
+  if (!selectedGame.value) return selectedCategory.value
+  return games.value.find(game => game.id === selectedGame.value)?.category ?? selectedCategory.value
+})
+
+const filteredGames = computed(() =>
+  selectedCategory.value === 'all'
+    ? games.value
+    : games.value.filter(game => game.category === selectedCategory.value)
+)
+
+const selectCategory = (key) => {
+  selectedCategory.value = key
+  selectedGame.value = null
+  window.scrollTo({ top: 0 })
+}
 
 const currentRules = computed(() => {
   const entry = rules[selectedGame.value] || rules.menu
@@ -125,35 +162,66 @@ const toggleLanguage = () => {
       ? 'bg-gray-900 text-white' 
       : 'bg-gray-50 text-gray-900'
   ]">
-    <div class="fixed top-4 right-4 flex items-center gap-2 z-30">
-      <button
-        @click="showRules = true"
-        :class="[
-          'w-12 h-12 rounded-full shadow-lg transition-all duration-50 backdrop-blur-sm flex items-center justify-center font-bold text-lg',
-          isDarkMode
-            ? 'bg-gray-800/90 text-blue-400 hover:bg-gray-700/90'
-            : 'bg-white/90 text-gray-800 hover:bg-gray-50/90'
-        ]"
-        :aria-label="t.gameRules"
-        :title="t.gameRules"
-      >
-        ?
-      </button>
-      <LanguageToggle
-        :currentLang="currentLang"
-        :isDarkMode="isDarkMode"
-        @toggle="toggleLanguage"
-      />
-      <ThemeToggle 
-        :isDarkMode="isDarkMode"
-        @toggle="toggleTheme"
-      />
-    </div>
+    <nav
+      :aria-label="t.navLabel"
+      :class="[
+        'sticky top-0 z-30 backdrop-blur-md border-b transition-colors duration-50',
+        isDarkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-gray-50/80 border-gray-200'
+      ]"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap md:flex-nowrap items-center gap-3">
+        <!-- Category items: own scrollable row on phones, left side on desktop -->
+        <ul class="order-2 md:order-1 w-full md:w-auto md:flex-1 flex gap-2 overflow-x-auto no-scrollbar">
+          <li v-for="category in categories" :key="category.key" class="shrink-0">
+            <button
+              @click="selectCategory(category.key)"
+              :aria-current="activeCategory === category.key ? 'page' : undefined"
+              :class="[
+                'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-50',
+                activeCategory === category.key
+                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-md'
+                  : isDarkMode
+                    ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                    : 'text-gray-600 hover:bg-white hover:text-gray-900'
+              ]"
+            >
+              <span aria-hidden="true">{{ category.icon }}</span>
+              <span>{{ category.label }}</span>
+            </button>
+          </li>
+        </ul>
+
+        <div class="order-1 md:order-2 ml-auto flex items-center gap-2">
+          <button
+            @click="showRules = true"
+            :class="[
+              'w-12 h-12 rounded-full shadow-lg transition-all duration-50 backdrop-blur-sm flex items-center justify-center font-bold text-lg',
+              isDarkMode
+                ? 'bg-gray-800/90 text-blue-400 hover:bg-gray-700/90'
+                : 'bg-white/90 text-gray-800 hover:bg-gray-50/90'
+            ]"
+            :aria-label="t.gameRules"
+            :title="t.gameRules"
+          >
+            ?
+          </button>
+          <LanguageToggle
+            :currentLang="currentLang"
+            :isDarkMode="isDarkMode"
+            @toggle="toggleLanguage"
+          />
+          <ThemeToggle
+            :isDarkMode="isDarkMode"
+            @toggle="toggleTheme"
+          />
+        </div>
+      </div>
+    </nav>
 
     <div class="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto">
       <GameMenu
         v-if="!selectedGame"
-        :games="games"
+        :games="filteredGames"
         :isDarkMode="isDarkMode"
         :t="t"
         @select-game="selectedGame = $event"
@@ -480,6 +548,14 @@ button, input {
 .rules-enter-from .rules-panel,
 .rules-leave-to .rules-panel {
   transform: translateY(16px) scale(0.98);
+}
+
+/* Horizontally scrollable nav items without a visible scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Remove tap highlight on mobile */
