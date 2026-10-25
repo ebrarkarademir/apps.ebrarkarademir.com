@@ -16,7 +16,7 @@ const emit = defineEmits(['go-back'])
 
 // Game settings
 const settings = ref({
-  language: 'EN',
+  language: props.t.langCode === 'TR' ? 'TR' : 'EN',
   wordLength: 5,
 })
 
@@ -44,7 +44,8 @@ const gameWon = ref(false)
 const shake = ref(false)
 const flip = ref(false)
 
-const t = computed(() => translations[settings.value.language])
+// UI text follows the app language; settings.language only picks the word list
+const t = computed(() => props.t)
 
 const availableWordLengths = computed(() => {
   return Object.keys(wordLists[settings.value.language]).map(Number)

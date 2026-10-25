@@ -145,35 +145,39 @@ export const rules = {
     EN: {
       icon: '🕵️',
       title: 'Who Is the Spy?',
-      players: '3+ players',
-      duration: '~5 min',
-      goal: 'Everyone knows the secret word except the spy. Find the spy before time runs out.',
+      players: '3–12 players',
+      duration: '5–10 min',
+      goal: 'Everyone knows the secret word except the spy. Civilians must find the spy; the spy must blend in or guess the word.',
       steps: [
-        'Add at least 3 players and choose a theme.',
-        'Pass the phone around — each player privately sees their role and the word.',
-        'Discuss for 2 minutes, asking each other questions about the word.',
-        'Vote for who you think the spy is.'
+        'Add players, pick a theme (or Random), the discussion time and 1–2 spies.',
+        'Pass the phone around — each player taps the card to see their role, then hides it before passing.',
+        'Discuss: take turns asking each other questions about the word. The timer can be paused or extended.',
+        'Everyone votes secretly for the player they suspect. A tie leads to one runoff vote.',
+        'If the spy is caught, they get one last chance to guess the word and steal the win.'
       ],
       tips: [
-        'Players: give hints vague enough that the spy can’t guess the word.',
-        'Spy: listen carefully and blend in — you win if you aren’t caught.'
+        'Civilians: be specific enough to prove you know the word, but vague enough not to give it away.',
+        'Spy: listen closely, keep answers short, and accuse someone else first.',
+        'Scoring: civilians +1 on a group win, spy +2 on a spy win, +3 for guessing the word.'
       ]
     },
     TR: {
       icon: '🕵️',
       title: 'Casus Kim?',
-      players: '3+ oyuncu',
-      duration: '~5 dk',
-      goal: 'Casus hariç herkes gizli kelimeyi bilir. Süre bitmeden casusu bulun.',
+      players: '3–12 oyuncu',
+      duration: '5–10 dk',
+      goal: 'Casus hariç herkes gizli kelimeyi bilir. Siviller casusu bulmalı; casus ise aralarına karışmalı ya da kelimeyi tahmin etmeli.',
       steps: [
-        'En az 3 oyuncu ekle ve bir tema seç.',
-        'Telefonu sırayla dolaştırın — herkes rolünü ve kelimeyi gizlice görür.',
-        '2 dakika boyunca kelimeyle ilgili birbirinize sorular sorun.',
-        'Casus olduğunu düşündüğünüz kişiye oy verin.'
+        'Oyuncuları ekle; bir tema (veya Rastgele), tartışma süresi ve 1–2 casus seç.',
+        'Telefonu dolaştırın — herkes rolünü görmek için karta dokunur, vermeden önce gizler.',
+        'Tartışın: sırayla kelimeyle ilgili birbirinize sorular sorun. Süre duraklatılabilir veya uzatılabilir.',
+        'Herkes şüphelendiği kişiye gizlice oy verir. Beraberlikte bir kez ikinci tur yapılır.',
+        'Casus yakalanırsa kelimeyi tahmin edip kazanmak için son bir şansı olur.'
       ],
       tips: [
-        'Oyuncular: casusun kelimeyi tahmin edemeyeceği kadar belirsiz ipuçları verin.',
-        'Casus: dikkatle dinle ve aralarına karış — yakalanmazsan kazanırsın.'
+        'Siviller: kelimeyi bildiğinizi gösterecek kadar net, ama ele vermeyecek kadar belirsiz olun.',
+        'Casus: dikkatle dinle, kısa cevap ver ve önce sen başkasını suçla.',
+        'Puanlama: grup kazanırsa siviller +1, casus kazanırsa +2, kelimeyi bilirse +3.'
       ]
     }
   },

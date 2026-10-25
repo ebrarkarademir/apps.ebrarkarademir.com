@@ -75,13 +75,13 @@ const games = computed(() => [
   },
   {
     id: 'coming-soon-1',
-    title: t.value.memoryMatchTitle || 'Memory Match',
+    title: t.value.memoryMatchTitle,
     description: t.value.comingSoonDesc,
     icon: '🎮'
   },
   {
     id: 'coming-soon-2',
-    title: t.value.wordPuzzleTitle || 'Word Puzzle',
+    title: t.value.wordPuzzleTitle,
     description: t.value.comingSoonDesc,
     icon: '📚'
   }
@@ -134,8 +134,8 @@ const toggleLanguage = () => {
             ? 'bg-gray-800/90 text-blue-400 hover:bg-gray-700/90'
             : 'bg-white/90 text-gray-800 hover:bg-gray-50/90'
         ]"
-        aria-label="Game rules"
-        title="Game rules"
+        :aria-label="t.gameRules"
+        :title="t.gameRules"
       >
         ?
       </button>
@@ -283,9 +283,9 @@ const toggleLanguage = () => {
                 : 'bg-gray-50 border-gray-200 text-gray-700'
             ]"
           >
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] mb-2 opacity-80">Status</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] mb-2 opacity-80">{{ t.comingSoonStatus }}</p>
             <p class="text-sm leading-relaxed">
-              This game is being designed and polished for a better experience. Check back soon for the full release.
+              {{ t.comingSoonStatusText }}
             </p>
           </div>
         </div>

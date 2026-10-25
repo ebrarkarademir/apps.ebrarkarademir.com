@@ -24,7 +24,7 @@ defineEmits(['toggle'])
       :src="currentLang === 'TR' 
         ? '/images/tr-lang-icon.png'
         : '/images/en-lang-icon.png'"
-      :alt="currentLang === 'TR' ? 'Turkish' : 'English'"
+      :alt="currentLang === 'TR' ? 'Türkçe' : 'English'"
       class="w-6 h-6"
     />
   </button>

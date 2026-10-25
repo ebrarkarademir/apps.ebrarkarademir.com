@@ -43,7 +43,7 @@ async function renderEmbed() {
   embedError.value = ''
   const raw = (postUrl.value || '').trim()
   if (!isValidInstagramUrl(raw)) {
-    embedError.value = props.t.instaInvalidUrl
+    embedError.value = 'instaInvalidUrl'
     return
   }
   // Ensure trailing slash for embed permalink
@@ -54,7 +54,7 @@ async function renderEmbed() {
     try {
       window.instgrm.Embeds.process()
     } catch (e) {
-      embedError.value = props.t.instaPreviewError
+      embedError.value = 'instaPreviewError'
     }
   }
 }
@@ -153,7 +153,7 @@ async function onFileChange(e) {
     commentsRaw.value = text
   } catch (err) {
     console.error(err)
-    fileError.value = props.t.instaFileReadError
+    fileError.value = 'instaFileReadError'
   }
 }
 
@@ -170,7 +170,7 @@ const activeRegex = computed(() => {
     regexError.value = ''
     return new RegExp(regexInput.value.trim(), 'i')
   } catch (e) {
-    regexError.value = props.t.instaInvalidRegex
+    regexError.value = 'instaInvalidRegex'
     return null
   }
 })
@@ -277,7 +277,7 @@ function resetAll() {
             ]"
           >{{ t.instaLoadPreview }}</button>
         </div>
-        <p v-if="embedError" class="text-sm mt-2 text-red-500">{{ embedError }}</p>
+        <p v-if="embedError" class="text-sm mt-2 text-red-500">{{ t[embedError] }}</p>
 
         <div class="mt-4">
           <div v-if="isValidInstagramUrl(postUrl)" class="overflow-hidden rounded-xl">
@@ -306,7 +306,7 @@ function resetAll() {
             ]"
           />
           <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-sm mt-2">{{ t.instaFileHint }}</p>
-          <p v-if="fileError" class="text-sm mt-2 text-red-500">{{ fileError }}</p>
+          <p v-if="fileError" class="text-sm mt-2 text-red-500">{{ t[fileError] }}</p>
         </div>
 
         <div class="mt-6">
@@ -361,7 +361,7 @@ function resetAll() {
                 'w-full rounded-xl p-3 focus:outline-none focus:ring-2',
                 isDarkMode ? 'bg-gray-900/40 text-gray-100 placeholder:text-gray-500 focus:ring-indigo-500/60' : 'bg-gray-50 text-gray-800 placeholder:text-gray-400 focus:ring-indigo-500/40'
               ]"/>
-              <p v-if="regexError" class="text-xs mt-1 text-red-500">{{ regexError }}</p>
+              <p v-if="regexError" class="text-xs mt-1 text-red-500">{{ t[regexError] }}</p>
             </div>
             <div class="flex items-center gap-2">
               <input id="uniq" type="checkbox" v-model="uniqueUsers" />
@@ -396,7 +396,7 @@ function resetAll() {
                 isDarkMode ? 'bg-indigo-900/40 text-indigo-100' : 'bg-indigo-50 text-indigo-800 border border-indigo-100'
               ]">
                 <div class="text-sm opacity-80">#{{ i+1 }}</div>
-                <div class="font-semibold">@{{ w.username }}</div>
+                <div class="font-semibold">@{{ w.username === 'anonymous' ? t.instaAnonymous : w.username }}</div>
                 <div class="text-sm mt-1">{{ w.comment }}</div>
               </div>
             </div>

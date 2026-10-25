@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   isDarkMode: {
@@ -17,7 +17,10 @@ const emit = defineEmits(['go-back'])
 const targetNumber = ref(Math.floor(Math.random() * 100) + 1)
 const currentGuess = ref('')
 const attempts = ref(0)
-const message = ref('')
+const messageKey = ref('') // congrats, tooHigh or tooLow; translated at render so it follows the language
+const message = computed(() =>
+  messageKey.value ? props.t[messageKey.value].replace('{attempts}', attempts.value) : ''
+)
 const gameWon = ref(false)
 
 const checkGuess = () => {
@@ -31,11 +34,11 @@ const checkGuess = () => {
   
   if (guess === targetNumber.value) {
     gameWon.value = true
-    message.value = props.t.congrats.replace('{attempts}', attempts.value)
+    messageKey.value = 'congrats'
   } else if (guess > targetNumber.value) {
-    message.value = props.t.tooHigh
+    messageKey.value = 'tooHigh'
   } else {
-    message.value = props.t.tooLow
+    messageKey.value = 'tooLow'
   }
   
   currentGuess.value = ''
@@ -45,7 +48,7 @@ const newGame = () => {
   targetNumber.value = Math.floor(Math.random() * 100) + 1
   currentGuess.value = ''
   attempts.value = 0
-  message.value = ''
+  messageKey.value = ''
   gameWon.value = false
 }
 </script>

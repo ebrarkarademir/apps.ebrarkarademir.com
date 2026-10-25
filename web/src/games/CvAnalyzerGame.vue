@@ -36,7 +36,7 @@ async function onFileChange(e) {
   const ext = f.name.split('.').pop()?.toLowerCase()
   if (ext !== 'txt') {
     // Keep it simple for the demo: only accept .txt for parsing.
-    error.value = props.t.cvOnlyTxt
+    error.value = 'cvOnlyTxt'
     return
   }
 
@@ -45,7 +45,7 @@ async function onFileChange(e) {
     extractedText.value = text
   } catch (err) {
     console.error(err)
-    error.value = props.t.cvReadError
+    error.value = 'cvReadError'
   }
 }
 
@@ -71,12 +71,12 @@ function scoreAts(text) {
 function detectSections(text) {
   const sections = []
   const addIf = (key, regex) => { if (regex.test(text)) sections.push(key) }
-  addIf(props.t.cvSectionSummary, /summary|objective|profile/i)
-  addIf(props.t.cvSectionExperience, /experience|work|employment/i)
-  addIf(props.t.cvSectionEducation, /education|bachelor|master|phd|university|college/i)
-  addIf(props.t.cvSectionSkills, /skills|technologies|stack|competencies/i)
-  addIf(props.t.cvSectionProjects, /projects?|portfolio/i)
-  addIf(props.t.cvSectionLanguages, /languages|english|turkish|german|french|spanish/i)
+  addIf('cvSectionSummary', /summary|objective|profile/i)
+  addIf('cvSectionExperience', /experience|work|employment/i)
+  addIf('cvSectionEducation', /education|bachelor|master|phd|university|college/i)
+  addIf('cvSectionSkills', /skills|technologies|stack|competencies/i)
+  addIf('cvSectionProjects', /projects?|portfolio/i)
+  addIf('cvSectionLanguages', /languages|english|turkish|german|french|spanish/i)
   return sections
 }
 
@@ -89,13 +89,13 @@ function guessSeniority(text) {
     junior: /(learned|assisted|intern|entry)/i
   }
   if (years !== null) {
-    if (years >= 7) return 'Senior'
-    if (years >= 3) return 'Mid-level'
-    return 'Junior'
+    if (years >= 7) return 'cvSenioritySenior'
+    if (years >= 3) return 'cvSeniorityMid'
+    return 'cvSeniorityJunior'
   }
-  if (keywords.senior.test(text)) return 'Senior'
-  if (keywords.mid.test(text)) return 'Mid-level'
-  return 'Junior'
+  if (keywords.senior.test(text)) return 'cvSenioritySenior'
+  if (keywords.mid.test(text)) return 'cvSeniorityMid'
+  return 'cvSeniorityJunior'
 }
 
 function extractSkills(text) {
@@ -121,18 +121,18 @@ function extractSkills(text) {
 
 function buildSuggestions(text, sections, checks) {
   const s = []
-  if (!/(summary|objective|profile)/i.test(text)) s.push(props.t.cvSugAddSummary)
-  if (!/(projects?)/i.test(text)) s.push(props.t.cvSugAddProjects)
-  if (!/(linkedin|github)/i.test(text)) s.push(props.t.cvSugAddLinks)
-  if (!/\n\s*[-•▪·]/.test(text)) s.push(props.t.cvSugUseBullets)
-  if (!checks.lengthOk) s.push(props.t.cvSugLength)
+  if (!/(summary|objective|profile)/i.test(text)) s.push('cvSugAddSummary')
+  if (!/(projects?)/i.test(text)) s.push('cvSugAddProjects')
+  if (!/(linkedin|github)/i.test(text)) s.push('cvSugAddLinks')
+  if (!/\n\s*[-•▪·]/.test(text)) s.push('cvSugUseBullets')
+  if (!checks.lengthOk) s.push('cvSugLength')
   return s
 }
 
 async function analyze() {
   const text = getTextToAnalyze()
   if (!text) {
-    error.value = props.t.cvNoText
+    error.value = 'cvNoText'
     return
   }
   analyzing.value = true
@@ -145,13 +145,13 @@ async function analyze() {
     const seniority = guessSeniority(text)
     const skills = extractSkills(text)
     const strengths = []
-    if (sections.includes(props.t.cvSectionExperience)) strengths.push(props.t.cvStrExp)
-    if (skills.length >= 5) strengths.push(props.t.cvStrSkills)
-    if (/(impact|reduced|increased|optimized|improved)/i.test(text)) strengths.push(props.t.cvStrImpact)
+    if (sections.includes('cvSectionExperience')) strengths.push('cvStrExp')
+    if (skills.length >= 5) strengths.push('cvStrSkills')
+    if (/(impact|reduced|increased|optimized|improved)/i.test(text)) strengths.push('cvStrImpact')
 
     const risks = []
-    if (!/(achieved|improved|delivered|launched)/i.test(text)) risks.push(props.t.cvRiskResults)
-    if (!/(email|@|phone|linkedin|github)/i.test(text)) risks.push(props.t.cvRiskContact)
+    if (!/(achieved|improved|delivered|launched)/i.test(text)) risks.push('cvRiskResults')
+    if (!/(email|@|phone|linkedin|github)/i.test(text)) risks.push('cvRiskContact')
 
     const suggestions = buildSuggestions(text, sections, ats.checks)
 
@@ -169,7 +169,7 @@ async function analyze() {
     }
   } catch (e) {
     console.error(e)
-    error.value = props.t.cvAnalyzeError
+    error.value = 'cvAnalyzeError'
   } finally {
     analyzing.value = false
   }
@@ -255,7 +255,7 @@ async function analyze() {
           </button>
         </div>
 
-        <p v-if="error" class="mt-4 text-sm text-red-500">{{ error }}</p>
+        <p v-if="error" class="mt-4 text-sm text-red-500">{{ t[error] }}</p>
       </div>
 
       <!-- Results side -->
@@ -280,7 +280,7 @@ async function analyze() {
               </div>
               <div>
                 <div class="text-gray-500" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ t.cvSeniority }}</div>
-                <div class="font-semibold">{{ analysis.seniority }}</div>
+                <div class="font-semibold">{{ t[analysis.seniority] }}</div>
               </div>
               <div>
                 <div class="text-gray-500" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ t.cvAtsScore }}</div>
@@ -298,7 +298,7 @@ async function analyze() {
                     'px-2 py-1 rounded-lg text-xs',
                     isDarkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800 border border-gray-200'
                   ]"
-                >{{ s }}</span>
+                >{{ t[s] }}</span>
                 <span v-if="analysis.sections.length === 0" class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ t.cvNoSections }}</span>
               </div>
             </div>
@@ -320,14 +320,14 @@ async function analyze() {
               <div>
                 <h3 class="font-medium mb-1">{{ t.cvStrengths }}</h3>
                 <ul class="list-disc pl-5 text-sm" :class="isDarkMode ? 'text-gray-200' : 'text-gray-700'">
-                  <li v-for="s in analysis.strengths" :key="s">{{ s }}</li>
+                  <li v-for="s in analysis.strengths" :key="s">{{ t[s] }}</li>
                   <li v-if="analysis.strengths.length === 0" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ t.cvNoStrengths }}</li>
                 </ul>
               </div>
               <div>
                 <h3 class="font-medium mb-1">{{ t.cvRisks }}</h3>
                 <ul class="list-disc pl-5 text-sm" :class="isDarkMode ? 'text-gray-200' : 'text-gray-700'">
-                  <li v-for="r in analysis.risks" :key="r">{{ r }}</li>
+                  <li v-for="r in analysis.risks" :key="r">{{ t[r] }}</li>
                   <li v-if="analysis.risks.length === 0" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ t.cvNoRisks }}</li>
                 </ul>
               </div>
@@ -336,7 +336,7 @@ async function analyze() {
             <div>
               <h3 class="font-medium mb-1">{{ t.cvSuggestions }}</h3>
               <ul class="list-disc pl-5 text-sm" :class="isDarkMode ? 'text-gray-200' : 'text-gray-700'">
-                <li v-for="sug in analysis.suggestions" :key="sug">{{ sug }}</li>
+                <li v-for="sug in analysis.suggestions" :key="sug">{{ t[sug] }}</li>
                 <li v-if="analysis.suggestions.length === 0" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ t.cvNoSuggestions }}</li>
               </ul>
             </div>
