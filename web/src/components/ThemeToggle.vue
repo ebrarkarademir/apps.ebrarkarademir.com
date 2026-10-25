@@ -7,15 +7,16 @@ defineEmits(['toggle'])
 </script>
 
 <template>
-  <button 
+  <button
     @click="$emit('toggle')"
+    :aria-label="isDarkMode ? 'Light mode' : 'Dark mode'"
     :class="[
-  'p-3 w-12 h-12 rounded-full shadow-lg transition-all duration-50 backdrop-blur-sm flex items-center justify-center',
-      isDarkMode 
-        ? 'bg-gray-800/90 text-yellow-400 hover:bg-gray-700/90' 
-        : 'bg-white/90 text-gray-800 hover:bg-gray-50/90'
+      'w-10 h-10 rounded-lg border transition-colors duration-150 flex items-center justify-center',
+      isDarkMode
+        ? 'bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-gray-700'
+        : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
     ]"
   >
-    <span class="text-xl">{{ isDarkMode ? '☀️' : '🌙' }}</span>
+    <span class="text-base">{{ isDarkMode ? '☀️' : '🌙' }}</span>
   </button>
-</template> 
+</template>

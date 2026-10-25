@@ -10,6 +10,7 @@ import CasusKimGame from './games/CasusKimGame.vue'
 import TabuGame from './games/TabuGame.vue'
 import CvAnalyzerGame from './games/CvAnalyzerGame.vue'
 import InstaCommentPickerGame from './games/InstaCommentPickerGame.vue'
+import QuizRaceGame from './games/QuizRaceGame.vue'
 import { translations } from './translations'
 import { rules, rulesLabels } from './rules'
 
@@ -31,6 +32,13 @@ watch(isDarkMode, (newMode) => {
 })
 
 const games = computed(() => [
+  {
+    id: 'quiz-race',
+    category: 'party',
+    title: t.value.quizTitle,
+    description: t.value.quizDesc,
+    icon: '⚡'
+  },
   {
     id: 'number-guess',
     category: 'solo',
@@ -96,7 +104,11 @@ const games = computed(() => [
   }
 ])
 
-const selectedGame = ref(null)
+// A shared quiz link (?quiz=CODE) opens the quiz straight away with the code filled in
+const quizInviteCode = new URLSearchParams(window.location.search).get('quiz') || ''
+if (quizInviteCode) window.history.replaceState(null, '', window.location.pathname)
+
+const selectedGame = ref(quizInviteCode ? 'quiz-race' : null)
 const showRules = ref(false)
 
 // Nav bar categories
@@ -157,32 +169,34 @@ const toggleLanguage = () => {
 
 <template>
   <div :class="[
-    'min-h-screen transition-colors duration-50 font-sans',
-    isDarkMode 
-      ? 'bg-gray-900 text-white' 
+    'min-h-screen transition-colors duration-150 font-sans antialiased',
+    isDarkMode
+      ? 'bg-gray-950 text-gray-100'
       : 'bg-gray-50 text-gray-900'
   ]">
     <nav
       :aria-label="t.navLabel"
       :class="[
         'sticky top-0 z-30 backdrop-blur-md border-b transition-colors duration-50',
-        isDarkMode ? 'bg-gray-900/80 border-gray-800' : 'bg-gray-50/80 border-gray-200'
+        isDarkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'
       ]"
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap md:flex-nowrap items-center gap-3">
         <!-- Category items: own scrollable row on phones, left side on desktop -->
-        <ul class="order-2 md:order-1 w-full md:w-auto md:flex-1 flex gap-2 overflow-x-auto no-scrollbar">
+        <ul class="order-2 md:order-1 w-full md:w-auto md:flex-1 flex gap-1 overflow-x-auto no-scrollbar">
           <li v-for="category in categories" :key="category.key" class="shrink-0">
             <button
               @click="selectCategory(category.key)"
               :aria-current="activeCategory === category.key ? 'page' : undefined"
               :class="[
-                'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-50',
+                'flex items-center gap-2 h-9 px-3 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-150',
                 activeCategory === category.key
-                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-md'
+                  ? isDarkMode
+                    ? 'bg-white text-gray-900'
+                    : 'bg-gray-900 text-white'
                   : isDarkMode
-                    ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                    : 'text-gray-600 hover:bg-white hover:text-gray-900'
+                    ? 'text-gray-400 hover:bg-gray-900 hover:text-white'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               ]"
             >
               <span aria-hidden="true">{{ category.icon }}</span>
@@ -195,10 +209,10 @@ const toggleLanguage = () => {
           <button
             @click="showRules = true"
             :class="[
-              'w-12 h-12 rounded-full shadow-lg transition-all duration-50 backdrop-blur-sm flex items-center justify-center font-bold text-lg',
+              'w-10 h-10 rounded-lg border transition-colors duration-150 flex items-center justify-center font-semibold text-base',
               isDarkMode
-                ? 'bg-gray-800/90 text-blue-400 hover:bg-gray-700/90'
-                : 'bg-white/90 text-gray-800 hover:bg-gray-50/90'
+                ? 'bg-gray-900 border-gray-800 text-gray-200 hover:bg-gray-800 hover:border-gray-700'
+                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
             ]"
             :aria-label="t.gameRules"
             :title="t.gameRules"
@@ -218,13 +232,21 @@ const toggleLanguage = () => {
       </div>
     </nav>
 
-    <div class="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto">
+    <div class="px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10 max-w-7xl mx-auto">
       <GameMenu
         v-if="!selectedGame"
         :games="filteredGames"
         :isDarkMode="isDarkMode"
         :t="t"
         @select-game="selectedGame = $event"
+      />
+
+      <QuizRaceGame
+        v-else-if="selectedGame === 'quiz-race'"
+        :isDarkMode="isDarkMode"
+        :t="t"
+        :initialCode="quizInviteCode"
+        @go-back="selectedGame = null"
       />
 
       <NumberGuessingGame
@@ -281,25 +303,25 @@ const toggleLanguage = () => {
       <!-- Placeholder for other games -->
       <div v-else
         :class="[
-          'max-w-lg mx-auto rounded-3xl border overflow-hidden shadow-2xl backdrop-blur-sm transition-all duration-50',
+          'max-w-lg mx-auto rounded-xl border overflow-hidden transition-colors duration-150',
           isDarkMode
-            ? 'bg-gray-800/90 border-gray-700 shadow-gray-950/40'
-            : 'bg-white/90 border-gray-200 shadow-gray-200/70'
+            ? 'bg-gray-900 border-gray-800'
+            : 'bg-white border-gray-200 shadow-lg'
         ]"
       >
         <div
           :class="[
             'px-5 py-4 sm:px-6 border-b',
-            isDarkMode ? 'border-gray-700 bg-gray-900/40' : 'border-gray-100 bg-gray-50/80'
+            isDarkMode ? 'border-gray-800' : 'border-gray-200'
           ]"
         >
           <div class="flex items-center justify-between gap-4">
             <button
               @click="selectedGame = null"
               :class="[
-                'px-3 py-2 rounded-xl transition-all duration-50 flex items-center gap-2 text-sm font-medium',
+                'px-3 py-2 rounded-lg transition-colors duration-150 flex items-center gap-2 text-sm font-medium',
                 isDarkMode
-                  ? 'text-gray-300 hover:text-white hover:bg-gray-700/60'
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               ]"
             >
@@ -309,10 +331,10 @@ const toggleLanguage = () => {
 
             <span
               :class="[
-                'inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]',
+                'inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
                 isDarkMode
-                  ? 'bg-purple-500/20 text-purple-300 border border-purple-400/40'
-                  : 'bg-purple-100 text-purple-700 border border-purple-200'
+                  ? 'bg-violet-500/10 text-violet-300 border-violet-500/40'
+                  : 'bg-violet-50 text-violet-700 border-violet-200'
               ]"
             >
               beta
@@ -323,10 +345,10 @@ const toggleLanguage = () => {
         <div class="p-6 sm:p-8 text-center">
           <div
             :class="[
-              'mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl text-4xl shadow-lg',
+              'mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-xl border text-3xl',
               isDarkMode
-                ? 'bg-gradient-to-br from-purple-500/20 to-blue-500/20 text-purple-300 shadow-purple-900/20'
-                : 'bg-gradient-to-br from-purple-100 to-blue-100 text-purple-600 shadow-purple-200/80'
+                ? 'bg-gray-800 border-gray-700'
+                : 'bg-gray-50 border-gray-200'
             ]"
           >
             🚧
@@ -345,9 +367,9 @@ const toggleLanguage = () => {
 
           <div
             :class="[
-              'mt-6 rounded-2xl p-4 border text-left',
+              'mt-6 rounded-lg p-4 border text-left',
               isDarkMode
-                ? 'bg-gray-900/40 border-gray-700 text-gray-200'
+                ? 'bg-gray-950/60 border-gray-800 text-gray-200'
                 : 'bg-gray-50 border-gray-200 text-gray-700'
             ]"
           >
@@ -371,9 +393,9 @@ const toggleLanguage = () => {
           aria-modal="true"
           aria-labelledby="rules-title"
           :class="[
-            'rules-panel w-full sm:max-w-lg max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl shadow-2xl border overflow-hidden',
+            'rules-panel w-full sm:max-w-lg max-h-[90vh] flex flex-col rounded-t-xl sm:rounded-xl shadow-2xl border overflow-hidden',
             isDarkMode
-              ? 'bg-gray-800 border-gray-700 text-white'
+              ? 'bg-gray-900 border-gray-800 text-white'
               : 'bg-white border-gray-200 text-gray-900'
           ]"
         >
@@ -381,17 +403,17 @@ const toggleLanguage = () => {
             :class="[
               'relative px-6 pt-6 pb-5 border-b',
               isDarkMode
-                ? 'bg-gradient-to-br from-purple-500/15 to-blue-500/15 border-gray-700'
-                : 'bg-gradient-to-br from-purple-50 to-blue-50 border-gray-100'
+                ? 'border-gray-800'
+                : 'border-gray-200'
             ]"
           >
             <button
               @click="showRules = false"
               :class="[
-                'absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-xl transition-colors',
+                'absolute top-4 right-4 w-8 h-8 rounded-lg border flex items-center justify-center text-lg transition-colors',
                 isDarkMode
-                  ? 'bg-gray-700/70 hover:bg-gray-600 text-gray-200'
-                  : 'bg-white/80 hover:bg-white text-gray-600 shadow-sm'
+                  ? 'border-gray-800 hover:bg-gray-800 text-gray-300'
+                  : 'border-gray-200 hover:bg-gray-100 text-gray-600'
               ]"
               :aria-label="rulesText.close"
             >
@@ -401,8 +423,8 @@ const toggleLanguage = () => {
             <div class="flex items-center gap-4 pr-10">
               <div
                 :class="[
-                  'h-14 w-14 shrink-0 rounded-2xl flex items-center justify-center text-3xl shadow-sm',
-                  isDarkMode ? 'bg-gray-900/60' : 'bg-white'
+                  'h-12 w-12 shrink-0 rounded-lg border flex items-center justify-center text-2xl',
+                  isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
                 ]"
               >
                 {{ currentRules.icon }}
@@ -416,8 +438,8 @@ const toggleLanguage = () => {
                     v-for="chip in [currentRules.players && '👥 ' + currentRules.players, currentRules.duration && '⏱ ' + currentRules.duration].filter(Boolean)"
                     :key="chip"
                     :class="[
-                      'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
-                      isDarkMode ? 'bg-gray-900/50 text-gray-200' : 'bg-white text-gray-700 shadow-sm'
+                      'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
+                      isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-600'
                     ]"
                   >
                     {{ chip }}
@@ -430,10 +452,10 @@ const toggleLanguage = () => {
           <div class="overflow-y-auto px-6 py-5 space-y-6">
             <div
               :class="[
-                'rounded-2xl p-4 border-l-4',
+                'rounded-lg p-4 border-l-2',
                 isDarkMode
-                  ? 'bg-blue-500/10 border-blue-400 text-blue-100'
-                  : 'bg-blue-50 border-blue-500 text-blue-900'
+                  ? 'bg-violet-500/10 border-violet-400 text-violet-100'
+                  : 'bg-violet-50 border-violet-500 text-violet-950'
               ]"
             >
               <p class="text-xs font-bold uppercase tracking-[0.18em] mb-1 opacity-80">{{ rulesText.goal }}</p>
@@ -452,8 +474,8 @@ const toggleLanguage = () => {
                 >
                   <span
                     :class="[
-                      'h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold',
-                      isDarkMode ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'
+                      'h-6 w-6 shrink-0 rounded-md border flex items-center justify-center text-xs font-semibold tabular-nums',
+                      isDarkMode ? 'border-gray-700 bg-gray-800 text-gray-200' : 'border-gray-200 bg-gray-50 text-gray-700'
                     ]"
                   >
                     {{ index + 1 }}
@@ -483,7 +505,7 @@ const toggleLanguage = () => {
                   v-for="(tip, index) in currentRules.tips"
                   :key="index"
                   :class="[
-                    'flex gap-3 items-start rounded-xl p-3 text-sm',
+                    'flex gap-3 items-start rounded-lg p-3 text-sm',
                     isDarkMode ? 'bg-yellow-400/10 text-yellow-100' : 'bg-yellow-50 text-yellow-900'
                   ]"
                 >
@@ -494,10 +516,13 @@ const toggleLanguage = () => {
             </section>
           </div>
 
-          <div :class="['px-6 py-4 border-t', isDarkMode ? 'border-gray-700' : 'border-gray-100']">
+          <div :class="['px-6 py-4 border-t', isDarkMode ? 'border-gray-800' : 'border-gray-200']">
             <button
               @click="showRules = false"
-              class="w-full rounded-xl py-3 font-semibold text-white bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-90 transition-opacity"
+              :class="[
+                'w-full rounded-lg py-2.5 text-sm font-semibold transition-colors',
+                isDarkMode ? 'bg-white text-gray-900 hover:bg-gray-200' : 'bg-gray-900 text-white hover:bg-gray-700'
+              ]"
             >
               {{ rulesText.gotIt }}
             </button>
@@ -515,9 +540,6 @@ const toggleLanguage = () => {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 
-               Helvetica, Arial, sans-serif, "Apple Color Emoji", 
-               "Segoe UI Emoji", "Segoe UI Symbol";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -535,11 +557,11 @@ button, input {
 /* Rules modal transition */
 .rules-enter-active,
 .rules-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.15s ease;
 }
 .rules-enter-active .rules-panel,
 .rules-leave-active .rules-panel {
-  transition: transform 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .rules-enter-from,
 .rules-leave-to {
@@ -547,7 +569,7 @@ button, input {
 }
 .rules-enter-from .rules-panel,
 .rules-leave-to .rules-panel {
-  transform: translateY(16px) scale(0.98);
+  transform: translateY(8px) scale(0.99);
 }
 
 /* Horizontally scrollable nav items without a visible scrollbar */

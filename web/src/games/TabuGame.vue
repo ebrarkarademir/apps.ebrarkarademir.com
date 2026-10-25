@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 
 const props = defineProps({
   isDarkMode: {
@@ -14,21 +14,22 @@ const props = defineProps({
 
 const emit = defineEmits(['go-back'])
 
+const ROUND_SECONDS = 60
+
 // Game states
 const gamePhase = ref('setup') // setup, play, score
 const teams = ref([
   { score: 0, players: [] },
   { score: 0, players: [] }
 ])
+const playerNames = ref(['', '']) // one name input per team
 const currentTeam = ref(0)
-const currentPlayer = ref('')
-const timer = ref(60)
-const timerInterval = ref(null)
-const playerName = ref('')
-const currentCard = ref(null)
-const skippedCards = ref([])
-const correctCards = ref([])
+const playerTurns = ref([0, 0]) // how many turns each team has had, used to rotate explainers
+const timer = ref(ROUND_SECONDS)
 const isPlaying = ref(false)
+const deck = ref([])
+const cardIndex = ref(0)
+let timerInterval = null
 
 // Card database: each card has an EN and a TR version so the shown card follows the app language
 const cards = [
@@ -51,13 +52,28 @@ const format = (text, values) =>
 const lang = computed(() => (props.t.langCode === 'TR' ? 'TR' : 'EN'))
 const teamName = (index) => format(props.t.tabuTeam, { n: index + 1 })
 
+const shuffle = (array) => {
+  const copy = [...array]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
 // Computed properties
 const canStartGame = computed(() => {
   return teams.value.every(team => team.players.length > 0)
 })
 
 const currentTeamName = computed(() => teamName(currentTeam.value))
+const currentPlayer = computed(() => {
+  const players = teams.value[currentTeam.value].players
+  return players.length ? players[playerTurns.value[currentTeam.value] % players.length] : ''
+})
+const currentCard = computed(() => deck.value[cardIndex.value] || null)
 const shownCard = computed(() => (currentCard.value ? currentCard.value[lang.value] : null))
+const cardsLeft = computed(() => deck.value.length - cardIndex.value)
 
 const winnerText = computed(() => {
   const [first, second] = teams.value.map(team => team.score)
@@ -65,22 +81,18 @@ const winnerText = computed(() => {
   return format(props.t.tabuTeamWins, { team: teamName(first > second ? 0 : 1) })
 })
 
-const shuffledCards = computed(() => {
-  return [...cards].sort(() => Math.random() - 0.5)
-})
-
-const remainingCards = computed(() => {
-  const usedCards = [...skippedCards.value, ...correctCards.value]
-  return shuffledCards.value.filter(card =>
-    !usedCards.find(used => used.id === card.id)
-  )
+const formattedTime = computed(() => {
+  const minutes = Math.floor(timer.value / 60)
+  const seconds = timer.value % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 })
 
 // Game functions
 const addPlayer = (teamIndex) => {
-  if (playerName.value.trim()) {
-    teams.value[teamIndex].players.push(playerName.value.trim())
-    playerName.value = ''
+  const name = playerNames.value[teamIndex].trim()
+  if (name) {
+    teams.value[teamIndex].players.push(name)
+    playerNames.value[teamIndex] = ''
   }
 }
 
@@ -88,82 +100,83 @@ const removePlayer = (teamIndex, playerIndex) => {
   teams.value[teamIndex].players.splice(playerIndex, 1)
 }
 
-const startGame = () => {
-  gamePhase.value = 'play'
-  currentTeam.value = 0
-  currentPlayer.value = teams.value[0].players[0]
-  resetRound()
+const stopTimer = () => {
+  clearInterval(timerInterval)
+  timerInterval = null
 }
 
-const resetRound = () => {
-  timer.value = 60
-  skippedCards.value = []
-  correctCards.value = []
+const startGame = () => {
+  if (!canStartGame.value) return
+  deck.value = shuffle(cards)
+  cardIndex.value = 0
+  teams.value.forEach(team => { team.score = 0 })
+  currentTeam.value = 0
+  playerTurns.value = [0, 0]
+  timer.value = ROUND_SECONDS
   isPlaying.value = false
-  currentCard.value = remainingCards.value[0]
+  gamePhase.value = 'play'
 }
 
 const startRound = () => {
+  if (isPlaying.value || cardsLeft.value === 0) return
+  timer.value = ROUND_SECONDS
   isPlaying.value = true
-  timerInterval.value = setInterval(() => {
-    if (timer.value > 0) {
-      timer.value--
-    } else {
-      endRound()
-    }
+  stopTimer()
+  timerInterval = setInterval(() => {
+    timer.value--
+    if (timer.value <= 0) endRound()
   }, 1000)
+}
+
+// Skipped and guessed cards both leave the deck for the rest of the game
+const nextCard = () => {
+  cardIndex.value++
+  if (cardsLeft.value === 0) endRound()
 }
 
 const skipCard = () => {
   if (!isPlaying.value) return
-  skippedCards.value.push(currentCard.value)
-  currentCard.value = remainingCards.value[skippedCards.value.length + correctCards.value.length]
+  nextCard()
 }
 
 const correctCard = () => {
   if (!isPlaying.value) return
-  correctCards.value.push(currentCard.value)
   teams.value[currentTeam.value].score++
-  currentCard.value = remainingCards.value[skippedCards.value.length + correctCards.value.length]
+  nextCard()
 }
 
 const endRound = () => {
-  clearInterval(timerInterval.value)
+  stopTimer()
   isPlaying.value = false
 
-  // Switch to next team
-  currentTeam.value = (currentTeam.value + 1) % 2
-
-  // Switch to next player in the team
-  const currentTeamPlayers = teams.value[currentTeam.value].players
-  const currentPlayerIndex = currentTeamPlayers.indexOf(currentPlayer.value)
-  const nextPlayerIndex = (currentPlayerIndex + 1) % currentTeamPlayers.length
-  currentPlayer.value = currentTeamPlayers[nextPlayerIndex]
-
-  // Check if game should end
-  if (remainingCards.value.length === 0) {
+  if (cardsLeft.value === 0) {
     gamePhase.value = 'score'
-  } else {
-    resetRound()
+    return
   }
+
+  // The team that just played moves on to its next explainer, then the other team plays
+  playerTurns.value[currentTeam.value]++
+  currentTeam.value = (currentTeam.value + 1) % 2
+  timer.value = ROUND_SECONDS
 }
 
 const resetGame = () => {
+  stopTimer()
   gamePhase.value = 'setup'
+  isPlaying.value = false
   teams.value = [
     { score: 0, players: [] },
     { score: 0, players: [] }
   ]
+  playerNames.value = ['', '']
+  deck.value = []
+  cardIndex.value = 0
   currentTeam.value = 0
-  currentPlayer.value = ''
-  resetRound()
+  playerTurns.value = [0, 0]
+  timer.value = ROUND_SECONDS
 }
 
-const formattedTime = computed(() => {
-  const minutes = Math.floor(timer.value / 60)
-  const seconds = timer.value % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
-})
+onUnmounted(stopTimer)
 </script>
 
 <template>
@@ -197,7 +210,7 @@ const formattedTime = computed(() => {
         <h2 class="text-xl font-semibold">{{ teamName(teamIndex) }}</h2>
         <div class="flex gap-2">
           <input
-            v-model="playerName"
+            v-model="playerNames[teamIndex]"
             @keyup.enter="addPlayer(teamIndex)"
             type="text"
             :placeholder="format(t.tabuAddPlayerTo, { team: teamName(teamIndex) })"
@@ -252,17 +265,46 @@ const formattedTime = computed(() => {
 
     <!-- Play Phase -->
     <div v-else-if="gamePhase === 'play'" class="space-y-8">
+      <!-- Scores -->
+      <div class="grid grid-cols-2 gap-3">
+        <div
+          v-for="(team, teamIndex) in teams"
+          :key="teamIndex"
+          :class="[
+            'rounded-xl px-4 py-2 flex items-center justify-between border-2 transition-colors duration-50',
+            teamIndex === currentTeam
+              ? 'border-blue-500'
+              : isDarkMode ? 'border-transparent bg-gray-700/50' : 'border-transparent bg-gray-100'
+          ]"
+        >
+          <span class="font-medium truncate">{{ teamName(teamIndex) }}</span>
+          <span class="text-xl font-bold tabular-nums">{{ team.score }}</span>
+        </div>
+      </div>
+
       <!-- Game Info -->
       <div class="flex justify-between items-center">
         <div>
           <h2 class="text-xl font-semibold">{{ currentTeamName }}</h2>
           <p class="text-sm opacity-75">{{ format(t.tabuPlayerTurn, { name: currentPlayer }) }}</p>
+          <p class="text-xs opacity-60">{{ format(t.tabuCardsLeft, { n: cardsLeft }) }}</p>
         </div>
-        <div class="text-4xl font-bold">{{ formattedTime }}</div>
+        <div :class="['text-4xl font-bold tabular-nums', isPlaying && timer <= 10 ? 'text-red-500' : '']">
+          {{ formattedTime }}
+        </div>
+      </div>
+
+      <!-- Before the round: hide the card so the next explainer can't peek -->
+      <div
+        v-if="!isPlaying"
+        class="p-6 rounded-xl text-center text-lg"
+        :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-100'"
+      >
+        {{ format(t.tabuGetReady, { name: currentPlayer, team: currentTeamName }) }}
       </div>
 
       <!-- Card Display -->
-      <div v-if="shownCard" class="space-y-6">
+      <div v-else-if="shownCard" class="space-y-6">
         <div
           class="p-6 rounded-xl text-center"
           :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-100'"

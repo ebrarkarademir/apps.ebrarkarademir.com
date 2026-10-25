@@ -278,6 +278,46 @@ export const rules = {
         'Bu bir demo analizdir — kesin bir değerlendirme değil, başlangıç noktası olarak kullan.'
       ]
     }
+  },
+  'quiz-race': {
+    EN: {
+      icon: '⚡',
+      title: 'Quiz Race',
+      players: '1–10 players, any devices',
+      duration: '5–10 min',
+      goal: 'Answer trivia questions correctly and faster than everyone else.',
+      steps: [
+        'One person taps Create room — their device becomes the host.',
+        'Everyone else opens this site on their own phone or computer, picks Quiz Race and enters the room code (or opens the shared link).',
+        'The host starts the game. Each question has 20 seconds — tap your answer.',
+        'A correct answer is worth 500 points plus up to 500 more for speed.',
+        'The host moves on to the next question; the highest score at the end wins.'
+      ],
+      tips: [
+        'The host has to keep the page open — if the host leaves, the room closes.',
+        'Got disconnected? Join again with the same name and your score comes back.',
+        'Each device shows the questions in its own language.'
+      ]
+    },
+    TR: {
+      icon: '⚡',
+      title: 'Bilgi Yarışı',
+      players: '1–10 oyuncu, her cihazdan',
+      duration: '5–10 dk',
+      goal: 'Bilgi sorularını herkesten doğru ve hızlı cevapla.',
+      steps: [
+        'Bir kişi Oda oluştur’a basar — onun cihazı sunucu olur.',
+        'Diğerleri kendi telefon veya bilgisayarlarında bu siteyi açar, Bilgi Yarışı’nı seçer ve oda kodunu girer (ya da paylaşılan bağlantıyı açar).',
+        'Sunucu oyunu başlatır. Her soru için 20 saniye var — cevabına dokun.',
+        'Doğru cevap 500 puan, hızlı olursan 500 puana kadar ek puan kazandırır.',
+        'Sunucu sonraki soruya geçer; sonunda en yüksek puanı alan kazanır.'
+      ],
+      tips: [
+        'Sunucu sayfayı açık tutmalı — sunucu çıkarsa oda kapanır.',
+        'Bağlantın mı koptu? Aynı adla tekrar katıl, puanın geri gelir.',
+        'Her cihaz soruları kendi dil ayarında gösterir.'
+      ]
+    }
   }
 }
 
