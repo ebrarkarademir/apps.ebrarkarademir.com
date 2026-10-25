@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "apps-76619"
-  }
+  },
+  "targets": {
+    "apps-76619": {
+      "hosting": {
+        "prod": [
+          "apps-76619"
+        ],
+        "dev": [
+          "apps-76619-dev"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
