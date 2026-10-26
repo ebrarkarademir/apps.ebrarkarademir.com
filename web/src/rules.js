@@ -33,6 +33,46 @@ export const rules = {
       ]
     }
   },
+  flappy: {
+    EN: {
+      icon: '[^]',
+      title: 'Flappy ASCII',
+      players: '1 player solo, or a race on any devices',
+      duration: '1–5 min',
+      goal: 'Keep the bird in the air and fly through as many gaps between the pipes as you can.',
+      steps: [
+        'Tap, click, or press Space, ↑ or W to flap. Stop flapping and the bird falls.',
+        'Every pair of pipes you pass is a point. Touching a pipe or the ground ends your flight.',
+        'Solo: beat your best score and earn a medal at 10, 20, 30 and 40 points.',
+        'Online race: one person creates a room and the others join with the code. Everyone flies the same pipes at the same time.',
+        'Other players show up as faint birds. Crash and you watch the rest — the last bird flying wins the round.'
+      ],
+      tips: [
+        'Short, steady taps work better than big panicked ones.',
+        'The gaps get a little narrower the further you fly.',
+        'P or Esc pauses a solo game, and M turns the sound on or off.'
+      ]
+    },
+    TR: {
+      icon: '[^]',
+      title: 'Flappy ASCII',
+      players: 'Tek kişilik ya da her cihazdan yarış',
+      duration: '1–5 dk',
+      goal: 'Kuşu havada tut ve boruların arasındaki boşluklardan olabildiğince çok geç.',
+      steps: [
+        'Kanat çırpmak için dokun, tıkla ya da Boşluk, ↑ veya W tuşuna bas. Durursan kuş düşer.',
+        'Geçtiğin her boru çifti bir puan. Boruya ya da yere değersen uçuşun biter.',
+        'Tek kişilik: en iyi skorunu geç; 10, 20, 30 ve 40 puanda madalya kazan.',
+        'Çevrim içi yarış: bir kişi oda oluşturur, diğerleri kodla katılır. Herkes aynı anda aynı borulardan geçer.',
+        'Diğer oyuncular soluk kuşlar olarak görünür. Düşersen diğerlerini izlersin — son uçan kuş turu kazanır.'
+      ],
+      tips: [
+        'Kısa ve düzenli dokunuşlar, panikle yapılan büyük dokunuşlardan daha iyi işler.',
+        'İlerledikçe boşluklar biraz daralır.',
+        'P veya Esc tek kişilik oyunu duraklatır, M sesi açıp kapatır.'
+      ]
+    }
+  },
   'number-guess': {
     EN: {
       icon: '[#]',

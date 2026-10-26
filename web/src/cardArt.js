@@ -1,6 +1,15 @@
 // ASCII art for the face of each game card, keyed by game id. Lines stay within 13
 // columns so the art still fits the two-column card grid on a phone.
 export const cardArt = {
+  flappy: [
+    '        |##|',
+    '        [==]',
+    ' .--.',
+    '( ^ @)>',
+    " `--'",
+    '        [==]',
+    '        |##|'
+  ],
   'quiz-race': [
     '  ___',
     String.raw` |__ \ `,

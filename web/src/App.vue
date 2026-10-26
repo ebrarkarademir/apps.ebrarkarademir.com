@@ -9,6 +9,7 @@ import BottleSpinGame from './games/BottleSpinGame.vue'
 import CasusKimGame from './games/CasusKimGame.vue'
 import TabuGame from './games/TabuGame.vue'
 import QuizRaceGame from './games/QuizRaceGame.vue'
+import FlappyGame from './games/FlappyGame.vue'
 import { translations } from './translations'
 import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
@@ -30,6 +31,17 @@ const minutes = (n) => t.value.cardMinutes.replace('{n}', n)
 // Menu cards: `players`, `duration` and `mode` fill the info side of each card, and
 // `soon` marks games that still open the Coming Soon screen
 const games = computed(() => [
+  {
+    id: 'flappy',
+    category: ['solo', 'party'],
+    title: t.value.flappyTitle,
+    description: t.value.flappyDesc,
+    icon: '[^]',
+    art: cardArt.flappy,
+    players: '1+',
+    duration: minutes('1–5'),
+    mode: t.value.cardModeSoloOnline
+  },
   {
     id: 'quiz-race',
     category: 'party',
@@ -143,7 +155,7 @@ const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
 
 // An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
 // Older links used /?join=CODE&game=quiz-race.
-const ONLINE_GAMES = ['quiz-race', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['flappy', 'quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const initialRoute = parsePath(window.location.pathname)
 const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
@@ -207,16 +219,22 @@ const categories = computed(() => [
   { key: 'solo', label: t.value.navSolo }
 ])
 
-// Inside a game, highlight the category that game belongs to
+// A game can belong to more than one category
+const categoriesOf = (game) => [].concat(game.category)
+
+// Inside a game, highlight the category that game belongs to: the open list when it's one of them
 const activeCategory = computed(() => {
   if (!selectedGame.value) return selectedCategory.value
-  return games.value.find(game => game.id === selectedGame.value)?.category ?? selectedCategory.value
+  const game = games.value.find(item => item.id === selectedGame.value)
+  if (!game) return selectedCategory.value
+  const list = categoriesOf(game)
+  return list.includes(selectedCategory.value) ? selectedCategory.value : list[0]
 })
 
 const filteredGames = computed(() =>
   selectedCategory.value === 'all'
     ? games.value
-    : games.value.filter(game => game.category === selectedCategory.value)
+    : games.value.filter(game => categoriesOf(game).includes(selectedCategory.value))
 )
 
 const selectedGameTitle = computed(() => games.value.find(game => game.id === selectedGame.value)?.title || '')
@@ -351,6 +369,13 @@ const toggleLanguage = () => {
         :games="filteredGames"
         :t="t"
         @select-game="openGame"
+      />
+
+      <FlappyGame
+        v-else-if="selectedGame === 'flappy'"
+        :t="t"
+        :initialCode="inviteCodeFor('flappy')"
+        @go-back="closeGame"
       />
 
       <QuizRaceGame

@@ -16,6 +16,10 @@ import { RELAY_BROKERS, connectRelay, relayTopic } from './relay'
 //
 // A top-level `deadline` (host clock, ms) is sent as time remaining and turned back into a
 // deadline on the guest's clock, so timers line up even when device clocks disagree.
+//
+// Real-time games also send "live" data (positions and the like) many times a second. That
+// stays out of the game state: the host keeps each player's latest and passes everyone's on
+// in one small message, ten times a second.
 
 const PEER_PREFIX = 'ebrarkarademir-'
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -26,6 +30,7 @@ const RELAY_PING_MS = 4000
 const RELAY_TIMEOUT_MS = 15000 // silence after which a relayed player counts as gone
 const RECONNECT_MS = 1000
 const TICK_MS = 250
+const LIVE_MS = 100 // how often the host passes on the players' live data
 const NAME_KEY = 'onlineName'
 const CLIENT_KEY = 'onlineClientId'
 
@@ -79,10 +84,11 @@ const loadName = () => {
  * @param {(state, player) => void} [options.onJoin]   Host: a player joined or came back.
  * @param {(state, player) => void} [options.onLeave]  Host: a player dropped out.
  * @param {(state, now) => void} [options.onTick]      Host: runs a few times a second (timeouts).
+ * @param {(data) => void} [options.onLive]  Everyone: every player's latest live data, by player id.
  * @param {string} [options.initialCode] Room code from an invite link; joins straight away.
  */
 export function useOnlineRoom (options) {
-  const { game, initialState, project = (state) => state, onAction, onJoin, onLeave, onTick } = options
+  const { game, initialState, project = (state) => state, onAction, onJoin, onLeave, onTick, onLive } = options
 
   const screen = ref('home') // home | connecting | room
   const role = ref(null) // host | guest
@@ -109,6 +115,10 @@ export function useOnlineRoom (options) {
   let guestRelay = null
   let relayTimer = null
   let lastHostMessage = 0
+  // Host: each player's latest live data, by player id; sent on when something changed
+  const liveData = new Map()
+  let liveChanged = false
+  let liveTimer = null
 
   const freshState = () => ({ phase: 'lobby', hostId: myId, players: [], ...initialState() })
 
@@ -260,6 +270,9 @@ export function useOnlineRoom (options) {
       sendTo(guests.get(key))
     } else if (msg.type === 'action' && known) {
       onAction(state.value, known.playerId, msg.action || {})
+    } else if (msg.type === 'live' && known) {
+      liveData.set(known.playerId, msg.data)
+      liveChanged = true
     }
   }
 
@@ -267,6 +280,8 @@ export function useOnlineRoom (options) {
     const guest = guests.get(key)
     if (!guest || !state.value) return
     guests.delete(key)
+    liveData.delete(guest.playerId)
+    liveChanged = true
     const s = state.value
     const player = s.players.find(p => p.id === guest.playerId)
     if (!player) return
@@ -290,6 +305,14 @@ export function useOnlineRoom (options) {
 
   // Any change to the host's state reaches every guest on the next tick
   watch(state, () => guests.forEach(sendTo), { deep: true })
+
+  function flushLive () {
+    if (role.value !== 'host' || !state.value || !liveChanged) return
+    liveChanged = false
+    const data = Object.fromEntries(liveData)
+    guests.forEach(guest => guest.send({ type: 'live', data }))
+    onLive?.(data)
+  }
 
   // ---------- Guest ----------
 
@@ -355,6 +378,10 @@ export function useOnlineRoom (options) {
   function receiveFromHost (msg) {
     lastHostMessage = Date.now()
     if (msg?.type === 'rejoin') hostLink?.send(joinMessage())
+    if (msg?.type === 'live') {
+      if (msg.data && typeof msg.data === 'object') onLive?.(msg.data)
+      return
+    }
     if (msg?.type !== 'state') return
     clearTimeout(connectTimer)
     clearTimeout(directTimer)
@@ -432,6 +459,16 @@ export function useOnlineRoom (options) {
     else hostLink?.send({ type: 'action', action })
   }
 
+  /** Share this player's latest live data; it replaces what they sent before. */
+  function sendLive (data) {
+    if (role.value === 'host') {
+      liveData.set(myId, data)
+      liveChanged = true
+    } else {
+      hostLink?.send({ type: 'live', data })
+    }
+  }
+
   function fail (key) {
     resetConnection()
     errorKey.value = key
@@ -444,6 +481,8 @@ export function useOnlineRoom (options) {
     clearTimeout(directTimer)
     clearInterval(relayTimer)
     guests.clear()
+    liveData.clear()
+    liveChanged = false
     const oldLink = hostLink
     const oldPeer = peer
     const oldRelays = [...hostRelays, guestRelay].filter(Boolean)
@@ -479,18 +518,20 @@ export function useOnlineRoom (options) {
       })
       onTick?.(state.value, now.value)
     }, TICK_MS)
+    liveTimer = setInterval(flushLive, LIVE_MS)
     if (joinCode.value.length === 4 && playerName.value) joinRoom()
   })
 
   onUnmounted(() => {
     document.removeEventListener('visibilitychange', onVisible)
     clearInterval(tickTimer)
+    clearInterval(liveTimer)
     resetConnection()
   })
 
   return reactive({
     screen, role, isHost, roomCode, errorKey, playerName, joinCode, now, myId,
     view, me, shareLink,
-    createRoom, joinRoom, leave, act
+    createRoom, joinRoom, leave, act, sendLive
   })
 }
