@@ -38,7 +38,8 @@ export function createRenderer (canvas) {
   let kanji = false
   let sprites = null
 
-  // Givens look printed: bold, smooth. Your own digits look typed: the pixel font.
+  // Givens look printed: bold, smooth. Your own digits look typed: the pixel font. In an online
+  // race the digits other players got are typed too, but dim.
   function build () {
     if (!cell) return
     const cw = cell * dpr
@@ -57,6 +58,7 @@ export function createRenderer (canvas) {
       givenInk: digits(d => given(d, INK, false)),
       typed: digits(d => typed(d, GREEN, true)),
       typedInk: digits(d => typed(d, INK, false)),
+      theirs: digits(d => typed(d, DIM, false)),
       note: digits(d => note(d, DIM, false)),
       noteLit: digits(d => note(d, GREEN, true)),
       noteInk: digits(d => note(d, INK, false)),
@@ -147,7 +149,9 @@ export function createRenderer (canvas) {
     }
     const d = values[i]
     if (d) {
-      const set = givens[i] ? (ink ? sprites.givenInk : sprites.given) : (ink ? sprites.typedInk : sprites.typed)
+      const set = givens[i]
+        ? (ink ? sprites.givenInk : sprites.given)
+        : (ink ? sprites.typedInk : scene.theirs?.[i] ? sprites.theirs : sprites.typed)
       const faded = scene.marks[i] & 1 && !scene.blink
       drawSprite(ctx, set[d], x, y, { scale: scene.pops[i] || 1, alpha: faded ? 0.35 : 1, dpr })
       if (!ink && scene.glow[i] > 0) {
@@ -223,7 +227,8 @@ export function createRenderer (canvas) {
   /**
    * scene: {
    *   board: { values, givens, notes }, marks (1 wrong, 2 clashes with a wrong digit),
-   *   selected, cursor: { x, y } | null, focus (digit to highlight), hidden, blink,
+   *   theirs (online: 1 where another player got the digit), selected,
+   *   cursor: { x, y } | null, focus (digit to highlight), hidden, blink,
    *   pops, glow, reveal, decode, glitches (per cell), drift, particles,
    *   bolts: [{ glyphs, alpha }], stamp: { scale, alpha } | null, debris: [{ d, given, x, y, angle }] | null,
    *   texts: [{ text, x, y, size, display, color, alpha }], flash, shake

@@ -1,18 +1,26 @@
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import confetti from 'canvas-confetti'
 import TermWindow from '../components/TermWindow.vue'
+import OnlineRoom from '../online/OnlineRoom.vue'
+import { useOnlineRoom } from '../online/useOnlineRoom'
 import SudokuStage from './sudoku/SudokuStage.vue'
-import { DIFFICULTIES, MAX_MISTAKES, HINTS, generate, isPuzzleText } from './sudoku/engine'
+import { CELLS, DIFFICULTIES, MAX_MISTAKES, HINTS, generate, isPuzzleText } from './sudoku/engine'
 import { JP, useJapaneseFont } from './ascii/paint'
 
 const props = defineProps({
-  t: { type: Object, required: true }
+  t: { type: Object, required: true },
+  // Room code from a shared invite link
+  initialCode: { type: String, default: '' }
 })
 
 const emit = defineEmits(['go-back'])
 
 const SAVE_KEY = 'sudokuSave'
 const BEST_KEY = 'sudokuBest'
+const COUNTDOWN_MS = 3000
+const ENDING_MS = 4500 // the full board and the winner show before the results
+const MAX_RACERS = 4
 
 const TITLE_ART = [
   '+-------+-------+-------+',
@@ -21,6 +29,9 @@ const TITLE_ART = [
   '| . 9 8 | . . . | . 6 . |',
   '+-------+-------+-------+'
 ].join('\n')
+// One cursor on a cell, or two going for the same one
+const SOLO_ART = ['+---+---+', '| 5 |>? |', '+---+---+'].join('\n')
+const ONLINE_ART = ['+---+---+---+', '| 5 |>?<| 3 |', '+---+---+---+'].join('\n')
 const LOSE_ART = [' \\ | /', '-- ! --', ' / | \\'].join('\n')
 
 const LEVEL_KEYS = { easy: 'sudokuEasy', medium: 'sudokuMedium', hard: 'sudokuHard', expert: 'sudokuExpert' }
@@ -36,6 +47,9 @@ const formatTime = (seconds) => {
   const ss = String(s % 60).padStart(2, '0')
   return s >= 3600 ? `${Math.floor(s / 3600)}:${mm}:${ss}` : `${mm}:${ss}`
 }
+
+// null while choosing, then solo or online; an invite link goes straight online
+const mode = ref(props.initialCode ? 'online' : null)
 
 // ---------- Kept on this device ----------
 
@@ -145,7 +159,7 @@ function onPauseClick (event) {
 }
 
 function onVisibility () {
-  if (document.hidden && play.value && !session.result) session.paused = true
+  if (document.hidden && mode.value === 'solo' && play.value && !session.result) session.paused = true
 }
 
 onMounted(() => {
@@ -154,12 +168,166 @@ onMounted(() => {
 })
 onUnmounted(() => document.removeEventListener('visibilitychange', onVisibility))
 
+// ---------- Online: host-side rules ----------
+//
+// Everyone plays the same puzzle on one shared board. Each device checks its own digits for
+// the effects; the host decides who got each cell first and keeps the points: a right digit is
+// worth one, a wrong one costs one. The round ends when the board is full.
+
+// Digits that arrive just before the host's tick opens the board still count
+const boardOpen = (s) => s.phase === 'playing' || (s.phase === 'countdown' && Date.now() >= s.deadline)
+const openCells = (s) => [...s.puzzle].filter(ch => ch === '0').length
+
+function endRound (s) {
+  s.standings = Object.entries(s.scores)
+    .map(([id, points]) => ({ id, points }))
+    .sort((a, b) => b.points - a.points)
+  const [first, second] = s.standings
+  const winner = first && first.points !== second?.points ? first.id : null
+  if (winner) s.wins[winner] = (s.wins[winner] || 0) + 1
+  s.outcome = { winner }
+  s.time = Math.round((Date.now() - s.startedAt) / 1000)
+  s.phase = 'ending'
+  s.deadline = Date.now() + ENDING_MS
+}
+
+function onAction (s, playerId, action) {
+  const isHost = playerId === s.hostId
+  switch (action.type) {
+    case 'level':
+      if (isHost && s.phase === 'lobby' && DIFFICULTIES.includes(action.level)) s.level = action.level
+      break
+    case 'start': {
+      if (!isHost || (s.phase !== 'lobby' && s.phase !== 'results')) return
+      s.players = s.players.filter(p => p.online)
+      if (s.players.length < 2) return
+      const { puzzle, solution } = generate(s.level)
+      s.round++
+      s.puzzle = puzzle
+      s.solution = solution
+      s.owners = {}
+      // Up to four race; anyone past that watches the round
+      s.scores = Object.fromEntries(s.players.slice(0, MAX_RACERS).map(p => [p.id, 0]))
+      s.standings = []
+      s.outcome = null
+      s.deadline = Date.now() + COUNTDOWN_MS
+      s.startedAt = s.deadline
+      s.phase = 'countdown'
+      break
+    }
+    case 'place': {
+      const { cell, d } = action
+      if (!boardOpen(s) || !(playerId in s.scores)) return
+      if (!Number.isInteger(cell) || cell < 0 || cell >= CELLS || !Number.isInteger(d) || d < 1 || d > 9) return
+      // A cell someone already got is gone: a late digit there neither scores nor costs
+      if (s.puzzle[cell] !== '0' || s.owners[cell]) return
+      if (s.solution[cell] === String(d)) {
+        s.owners[cell] = playerId
+        s.scores[playerId]++
+        if (Object.keys(s.owners).length === openCells(s)) endRound(s)
+      } else {
+        s.scores[playerId]--
+      }
+      break
+    }
+    case 'lobby':
+      if (!isHost || s.phase !== 'results') return
+      s.players = s.players.filter(p => p.online)
+      s.phase = 'lobby'
+      break
+  }
+}
+
+const room = useOnlineRoom({
+  game: 'sudoku',
+  initialCode: props.initialCode,
+  initialState: () => ({ level: 'easy', round: 0, puzzle: '', solution: '', deadline: null, startedAt: 0, owners: {}, scores: {}, standings: [], wins: {}, outcome: null, time: 0 }),
+  // A page that comes in mid-round needs to know how long the round has been going
+  project: (s) => (s.phase === 'playing' ? { ...s, msPlayed: Date.now() - s.startedAt } : s),
+  onAction,
+  onTick: (s, now) => {
+    if (s.phase === 'countdown' && now >= s.deadline) {
+      s.phase = 'playing'
+      s.deadline = null
+    } else if (s.phase === 'ending' && now >= s.deadline) {
+      s.phase = 'results'
+      s.deadline = null
+    }
+  }
+})
+
+// ---------- Online: view ----------
+
+const view = computed(() => room.view)
+const onBoard = computed(() => ['countdown', 'playing', 'ending'].includes(view.value?.phase))
+const names = computed(() => Object.fromEntries((view.value?.players || []).map(p => [p.id, p.name])))
+const racing = computed(() => room.myId in (view.value?.scores || {}))
+
+// When the board opens, on this device's clock: from the countdown, or for a page that came in
+// mid-round, from how long the round has been going
+const startAt = ref(0)
+const seenRound = ref(0)
+watch(() => [view.value?.phase, view.value?.round, view.value?.deadline], ([phase, round, deadline]) => {
+  if (phase === 'countdown' && deadline) {
+    startAt.value = deadline
+    seenRound.value = round
+  } else if (phase === 'playing' && seenRound.value !== round) {
+    startAt.value = Date.now() - (view.value.msPlayed || 0)
+    seenRound.value = round
+  }
+}, { immediate: true })
+
+const standings = computed(() => (view.value?.standings || []).map((entry, index) => ({
+  ...entry,
+  rank: index + 1,
+  name: names.value[entry.id] || '?',
+  wins: view.value.wins?.[entry.id] || 0
+})))
+const winner = computed(() => (view.value?.outcome?.winner ? standings.value.find(entry => entry.id === view.value.outcome.winner) : null))
+
+watch(() => (view.value?.phase === 'results' ? view.value.round : 0), (round) => {
+  if (round && winner.value?.id === room.myId) {
+    confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
+  }
+})
+
 const cardClass = 'term-card group flex flex-col gap-2 p-4 text-left'
+const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
 </script>
 
 <template>
-  <!-- Choose a level, or pick up the game in progress -->
-  <TermWindow v-if="!play" class="max-w-2xl" :title="t.sudokuTitle" :backLabel="t.back" @back="emit('go-back')">
+  <!-- Choose solo or online -->
+  <TermWindow v-if="mode === null" class="max-w-2xl" :title="t.sudokuTitle" :backLabel="t.back" @back="emit('go-back')">
+    <div class="space-y-6">
+      <div class="overflow-hidden text-center" aria-hidden="true">
+        <span class="inline-block whitespace-pre text-left text-[0.6rem] min-[400px]:text-xs sm:text-sm leading-tight">{{ TITLE_ART }}</span>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <button type="button" :class="modeCardClass" @click="mode = 'solo'">
+          <span class="whitespace-pre text-sm leading-tight" aria-hidden="true">{{ SOLO_ART }}</span>
+          <span class="font-display text-3xl leading-none uppercase">{{ t.sudokuSolo }}</span>
+          <span class="term-muted text-sm leading-relaxed">{{ t.sudokuSoloDesc }}</span>
+          <span class="mt-auto flex items-center justify-between gap-2 pt-1">
+            <span v-if="savedGame" class="term-chip">{{ t.sudokuContinue }}: {{ levelName(savedGame.level) }}</span>
+            <span class="ml-auto text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+          </span>
+        </button>
+
+        <button type="button" :class="modeCardClass" @click="mode = 'online'">
+          <span class="whitespace-pre text-sm leading-tight" aria-hidden="true">{{ ONLINE_ART }}</span>
+          <span class="font-display text-3xl leading-none uppercase">{{ t.sudokuOnline }}</span>
+          <span class="term-muted text-sm leading-relaxed">{{ t.sudokuOnlineDesc }}</span>
+          <span class="mt-auto flex items-center justify-end pt-1">
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </TermWindow>
+
+  <!-- Solo: choose a level, or pick up the game in progress -->
+  <TermWindow v-else-if="mode === 'solo' && !play" class="max-w-2xl" :title="t.sudokuTitle" :backLabel="t.back" @back="mode = null">
     <div class="space-y-6">
       <div class="overflow-hidden text-center" aria-hidden="true">
         <span class="inline-block whitespace-pre text-left text-[0.6rem] min-[400px]:text-xs sm:text-sm leading-tight">{{ TITLE_ART }}</span>
@@ -195,8 +363,9 @@ const cardClass = 'term-card group flex flex-col gap-2 p-4 text-left'
     </div>
   </TermWindow>
 
+  <!-- Solo: the board -->
   <SudokuStage
-    v-else
+    v-else-if="mode === 'solo'"
     :t="t"
     :title="t.sudokuTitle"
     :exitLabel="t.sudokuMenu"
@@ -258,10 +427,96 @@ const cardClass = 'term-card group flex flex-col gap-2 p-4 text-left'
       </div>
     </template>
   </SudokuStage>
+
+  <!-- Online race -->
+  <OnlineRoom v-else :room="room" :t="t" :title="t.sudokuTitle" :minPlayers="2" @go-back="mode = null" @start="room.act('start')">
+    <template #lobby="{ view: lobby, isHost }">
+      <div class="space-y-4">
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="term-label mr-1">&gt; {{ t.sudokuLevel }}</span>
+          <button
+            v-for="level in DIFFICULTIES"
+            :key="level"
+            type="button"
+            @click="room.act('level', { level })"
+            :disabled="!isHost"
+            :class="['term-option min-h-8 px-3 text-sm font-semibold', { 'is-active': lobby.level === level }]"
+          >
+            {{ levelName(level) }}
+          </button>
+        </div>
+        <div class="space-y-2 text-sm leading-relaxed">
+          <p class="term-muted">&gt; {{ t.sudokuLobbyHint }}</p>
+          <p class="term-muted">&gt; {{ t.sudokuControlsOnline }}</p>
+        </div>
+      </div>
+    </template>
+
+    <SudokuStage
+      v-if="onBoard"
+      mode="online"
+      :t="t"
+      :title="t.sudokuTitle"
+      :exitLabel="t.onlineLeave"
+      :levelLabel="levelName(view.level)"
+      :puzzle="view.puzzle"
+      :solution="view.solution"
+      :gameId="view.round"
+      :startAt="startAt"
+      :player="racing"
+      :myId="room.myId"
+      :owners="view.owners"
+      :scores="view.scores"
+      :names="names"
+      :outcome="view.outcome"
+      @exit="room.leave()"
+      @place="room.act('place', $event)"
+    />
+
+    <!-- Round results -->
+    <div v-else-if="view.phase === 'results'" class="space-y-6">
+      <div class="text-center">
+        <p class="seal mx-auto mb-4" aria-hidden="true" :style="{ fontFamily: JP }">完</p>
+        <h2 class="font-display text-5xl leading-none uppercase">{{ fmt(t.sudokuRoundResults, { n: view.round }) }}</h2>
+        <p class="term-muted mt-2">&gt; {{ winner ? fmt(t.sudokuWinner, { name: winner.name }) : t.sudokuDraw }}</p>
+        <p class="mt-3 flex justify-center gap-2">
+          <span class="term-chip">{{ levelName(view.level) }}</span>
+          <span class="term-chip tabular-nums">{{ formatTime(view.time) }}</span>
+        </p>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-3 px-4 pb-2 term-label">
+          <span class="w-8">#</span>
+          <span class="flex-1">{{ t.onlinePlayers }}</span>
+          <span class="w-14 text-right">{{ t.sudokuWins }}</span>
+          <span class="w-14 text-right">{{ t.sudokuPoints }}</span>
+        </div>
+        <ol class="border border-term-low divide-y divide-term-low">
+          <li
+            v-for="entry in standings"
+            :key="entry.id"
+            :class="['flex items-center gap-3 px-4 py-3', { 'term-inverse': winner && entry.id === winner.id, 'bg-term-deep': !(winner && entry.id === winner.id) && entry.id === room.myId }]"
+          >
+            <span class="w-8 tabular-nums font-semibold">#{{ entry.rank }}</span>
+            <span :class="['flex-1 truncate', { 'font-semibold': entry.id === room.myId }]">{{ entry.name }}</span>
+            <span class="w-14 text-right tabular-nums text-sm">{{ entry.wins }}</span>
+            <span class="w-14 text-right font-bold tabular-nums">{{ entry.points }}</span>
+          </li>
+        </ol>
+      </div>
+
+      <template v-if="room.isHost">
+        <button type="button" class="term-btn term-btn-primary w-full min-h-12" @click="room.act('start')">{{ t.playAgain }}</button>
+        <button type="button" class="term-btn w-full" @click="room.act('lobby')">{{ t.onlineBackToLobby }}</button>
+      </template>
+      <p v-else class="term-muted text-center text-sm"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
+    </div>
+  </OnlineRoom>
 </template>
 
 <style scoped>
-/* The 完 seal, as it was stamped on the board */
+/* The 完 seal, as it was stamped on the board, on the solved card and the round results */
 .seal {
   display: flex;
   align-items: center;

@@ -294,8 +294,11 @@ export function generate (difficulty, seed = Math.floor(Math.random() * 2 ** 31)
 
 // ---------- A game in play ----------
 
-/** A puzzle in play: `values` holds every digit on the board, givens included. */
-export function createGame (puzzle, solution = null) {
+/**
+ * A puzzle in play: `values` holds every digit on the board, givens included. The game is over
+ * after `maxMistakes`; an online race passes Infinity, as mistakes cost points there instead.
+ */
+export function createGame (puzzle, solution = null, { maxMistakes = MAX_MISTAKES } = {}) {
   const board = parse(puzzle)
   return {
     givens: Uint8Array.from(board, d => (d ? 1 : 0)),
@@ -303,6 +306,7 @@ export function createGame (puzzle, solution = null) {
     values: Uint8Array.from(board),
     notes: new Uint16Array(CELLS),
     mistakes: 0,
+    maxMistakes,
     hints: 0,
     history: []
   }
@@ -313,7 +317,7 @@ export const isGiven = (game, cell) => game.givens[cell] === 1
 export const isSettled = (game, cell) => game.values[cell] !== 0 && game.values[cell] === game.solution[cell]
 export const isWrong = (game, cell) => game.values[cell] !== 0 && game.values[cell] !== game.solution[cell]
 export const isSolved = (game) => game.values.every((d, i) => d === game.solution[i])
-export const isOver = (game) => game.mistakes >= MAX_MISTAKES
+export const isOver = (game) => game.mistakes >= game.maxMistakes
 const isActive = (game) => !isOver(game) && !isSolved(game)
 
 /** How many of each digit are in place: counts[d] for d = 1-9. */
@@ -400,6 +404,21 @@ export function erase (game, cell) {
   return true
 }
 
+/**
+ * Puts the right digit in a cell another player got first, in an online race. Like a right
+ * digit placed here it clears itself from the notes around it. It can't be taken back, and
+ * neither can the moves before it. Returns false if the cell already held it.
+ */
+export function fillIn (game, cell) {
+  if (isSettled(game, cell)) return false
+  const d = game.solution[cell]
+  game.values[cell] = d
+  game.notes[cell] = 0
+  for (const i of PEERS[cell]) game.notes[i] &= ~(1 << d)
+  game.history.length = 0
+  return true
+}
+
 /** Takes back the last move. Mistakes and hints stay counted. Returns the cell it was in, or -1. */
 export function undo (game) {
   const step = isActive(game) && game.history.pop()
@@ -449,6 +468,6 @@ export function restore (game, saved) {
     const notes = Number(saved.notes?.[i]) || 0
     game.notes[i] = values[i] ? 0 : notes & ALL
   }
-  game.mistakes = Math.min(MAX_MISTAKES - 1, Math.max(0, Math.floor(Number(saved.mistakes)) || 0))
+  game.mistakes = Math.min(game.maxMistakes - 1, Math.max(0, Math.floor(Number(saved.mistakes)) || 0))
   game.hints = Math.min(HINTS, Math.max(0, Math.floor(Number(saved.hints)) || 0))
 }

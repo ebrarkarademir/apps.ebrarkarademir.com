@@ -57,14 +57,14 @@ const games = computed(() => [
   },
   {
     id: 'sudoku',
-    category: 'solo',
+    category: ['solo', 'online'],
     title: t.value.sudokuTitle,
     description: t.value.sudokuDesc,
     icon: '[9]',
     art: cardArt.sudoku,
-    players: '1',
+    players: '1–4',
     duration: minutes('5–30'),
-    mode: t.value.cardModeSolo
+    mode: t.value.cardModeSoloOnline
   },
   {
     id: 'quiz-race',
@@ -179,7 +179,7 @@ const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
 
 // An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
 // Older links used /?join=CODE&game=quiz-race.
-const ONLINE_GAMES = ['flappy', 'tanks', 'quiz-race', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['flappy', 'tanks', 'sudoku', 'quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const initialRoute = parsePath(window.location.pathname)
 const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
@@ -443,6 +443,7 @@ const toggleLanguage = () => {
       <SudokuGame
         v-else-if="selectedGame === 'sudoku'"
         :t="t"
+        :initialCode="inviteCodeFor('sudoku')"
         @go-back="closeGame"
       />
 

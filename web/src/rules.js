@@ -119,7 +119,7 @@ export const rules = {
     EN: {
       icon: '[9]',
       title: 'Sudoku ASCII',
-      players: '1 player',
+      players: '1 player solo, or 2–4 racing online',
       duration: '5–30 min',
       goal: 'Fill the board so every row, every column and every 3×3 box holds each digit from 1 to 9 exactly once.',
       steps: [
@@ -127,17 +127,20 @@ export const rules = {
         'Select a cell, then tap a number below the board or type 1–9.',
         'A wrong digit is struck by lightning and counts as a mistake. After 3 mistakes the game is over.',
         'Turn on Notes to pencil in the digits a cell could still hold. A right digit clears itself from the notes around it.',
-        'You get 3 hints per puzzle: each one fills in the selected cell, or the easiest cell on the board.'
+        'You get 3 hints per puzzle: each one fills in the selected cell, or the easiest cell on the board.',
+        'Online race: one person creates a room and picks the level, and the others join with the code. Everyone plays the same puzzle on one shared board.',
+        'Get a right digit in first and the cell is yours: it’s a point. Your digits are bright, the others’ dim. A wrong digit costs a point. When the board is full, the most points wins.'
       ],
       tips: [
         'Start with the digits that are already on the board most often.',
-        'Your game is saved as you play — come back later and pick Continue.'
+        'Your game is saved as you play — come back later and pick Continue.',
+        'An online race has no hints, no undo and no pause, and mistakes don’t end it.'
       ]
     },
     TR: {
       icon: '[9]',
       title: 'Sudoku ASCII',
-      players: 'Tek kişilik',
+      players: 'Tek kişilik ya da çevrim içi 2–4 kişilik yarış',
       duration: '5–30 dk',
       goal: 'Tahtayı her satırda, her sütunda ve her 3×3 kutuda 1’den 9’a kadar her rakam tam bir kez olacak şekilde doldur.',
       steps: [
@@ -145,11 +148,14 @@ export const rules = {
         'Bir kare seç, sonra tahtanın altındaki bir sayıya dokun ya da 1–9 yaz.',
         'Yanlış rakama yıldırım düşer ve bir hata sayılır. 3 hatadan sonra oyun biter.',
         'Bir karede olabilecek rakamları not almak için Not’u aç. Doğru rakam, çevresindeki notlardan kendini siler.',
-        'Her bulmacada 3 ipucu hakkın var: her biri seçili kareyi ya da tahtadaki en kolay kareyi doldurur.'
+        'Her bulmacada 3 ipucu hakkın var: her biri seçili kareyi ya da tahtadaki en kolay kareyi doldurur.',
+        'Çevrim içi yarış: bir kişi oda oluşturup seviyeyi seçer, diğerleri kodla katılır. Herkes aynı bulmacayı tek bir ortak tahtada oynar.',
+        'Doğru rakamı ilk sen koyarsan kare senindir: bir puan. Senin rakamların parlak, diğerlerininki soluk görünür. Yanlış rakam bir puan götürür. Tahta dolduğunda en çok puanı olan kazanır.'
       ],
       tips: [
         'Tahtada en çok bulunan rakamlarla başla.',
-        'Oyunun sen oynadıkça kaydedilir — sonra geri gelip Devam et’i seç.'
+        'Oyunun sen oynadıkça kaydedilir — sonra geri gelip Devam et’i seç.',
+        'Çevrim içi yarışta ipucu, geri alma ve duraklatma yoktur; hatalar oyunu bitirmez.'
       ]
     }
   },
