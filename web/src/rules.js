@@ -73,6 +73,48 @@ export const rules = {
       ]
     }
   },
+  tanks: {
+    EN: {
+      icon: '[T]',
+      title: 'Tank ASCII',
+      players: '2–8 players, one device each',
+      duration: '2½ min rounds',
+      goal: 'Hit the other tanks with your shells and be the last tank standing.',
+      steps: [
+        'One person creates a room and the others join with the code. Everyone plays on their own phone or computer.',
+        'There is only one button: hold it anywhere on the screen (or Space) and your tank drives forward and fires.',
+        'Let go and the tank stops and turns on the spot — the other way round after every press. Press again when the dotted line points where you want to go.',
+        'Every tank has 3 hearts. A hit costs one heart, then the tank blinks and is safe for a moment.',
+        'The last tank standing wins the round. If the clock runs out, the tank with the most hearts wins.'
+      ],
+      tips: [
+        'Shells bounce off a wall once — the dotted line shows the bounce too.',
+        'You can only have 3 shells in the air, so pick your shots.',
+        'Short taps fire without driving far; long holds get you out of trouble.',
+        'Turned past your target? A quick tap swings the barrel back the other way.'
+      ]
+    },
+    TR: {
+      icon: '[T]',
+      title: 'Tank ASCII',
+      players: '2–8 oyuncu, herkes kendi cihazından',
+      duration: '2,5 dakikalık turlar',
+      goal: 'Diğer tankları mermilerinle vur ve ayakta kalan son tank ol.',
+      steps: [
+        'Bir kişi oda oluşturur, diğerleri kodla katılır. Herkes kendi telefonundan ya da bilgisayarından oynar.',
+        'Tek bir tuş var: ekranın herhangi bir yerine basılı tut (ya da Boşluk) — tankın ileri gider ve ateş eder.',
+        'Bırakınca tank durur ve olduğu yerde döner — her basıştan sonra ters yöne. Noktalı çizgi istediğin yönü gösterdiğinde tekrar bas.',
+        'Her tankın 3 canı var. Her isabet bir can götürür, sonra tank yanıp söner ve kısa bir süre güvende olur.',
+        'Ayakta kalan son tank turu kazanır. Süre dolarsa en çok canı kalan tank kazanır.'
+      ],
+      tips: [
+        'Mermiler duvardan bir kez seker — noktalı çizgi sekmeyi de gösterir.',
+        'Havada aynı anda en fazla 3 merminin olabilir, atışlarını seç.',
+        'Kısa dokunuşlar fazla ilerlemeden ateş eder; uzun basışlar seni tehlikeden kurtarır.',
+        'Hedefi geçtin mi? Kısa bir dokunuş namluyu ters yöne çevirir.'
+      ]
+    }
+  },
   'number-guess': {
     EN: {
       icon: '[#]',

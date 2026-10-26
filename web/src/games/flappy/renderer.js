@@ -1,15 +1,7 @@
-import { COLS, ROWS, GROUND_Y, PIPE_W, CAP_OVER, CAP_H, mulberry32, pipesInView } from './engine'
+import { COLS, ROWS, GROUND_Y, CAP_OVER, CAP_H, mulberry32, pipesInView } from './engine'
+import { GREEN, DIM, LOW, MONO, tileOut, truncate, paint, drawSprite, drawText } from '../ascii/paint'
 
-// Draws Flappy ASCII on a canvas. Everything is made of characters, pre-rendered once at the
-// screen's full pixel density with the phosphor glow baked in, then moved at fractional
-// positions, so motion stays smooth and the glyphs stay sharp.
-
-export const GREEN = '#00ff00'
-export const DIM = '#00b300'
-export const LOW = '#007a00'
-const GLOW = 'rgba(0, 255, 0, 0.45)'
-const MONO = '"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace'
-const DISPLAY = '"VT323", "JetBrains Mono", monospace'
+// Draws Flappy ASCII on a canvas, from sprites painted with the shared ASCII look.
 
 // Wing up, level and down, then the crashed bird
 const BIRD_FRAMES = [
@@ -29,9 +21,6 @@ const SKY_TILE = 96
 const SKY_ROWS = 14
 const STAR_TILE = 120
 const STAR_ROWS = 36
-
-// Repeats a tile of text rows out to `width` columns
-const tileOut = (tile, width) => tile.map(line => line.repeat(Math.ceil(width / line.length)).slice(0, width))
 
 function groundTile () {
   const random = mulberry32(11)
@@ -74,49 +63,6 @@ function starTile () {
     const r = random()
     return r < 0.006 ? '.' : r < 0.009 ? "'" : r < 0.011 ? '+' : r < 0.012 ? '*' : ' '
   }).join(''))
-}
-
-const truncate = (text, max) => (text.length > max ? text.slice(0, max - 1) + '~' : text)
-
-// Paints rows of text one character per cell, so the grid holds whatever the font's metrics.
-// cw and rh are the cell size in device pixels; `scale` enlarges the glyphs within their cells
-// and `halo` puts a soft phosphor bloom of that strength behind them.
-function paint (lines, colorOf, { cw, rh, glow, weight = 600, scale = 1, halo = 0 }) {
-  const pad = Math.ceil(glow * 2) + Math.ceil(rh * (scale - 1)) + 1
-  const cols = Math.max(...lines.map(line => line.length))
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.ceil(cols * cw + pad * 2)
-  canvas.height = Math.ceil(lines.length * rh + pad * 2)
-  const ctx = canvas.getContext('2d')
-  if (halo) {
-    // An ellipse that fades out exactly at the canvas edges, so it never shows a hard border
-    const radius = canvas.width / 2
-    const bloom = ctx.createRadialGradient(0, 0, 0, 0, 0, radius)
-    bloom.addColorStop(0, `rgba(0, 255, 0, ${halo})`)
-    bloom.addColorStop(1, 'rgba(0, 255, 0, 0)')
-    ctx.save()
-    ctx.translate(canvas.width / 2, canvas.height / 2)
-    ctx.scale(1, canvas.height / canvas.width)
-    ctx.fillStyle = bloom
-    ctx.fillRect(-radius, -radius, radius * 2, radius * 2)
-    ctx.restore()
-  }
-  ctx.font = `${weight} ${rh * scale}px ${MONO}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  if (glow) {
-    ctx.shadowColor = GLOW
-    ctx.shadowBlur = glow
-  }
-  lines.forEach((line, row) => {
-    for (let col = 0; col < line.length; col++) {
-      const ch = line[col]
-      if (ch === ' ') continue
-      ctx.fillStyle = colorOf(ch, col, row, line)
-      ctx.fillText(ch, pad + (col + 0.5) * cw, pad + (row + 0.5) * rh)
-    }
-  })
-  return { canvas, pad }
 }
 
 function buildSprites (row, col, dpr) {
@@ -189,38 +135,12 @@ export function createRenderer (canvas) {
 
   // A bird centered on (x, y) in cells, tilted by `tilt` degrees
   function bird (sprite, x, y, tilt, alpha = 1) {
-    const { canvas: image } = sprite
-    const w = image.width / dpr
-    const h = image.height / dpr
-    ctx.save()
-    ctx.globalAlpha = alpha
-    ctx.translate(x * col, y * row)
-    ctx.rotate((tilt * Math.PI) / 180)
-    ctx.drawImage(image, -w / 2, -h / 2, w, h)
-    ctx.restore()
+    drawSprite(ctx, sprite, x * col, y * row, { angle: (tilt * Math.PI) / 180, alpha, dpr })
   }
 
-  // Text centered on (x, y) in cells; size is in rows. A black outline keeps it readable over pipes.
-  function text (str, { x = COLS / 2, y, size = 1, display = false, color = GREEN, alpha = 1, glow = true, outline = true }) {
-    const px = size * row
-    ctx.save()
-    ctx.globalAlpha = alpha
-    ctx.font = display ? `${px}px ${DISPLAY}` : `600 ${px}px ${MONO}`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    if (outline) {
-      ctx.lineJoin = 'round'
-      ctx.lineWidth = Math.max(2, px * 0.16)
-      ctx.strokeStyle = '#000'
-      ctx.strokeText(str, x * col, y * row)
-    }
-    if (glow) {
-      ctx.shadowColor = GLOW
-      ctx.shadowBlur = Math.max(2, px * 0.15) * dpr
-    }
-    ctx.fillStyle = color
-    ctx.fillText(str, x * col, y * row)
-    ctx.restore()
+  // Text centered on (x, y) in cells; size is in rows
+  function text (str, { x = COLS / 2, y, size = 1, ...style }) {
+    drawText(ctx, str, x * col, y * row, { px: size * row, dpr, ...style })
   }
 
   // Live standings in the top-left corner: > marks you, x marks a crashed bird

@@ -13,6 +13,7 @@ export const translations = {
     langCode: 'EN',
     languageName: 'English',
     gameRules: 'Game rules',
+    sound: 'Sound',
     memoryMatchTitle: 'Memory Match',
     wordPuzzleTitle: 'Word Puzzle',
 
@@ -21,8 +22,9 @@ export const translations = {
     menuSubtitle: 'Choose a game to begin your adventure',
     navLabel: 'App categories',
     navAll: 'All',
-    navParty: 'Party Games',
-    navSolo: 'Solo Games',
+    navParty: 'Party',
+    navOnline: 'Online',
+    navSolo: 'Solo',
     crumbHome: 'Home',
 
     // Game cards
@@ -242,7 +244,6 @@ export const translations = {
     flappyResume: 'Resume',
     flappyTapToResume: 'Press Space or tap to resume',
     flappyQuit: 'Quit',
-    flappySound: 'Sound',
     flappyCrashed: 'Crashed at {score}',
     flappyWatching: 'Watching {name}',
     flappyNextRound: 'You join the next round',
@@ -252,6 +253,26 @@ export const translations = {
     flappyRoundWinner: '{name} wins the round!',
     flappyWins: 'Wins',
     flappyPipes: 'Pipes',
+
+    // Tank ASCII
+    tankTitle: 'Tank ASCII',
+    tankDesc: 'One-button tank battle with friends online — the last tank standing wins',
+    tankLobbyHint: 'Every tank has 3 hearts. Shells bounce off a wall once. The last tank standing wins the round.',
+    tankControls: 'One button: hold it (touch, click or Space) to drive forward and fire, let go to stop and turn. Every press flips the way it turns.',
+    tankHold: 'Hold to drive + fire',
+    tankHolding: 'Driving!',
+    tankGetReady: 'Get ready',
+    tankFight: 'Fight!',
+    tankDestroyed: 'Destroyed',
+    tankWatching: 'Watching the fight',
+    tankNextRound: 'You join the next round',
+    tankWinner: '{name} wins!',
+    tankDraw: 'Draw!',
+    tankTimeUp: 'Time up',
+    tankRoundResults: 'Round {n} results',
+    tankHearts: 'Hearts',
+    tankHits: 'Hits',
+    tankWins: 'Wins',
 
     // Online Quiz Race
     quizTitle: 'Quiz Race',
@@ -311,6 +332,7 @@ export const translations = {
     langCode: 'TR',
     languageName: 'Türkçe',
     gameRules: 'Oyun kuralları',
+    sound: 'Ses',
     memoryMatchTitle: 'Hafıza Oyunu',
     wordPuzzleTitle: 'Kelime Bulmacası',
 
@@ -319,7 +341,8 @@ export const translations = {
     menuSubtitle: 'Macerana başlamak için bir oyun seç',
     navLabel: 'Uygulama kategorileri',
     navAll: 'Tümü',
-    navParty: 'Parti Oyunları',
+    navParty: 'Parti',
+    navOnline: 'Çevrim İçi',
     navSolo: 'Tek Kişilik',
     crumbHome: 'Ana sayfa',
 
@@ -540,7 +563,6 @@ export const translations = {
     flappyResume: 'Devam et',
     flappyTapToResume: 'Devam için Boşluk tuşuna bas ya da dokun',
     flappyQuit: 'Çık',
-    flappySound: 'Ses',
     flappyCrashed: '{score} puanda düştün',
     flappyWatching: '{name} izleniyor',
     flappyNextRound: 'Bir sonraki tura katılacaksın',
@@ -550,6 +572,26 @@ export const translations = {
     flappyRoundWinner: 'Turu {name} kazandı!',
     flappyWins: 'Galibiyet',
     flappyPipes: 'Boru',
+
+    // Tank ASCII
+    tankTitle: 'Tank ASCII',
+    tankDesc: 'Arkadaşlarınla çevrim içi tek tuşlu tank savaşı — ayakta kalan son tank kazanır',
+    tankLobbyHint: 'Her tankın 3 canı var. Mermiler duvardan bir kez seker. Ayakta kalan son tank turu kazanır.',
+    tankControls: 'Tek tuş: basılı tut (dokun, tıkla ya da Boşluk) ileri sür ve ateş et; bırakınca durur ve döner. Her basış dönüş yönünü değiştirir.',
+    tankHold: 'Sürmek ve ateş için basılı tut',
+    tankHolding: 'Sürüyor!',
+    tankGetReady: 'Hazır ol',
+    tankFight: 'Savaş!',
+    tankDestroyed: 'Yok edildin',
+    tankWatching: 'Savaşı izliyorsun',
+    tankNextRound: 'Bir sonraki tura katılacaksın',
+    tankWinner: '{name} kazandı!',
+    tankDraw: 'Berabere!',
+    tankTimeUp: 'Süre doldu',
+    tankRoundResults: 'Tur {n} sonuçları',
+    tankHearts: 'Can',
+    tankHits: 'İsabet',
+    tankWins: 'Galibiyet',
 
     // Online Quiz Race
     quizTitle: 'Bilgi Yarışı',

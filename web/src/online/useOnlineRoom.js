@@ -19,7 +19,8 @@ import { RELAY_BROKERS, connectRelay, relayTopic } from './relay'
 //
 // Real-time games also send "live" data (positions and the like) many times a second. That
 // stays out of the game state: the host keeps each player's latest and passes everyone's on
-// in one small message, ten times a second.
+// in one small message, ten times a second by default. One-off "events" (a shot fired) are
+// passed on to everyone straight away instead.
 
 const PEER_PREFIX = 'ebrarkarademir-'
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -85,10 +86,13 @@ const loadName = () => {
  * @param {(state, player) => void} [options.onLeave]  Host: a player dropped out.
  * @param {(state, now) => void} [options.onTick]      Host: runs a few times a second (timeouts).
  * @param {(data) => void} [options.onLive]  Everyone: every player's latest live data, by player id.
+ * @param {number} [options.liveMs]          How often the host passes on live data.
+ * @param {(data, from) => void} [options.onEvent]  Everyone: another player's one-off event.
  * @param {string} [options.initialCode] Room code from an invite link; joins straight away.
  */
 export function useOnlineRoom (options) {
-  const { game, initialState, project = (state) => state, onAction, onJoin, onLeave, onTick, onLive } = options
+  const { game, initialState, project = (state) => state, onAction, onJoin, onLeave, onTick, onLive, onEvent } = options
+  const liveMs = options.liveMs || LIVE_MS
 
   const screen = ref('home') // home | connecting | room
   const role = ref(null) // host | guest
@@ -273,7 +277,17 @@ export function useOnlineRoom (options) {
     } else if (msg.type === 'live' && known) {
       liveData.set(known.playerId, msg.data)
       liveChanged = true
+    } else if (msg.type === 'event' && known && msg.data && typeof msg.data === 'object') {
+      passOnEvent(known.playerId, msg.data)
     }
+  }
+
+  // Host: an event goes to every other player at once
+  function passOnEvent (from, data) {
+    guests.forEach(guest => {
+      if (guest.playerId !== from) guest.send({ type: 'event', from, data })
+    })
+    if (from !== myId) onEvent?.(data, from)
   }
 
   function dropGuest (key) {
@@ -382,6 +396,10 @@ export function useOnlineRoom (options) {
       if (msg.data && typeof msg.data === 'object') onLive?.(msg.data)
       return
     }
+    if (msg?.type === 'event') {
+      if (msg.data && typeof msg.data === 'object') onEvent?.(msg.data, msg.from)
+      return
+    }
     if (msg?.type !== 'state') return
     clearTimeout(connectTimer)
     clearTimeout(directTimer)
@@ -469,6 +487,12 @@ export function useOnlineRoom (options) {
     }
   }
 
+  /** Send a one-off event to every other player, right away. */
+  function sendEvent (data) {
+    if (role.value === 'host') passOnEvent(myId, data)
+    else hostLink?.send({ type: 'event', data })
+  }
+
   function fail (key) {
     resetConnection()
     errorKey.value = key
@@ -518,7 +542,7 @@ export function useOnlineRoom (options) {
       })
       onTick?.(state.value, now.value)
     }, TICK_MS)
-    liveTimer = setInterval(flushLive, LIVE_MS)
+    liveTimer = setInterval(flushLive, liveMs)
     if (joinCode.value.length === 4 && playerName.value) joinRoom()
   })
 
@@ -532,6 +556,6 @@ export function useOnlineRoom (options) {
   return reactive({
     screen, role, isHost, roomCode, errorKey, playerName, joinCode, now, myId,
     view, me, shareLink,
-    createRoom, joinRoom, leave, act, sendLive
+    createRoom, joinRoom, leave, act, sendLive, sendEvent
   })
 }

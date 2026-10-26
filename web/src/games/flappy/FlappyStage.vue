@@ -1,8 +1,9 @@
 <script setup>
 import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { COLS, ROWS, CELL_ASPECT, STEP, SPEED, BIRD_X, createCourse, createRun, flap, knockOut, stepRun, ghostAt, tiltFor } from './engine'
-import { createRenderer, WING_CYCLE, DEAD_FRAME, GREEN, DIM, LOW } from './renderer'
-import { sound } from './sound'
+import { createRenderer, WING_CYCLE, DEAD_FRAME } from './renderer'
+import { GREEN, DIM, LOW, CANVAS_FONTS } from '../ascii/paint'
+import { sound } from '../ascii/sound'
 
 // The full-screen play area: a canvas as large as the screen allows, the game loop, input and
 // sound. Solo runs take off on the first tap. Online runs take off together at `startAt` and
@@ -460,7 +461,7 @@ onMounted(() => {
   observer = new ResizeObserver(fit)
   observer.observe(area.value)
   fit()
-  Promise.all(['600 16px "JetBrains Mono"', '700 16px "JetBrains Mono"', '16px "VT323"'].map(font => document.fonts?.load(font))).then(onFontsLoaded, () => {})
+  Promise.all(CANVAS_FONTS.map(font => document.fonts?.load(font))).then(onFontsLoaded, () => {})
   document.fonts?.addEventListener?.('loadingdone', onFontsLoaded)
   window.addEventListener('keydown', onKey)
   savedOverflow = document.body.style.overflow
@@ -500,7 +501,7 @@ onUnmounted(() => {
       <button
         type="button"
         class="term-icon-btn shrink-0 h-9 text-xs"
-        :aria-label="t.flappySound"
+        :aria-label="t.sound"
         :aria-pressed="!muted"
         @click="onSoundClick"
       >

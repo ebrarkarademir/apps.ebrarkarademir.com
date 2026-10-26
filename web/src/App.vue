@@ -10,6 +10,7 @@ import CasusKimGame from './games/CasusKimGame.vue'
 import TabuGame from './games/TabuGame.vue'
 import QuizRaceGame from './games/QuizRaceGame.vue'
 import FlappyGame from './games/FlappyGame.vue'
+import TankGame from './games/TankGame.vue'
 import { translations } from './translations'
 import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
@@ -33,7 +34,7 @@ const minutes = (n) => t.value.cardMinutes.replace('{n}', n)
 const games = computed(() => [
   {
     id: 'flappy',
-    category: ['solo', 'party'],
+    category: ['solo', 'online', 'party'],
     title: t.value.flappyTitle,
     description: t.value.flappyDesc,
     icon: '[^]',
@@ -43,8 +44,19 @@ const games = computed(() => [
     mode: t.value.cardModeSoloOnline
   },
   {
+    id: 'tanks',
+    category: ['online', 'party'],
+    title: t.value.tankTitle,
+    description: t.value.tankDesc,
+    icon: '[T]',
+    art: cardArt.tanks,
+    players: '2–8',
+    duration: minutes('2–5'),
+    mode: t.value.cardModeOnline
+  },
+  {
     id: 'quiz-race',
-    category: 'party',
+    category: ['online', 'party'],
     title: t.value.quizTitle,
     description: t.value.quizDesc,
     icon: '[?]',
@@ -89,7 +101,7 @@ const games = computed(() => [
   },
   {
     id: 'casus-kim',
-    category: 'party',
+    category: ['online', 'party'],
     title: t.value.casusTitle,
     description: t.value.casusDesc,
     icon: '[*]',
@@ -100,7 +112,7 @@ const games = computed(() => [
   },
   {
     id: 'tabu',
-    category: 'party',
+    category: ['online', 'party'],
     title: t.value.tabuTitle,
     description: t.value.tabuDesc,
     icon: '[!]',
@@ -137,11 +149,11 @@ const games = computed(() => [
 
 // ---------- URL routing ----------
 // /            menu, all games
-// /party       menu, one category (also /solo)
+// /party       menu, one category (also /online and /solo)
 // /quiz-race   a game, by its id
 // Unknown paths fall back to the menu. Firebase serves index.html for every path.
 
-const CATEGORY_KEYS = ['all', 'party', 'solo']
+const CATEGORY_KEYS = ['all', 'party', 'online', 'solo']
 const GAME_IDS = games.value.map(game => game.id)
 
 const parsePath = (pathname) => {
@@ -155,7 +167,7 @@ const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
 
 // An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
 // Older links used /?join=CODE&game=quiz-race.
-const ONLINE_GAMES = ['flappy', 'quiz-race', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['flappy', 'tanks', 'quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const initialRoute = parsePath(window.location.pathname)
 const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
@@ -171,6 +183,33 @@ const showRules = ref(false)
 // The dev Firebase site (apps-76619-dev.web.app) and the local dev server get a DEV mark
 // so they can't be mistaken for the live site
 const isDevSite = import.meta.env.DEV || window.location.hostname.includes('-dev.')
+
+// The shell prompt shows the visitor's public IPv4 address as the user name. The site has no
+// server of its own, so a public lookup service is asked once per browser session; until it
+// answers, or if it's blocked, the visitor stays "guest".
+const IP_KEY = 'publicIp'
+const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/
+
+const visitor = ref((() => {
+  try {
+    return sessionStorage.getItem(IP_KEY) || 'guest'
+  } catch {
+    return 'guest'
+  }
+})())
+
+async function lookUpIp () {
+  if (visitor.value !== 'guest') return
+  try {
+    const response = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout?.(5000) })
+    const { ip } = await response.json()
+    if (!IPV4.test(ip)) return
+    visitor.value = ip
+    sessionStorage.setItem(IP_KEY, ip)
+  } catch {
+    // Offline, blocked or no IPv4 address: stay "guest"
+  }
+}
 
 // Menu card turned over to its info side
 const flippedGame = ref(null)
@@ -216,6 +255,7 @@ const onPopState = () => {
 const categories = computed(() => [
   { key: 'all', label: t.value.navAll },
   { key: 'party', label: t.value.navParty },
+  { key: 'online', label: t.value.navOnline },
   { key: 'solo', label: t.value.navSolo }
 ])
 
@@ -303,6 +343,7 @@ const onKeydown = (e) => {
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
   window.addEventListener('popstate', onPopState)
+  lookUpIp()
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
@@ -322,7 +363,7 @@ const toggleLanguage = () => {
 
         <!-- Shell prompt -->
         <p class="order-1 flex-1 basis-0 md:flex-none md:basis-auto min-w-0 truncate text-sm font-semibold">
-          <span aria-hidden="true"><span class="term-muted">guest@apps</span>:</span>
+          <span aria-hidden="true"><span class="term-muted">{{ visitor }}@apps</span>:</span>
           <template v-for="(crumb, index) in crumbs" :key="crumb.text">
             <span v-if="index" aria-hidden="true">/</span>
             <button v-if="crumb.path" type="button" class="term-crumb" :aria-label="crumb.label" @click="navigate(crumb.path)">{{ crumb.text }}</button>
@@ -375,6 +416,13 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'flappy'"
         :t="t"
         :initialCode="inviteCodeFor('flappy')"
+        @go-back="closeGame"
+      />
+
+      <TankGame
+        v-else-if="selectedGame === 'tanks'"
+        :t="t"
+        :initialCode="inviteCodeFor('tanks')"
         @go-back="closeGame"
       />
 
