@@ -1,5 +1,6 @@
-import { COLS, ROWS, GROUND_Y, CAP_OVER, CAP_H, mulberry32, pipesInView } from './engine'
+import { COLS, ROWS, GROUND_Y, CAP_OVER, CAP_H, pipesInView } from './engine'
 import { GREEN, DIM, LOW, MONO, tileOut, truncate, paint, drawSprite, drawText } from '../ascii/paint'
+import { mulberry32 } from '../ascii/random'
 
 // Draws Flappy ASCII on a canvas, from sprites painted with the shared ASCII look.
 

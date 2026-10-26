@@ -2,8 +2,12 @@
 import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { COLS, ROWS, CELL_ASPECT, STEP, SPEED, BIRD_X, createCourse, createRun, flap, knockOut, stepRun, ghostAt, tiltFor } from './engine'
 import { createRenderer, WING_CYCLE, DEAD_FRAME } from './renderer'
-import { GREEN, DIM, LOW, CANVAS_FONTS } from '../ascii/paint'
+import ArcadeStage from '../ascii/ArcadeStage.vue'
+import { GREEN, DIM, LOW, watchFonts } from '../ascii/paint'
+import { startLoop } from '../ascii/loop'
+import { stepParticles } from '../ascii/physics'
 import { sound } from '../ascii/sound'
+import { haptics } from '../ascii/haptics'
 
 // The full-screen play area: a canvas as large as the screen allows, the game loop, input and
 // sound. Solo runs take off on the first tap. Online runs take off together at `startAt` and
@@ -42,17 +46,14 @@ const FEATHERS = ["'", ',', '`', '.', '*', '~', "'", '.']
 const area = ref(null)
 const canvas = ref(null)
 const box = reactive({ w: 0, h: 0 })
-const muted = ref(sound.muted)
 
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 let renderer = null
 let observer = null
-let raf = 0
-let lastFrame = 0
-let acc = 0
+let stopLoop = null
+let stopFonts = null
 let alpha = 0
-let savedOverflow = ''
 
 let course = null
 let run = null
@@ -145,21 +146,7 @@ function onKey (event) {
     if (!event.repeat) input()
   } else if ((event.code === 'KeyP' || event.code === 'Escape') && !event.repeat) {
     emit('pause')
-  } else if (event.code === 'KeyM' && !event.repeat) {
-    toggleSound()
   }
-}
-
-function toggleSound () {
-  sound.setMuted(!sound.muted)
-  muted.value = sound.muted
-  if (!muted.value) sound.unlock()
-}
-
-// Clicked buttons let go of focus, so Space goes back to flapping
-function onSoundClick (event) {
-  toggleSound()
-  if (event.detail) event.currentTarget.blur()
 }
 
 // ---------- Simulation ----------
@@ -170,6 +157,7 @@ function onEvent (event) {
     pop = 1
   } else if (event === 'hit') {
     sound.play('hit')
+    haptics.buzz('crash')
     if (run.phase === 'dead') sound.play('fall')
     if (!reduceMotion) {
       flash = 1
@@ -299,17 +287,7 @@ function effects (dt) {
   shake = Math.max(0, shake - dt * 3.5)
   pop = Math.max(0, pop - dt * 6)
   goTimer = Math.max(0, goTimer - dt)
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i]
-    p.life -= dt
-    if (p.life <= 0) {
-      particles.splice(i, 1)
-      continue
-    }
-    p.vy += p.gravity * dt
-    p.x += p.vx * dt
-    p.y += p.vy * dt
-  }
+  stepParticles(particles, dt)
 }
 
 // ---------- Drawing ----------
@@ -409,26 +387,15 @@ function render () {
 
 // ---------- Loop ----------
 
-function frame (now) {
-  raf = requestAnimationFrame(frame)
-  // Long gaps (a hidden tab) are cut short instead of fast-forwarding the game
-  const dt = Math.min(0.1, Math.max(0, (now - lastFrame) / 1000))
-  lastFrame = now
-  if (!props.paused) {
-    if (props.mode === 'online') {
-      countdown()
-      updateGhosts(dt)
-    }
-    acc += dt
-    while (acc >= STEP) {
-      tick()
-      acc -= STEP
-    }
-    alpha = acc / STEP
-    effects(dt)
-    sendSample(dt)
-  }
-  render()
+function before (dt) {
+  if (props.mode !== 'online') return
+  countdown()
+  updateGhosts(dt)
+}
+
+function after (dt) {
+  effects(dt)
+  sendSample(dt)
 }
 
 // The play area keeps the view's shape and fills as much of the screen as it can
@@ -442,9 +409,6 @@ function fit () {
   box.w = Math.floor(box.h * ASPECT)
   renderer.resize(box.w, box.h, Math.min(window.devicePixelRatio || 1, 3))
 }
-
-// The sprites are drawn with the page fonts, so draw them again once a font has loaded
-const onFontsLoaded = () => renderer?.rebuild()
 
 watch(() => props.runId, newRun)
 
@@ -461,53 +425,47 @@ onMounted(() => {
   observer = new ResizeObserver(fit)
   observer.observe(area.value)
   fit()
-  Promise.all(CANVAS_FONTS.map(font => document.fonts?.load(font))).then(onFontsLoaded, () => {})
-  document.fonts?.addEventListener?.('loadingdone', onFontsLoaded)
+  // The sprites are drawn with the page fonts, so draw them again once a font has loaded
+  stopFonts = watchFonts(() => renderer?.rebuild())
   window.addEventListener('keydown', onKey)
-  savedOverflow = document.body.style.overflow
-  document.body.style.overflow = 'hidden'
-  document.activeElement?.blur?.()
   newRun()
-  lastFrame = performance.now()
-  raf = requestAnimationFrame(frame)
+  stopLoop = startLoop({
+    step: STEP,
+    paused: () => props.paused,
+    before,
+    tick,
+    after,
+    draw: (value) => {
+      alpha = value
+      render()
+    }
+  })
   // Development builds expose the run, for scripted play-testing
   if (import.meta.env.DEV) window.__flappy = { get run () { return run }, get camera () { return camera } }
 })
 
 onUnmounted(() => {
-  cancelAnimationFrame(raf)
+  stopLoop?.()
   observer?.disconnect()
-  document.fonts?.removeEventListener?.('loadingdone', onFontsLoaded)
+  stopFonts?.()
   window.removeEventListener('keydown', onKey)
-  document.body.style.overflow = savedOverflow
   if (import.meta.env.DEV) delete window.__flappy
 })
 </script>
 
 <template>
-  <div
-    class="arena fixed inset-0 z-40 flex flex-col bg-black select-none"
+  <ArcadeStage
+    :t="t"
+    :title="title"
+    :exitLabel="exitLabel"
+    @exit="emit('exit')"
     @pointerdown="onPointer"
     @pointerup="sound.unlock()"
     @contextmenu.prevent
   >
-    <header class="shrink-0 flex items-center gap-2 h-12 px-2 sm:px-4 border-b border-term-low">
-      <button type="button" class="term-link shrink-0" @click="emit('exit')">
-        <span aria-hidden="true">[&lt;]</span>
-        <span>{{ exitLabel }}</span>
-      </button>
-      <h1 class="flex-1 min-w-0 truncate text-center font-display text-2xl leading-none uppercase">[ {{ title }} ]</h1>
+    <template #actions>
       <slot name="actions" />
-      <button
-        type="button"
-        class="term-icon-btn shrink-0 h-9 text-xs"
-        :aria-label="t.sound"
-        :aria-pressed="!muted"
-        @click="onSoundClick"
-      >
-        {{ muted ? 'SND:OFF' : 'SND:ON' }}
-      </button>
-    </header>
+    </template>
 
     <div ref="area" class="flex-1 min-h-0 flex items-center justify-center p-2 sm:p-4 touch-none">
       <div class="stage relative" :style="{ width: `${box.w}px`, height: `${box.h}px` }">
@@ -515,14 +473,10 @@ onUnmounted(() => {
         <slot name="overlay" />
       </div>
     </div>
-  </div>
+  </ArcadeStage>
 </template>
 
 <style scoped>
-.arena {
-  -webkit-touch-callout: none;
-}
-
 .stage {
   box-shadow: 0 0 0 1px var(--color-term-low), 0 0 18px rgb(0 255 0 / 0.15);
 }

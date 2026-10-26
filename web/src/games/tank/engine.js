@@ -57,17 +57,6 @@ export const wrapAngle = (a) => ((a % TAU) + TAU) % TAU
 // The short way round from a to b
 export const angleDiff = (a, b) => ((((b - a) % TAU) + TAU * 1.5) % TAU) - Math.PI
 
-export function mulberry32 (seed) {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 /** All walls of a map as cells, border included. */
 export const mapCells = (map) => [...BORDER, ...MAPS[map % MAPS.length]]
 

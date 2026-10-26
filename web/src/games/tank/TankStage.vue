@@ -5,8 +5,13 @@ import {
   mapWalls, spawnTank, moveTank, fireShell, stepShell, touches, aimPath, tankAt, wrapAngle, angleDiff
 } from './engine'
 import { createRenderer } from './renderer'
-import { GREEN, DIM, CANVAS_FONTS } from '../ascii/paint'
+import ArcadeStage from '../ascii/ArcadeStage.vue'
+import { GREEN, DIM, watchFonts } from '../ascii/paint'
+import { startLoop } from '../ascii/loop'
+import { stepParticles, burst } from '../ascii/physics'
+import { SPARKS, sparks as throwSparks } from '../ascii/fx'
 import { sound } from '../ascii/sound'
+import { haptics } from '../ascii/haptics'
 
 // The full-screen battle: a square arena as large as the screen allows, one big button under
 // it, the game loop, input and sound. Holding the button (anywhere on screen, or Space) drives
@@ -40,25 +45,22 @@ const FIGHT_SECONDS = 0.9
 const BAR_MIN = 56
 const GAP = 8
 const BUTTON_KEYS = new Set(['Space', 'Enter', 'ArrowUp', 'KeyW'])
-const SPARKS = ['*', "'", '.', '`', '+', ',']
 const DEBRIS = ['#', '*', '@', '%', '+', 'x', '=', '"']
 
 const area = ref(null)
 const canvas = ref(null)
 const box = reactive({ size: 0, bar: BAR_MIN })
 const held = ref(false)
-const muted = ref(sound.muted)
 const now = ref(Date.now()) // for the clock in the bar; updated once a second at most
 
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 let renderer = null
 let observer = null
-let raf = 0
-let lastFrame = 0
-let acc = 0
+let stopLoop = null
+let stopFonts = null
 let alpha = 0
-let savedOverflow = ''
+let others = [] // the other tanks still in the fight, for this frame's steps
 
 let walls = []
 let me = null // { x, y, a, moving, travel, alive } and prev* for smooth drawing
@@ -166,8 +168,6 @@ function onKeyDown (event) {
     sound.unlock()
     keyDown = true
     syncHeld()
-  } else if (event.code === 'KeyM' && !event.repeat) {
-    toggleSound()
   }
 }
 
@@ -186,18 +186,6 @@ function releaseAll () {
 
 const onVisibility = () => {
   if (document.hidden) releaseAll()
-}
-
-function toggleSound () {
-  sound.setMuted(!sound.muted)
-  muted.value = sound.muted
-  if (!muted.value) sound.unlock()
-}
-
-// Clicked buttons let go of focus, so Space goes back to the tank
-function onSoundClick (event) {
-  toggleSound()
-  if (event.detail) event.currentTarget.blur()
 }
 
 // ---------- Shells and hits ----------
@@ -240,6 +228,7 @@ function gotHit (shell) {
   safeUntil = clock + INVULNERABLE
   emit('hit', { by: shell.owner, sid: shell.id, x: round2(shell.x), y: round2(shell.y) })
   sound.play('hit')
+  haptics.buzz('hit')
   sparks(shell.x, shell.y, 10)
   if (!reduceMotion) {
     flash = 1
@@ -262,20 +251,13 @@ function watchTanks () {
 
 // ---------- Effects ----------
 
-function burst (x, y, chars, count, speed, life) {
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2
-    const v = speed * (0.4 + Math.random() * 0.6)
-    particles.push({ ch: chars[i % chars.length], x, y, vx: Math.cos(angle) * v, vy: Math.sin(angle) * v, life: life * (0.6 + Math.random() * 0.4), ttl: life, color: i % 3 ? DIM : GREEN })
-  }
-}
-
-const sparks = (x, y, count) => burst(x, y, SPARKS, count, 9, 0.45)
+const sparks = (x, y, count) => throwSparks(particles, x, y, { count })
 
 function explode (body, mine) {
   body.alive = false
-  burst(body.x, body.y, DEBRIS, 22, 14, 1)
+  burst(particles, body.x, body.y, { chars: DEBRIS, colors: [GREEN, DIM, DIM], count: 22, speed: 14, life: 1, drag: 3 })
   sound.play('boom')
+  if (mine) haptics.buzz('boom')
   if (mine && !reduceMotion) {
     shake = 1.5
     flash = 1
@@ -285,7 +267,7 @@ function explode (body, mine) {
 function muzzle (shot) {
   if (reduceMotion) return
   for (let i = 0; i < 3; i++) {
-    particles.push({ ch: SPARKS[i], x: shot.x, y: shot.y, vx: shot.dx * (6 + i * 3), vy: shot.dy * (6 + i * 3), life: 0.16, ttl: 0.16, color: GREEN })
+    particles.push({ ch: SPARKS[i], x: shot.x, y: shot.y, vx: shot.dx * (6 + i * 3), vy: shot.dy * (6 + i * 3), drag: 3, life: 0.16, ttl: 0.16, color: GREEN })
   }
 }
 
@@ -293,19 +275,7 @@ function effects (dt) {
   flash = Math.max(0, flash - dt * 4)
   shake = Math.max(0, shake - dt * 3)
   fightTimer = Math.max(0, fightTimer - dt)
-  const drag = Math.exp(-dt * 3)
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i]
-    p.life -= dt
-    if (p.life <= 0) {
-      particles.splice(i, 1)
-      continue
-    }
-    p.vx *= drag
-    p.vy *= drag
-    p.x += p.vx * dt
-    p.y += p.vy * dt
-  }
+  stepParticles(particles, dt)
 }
 
 // ---------- Simulation ----------
@@ -325,7 +295,7 @@ function startCheck () {
   }
 }
 
-function tick (others) {
+function tick () {
   clock += STEP
   if (me) {
     me.prevX = me.x
@@ -342,7 +312,7 @@ function tick (others) {
     const result = stepShell(shell, walls, STEP)
     if (result === 'gone') {
       shells.delete(shell.id)
-      burst(shell.x, shell.y, SPARKS, 3, 5, 0.3)
+      throwSparks(particles, shell.x, shell.y, { count: 3, speed: 5, life: 0.3 })
       continue
     }
     if (result === 'bounce' && shell.owner === props.myId) sound.play('bounce')
@@ -485,26 +455,19 @@ function render () {
 
 // ---------- Loop ----------
 
-function frame (time) {
-  raf = requestAnimationFrame(frame)
-  const dt = Math.min(0.1, Math.max(0, (time - lastFrame) / 1000))
-  lastFrame = time
+function before (dt) {
   readInbox()
   watchTanks()
   startCheck()
   updateGhosts(dt)
-  const others = []
+  others = []
   for (const ghost of ghosts.values()) if (ghost.alive) others.push(ghost)
-  acc += dt
-  while (acc >= STEP) {
-    tick(others)
-    acc -= STEP
-  }
-  alpha = acc / STEP
+}
+
+function after (dt) {
   effects(dt)
   sendSample(dt)
   if (Math.floor(Date.now() / 1000) !== Math.floor(now.value / 1000)) now.value = Date.now()
-  if (renderer) render()
 }
 
 // The arena stays square; the button below it gets the room that's left, within limits
@@ -519,8 +482,6 @@ function fit () {
   renderer.resize(box.size, Math.min(window.devicePixelRatio || 1, 3))
 }
 
-const onFontsLoaded = () => renderer?.rebuild()
-
 watch(() => props.round, newRound)
 
 onMounted(() => {
@@ -529,17 +490,21 @@ onMounted(() => {
   observer = new ResizeObserver(fit)
   observer.observe(area.value)
   fit()
-  Promise.all(CANVAS_FONTS.map(font => document.fonts?.load(font))).then(onFontsLoaded, () => {})
-  document.fonts?.addEventListener?.('loadingdone', onFontsLoaded)
+  stopFonts = watchFonts(() => renderer?.rebuild())
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('blur', releaseAll)
   document.addEventListener('visibilitychange', onVisibility)
-  savedOverflow = document.body.style.overflow
-  document.body.style.overflow = 'hidden'
-  document.activeElement?.blur?.()
-  lastFrame = performance.now()
-  raf = requestAnimationFrame(frame)
+  stopLoop = startLoop({
+    step: STEP,
+    before,
+    tick,
+    after,
+    draw: (value) => {
+      alpha = value
+      if (renderer) render()
+    }
+  })
   // Development builds expose the battle, for scripted play-testing
   if (import.meta.env.DEV) {
     window.__tank = { get me () { return me }, get ghosts () { return ghosts }, get shells () { return shells }, get held () { return held.value } }
@@ -547,37 +512,19 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  cancelAnimationFrame(raf)
+  stopLoop?.()
   observer?.disconnect()
-  document.fonts?.removeEventListener?.('loadingdone', onFontsLoaded)
+  stopFonts?.()
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('blur', releaseAll)
   document.removeEventListener('visibilitychange', onVisibility)
-  document.body.style.overflow = savedOverflow
   if (import.meta.env.DEV) delete window.__tank
 })
 </script>
 
 <template>
-  <div class="arena fixed inset-0 z-40 flex flex-col bg-black select-none">
-    <header class="shrink-0 flex items-center gap-2 h-12 px-2 sm:px-4 border-b border-term-low">
-      <button type="button" class="term-link shrink-0" @click="emit('exit')">
-        <span aria-hidden="true">[&lt;]</span>
-        <span>{{ exitLabel }}</span>
-      </button>
-      <h1 class="flex-1 min-w-0 truncate text-center font-display text-2xl leading-none uppercase">[ {{ title }} ]</h1>
-      <button
-        type="button"
-        class="term-icon-btn shrink-0 h-9 text-xs"
-        :aria-label="t.sound"
-        :aria-pressed="!muted"
-        @click="onSoundClick"
-      >
-        {{ muted ? 'SND:OFF' : 'SND:ON' }}
-      </button>
-    </header>
-
+  <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" @exit="emit('exit')">
     <!-- The whole area is the button -->
     <div
       ref="area"
@@ -610,14 +557,10 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-  </div>
+  </ArcadeStage>
 </template>
 
 <style scoped>
-.arena {
-  -webkit-touch-callout: none;
-}
-
 .stage {
   box-shadow: 0 0 0 1px var(--color-term-low), 0 0 18px rgb(0 255 0 / 0.15);
 }

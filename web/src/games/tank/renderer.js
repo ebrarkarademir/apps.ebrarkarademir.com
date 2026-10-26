@@ -1,5 +1,6 @@
-import { COLS, ROWS, SIZE, TANK_R, mapCells, mulberry32 } from './engine'
+import { COLS, ROWS, SIZE, TANK_R, mapCells } from './engine'
 import { GREEN, DIM, LOW, MONO, paint, drawSprite, drawText, truncate } from '../ascii/paint'
+import { mulberry32 } from '../ascii/random'
 
 // Draws Tank ASCII on a canvas: the arena is painted once per map and size, tanks and shells
 // are pre-painted sprites turned and moved freely on top.

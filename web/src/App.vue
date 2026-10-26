@@ -11,6 +11,7 @@ import TabuGame from './games/TabuGame.vue'
 import QuizRaceGame from './games/QuizRaceGame.vue'
 import FlappyGame from './games/FlappyGame.vue'
 import TankGame from './games/TankGame.vue'
+import SudokuGame from './games/SudokuGame.vue'
 import { translations } from './translations'
 import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
@@ -53,6 +54,17 @@ const games = computed(() => [
     players: '2–8',
     duration: minutes('2–5'),
     mode: t.value.cardModeOnline
+  },
+  {
+    id: 'sudoku',
+    category: 'solo',
+    title: t.value.sudokuTitle,
+    description: t.value.sudokuDesc,
+    icon: '[9]',
+    art: cardArt.sudoku,
+    players: '1',
+    duration: minutes('5–30'),
+    mode: t.value.cardModeSolo
   },
   {
     id: 'quiz-race',
@@ -315,8 +327,10 @@ const legendStyles = {
 const isTyping = (target) => !!target.closest?.('input, textarea, select, [contenteditable="true"]')
 
 // Esc climbs one level: game -> its list, category -> all. Online games ignore it, since
-// leaving would drop the player out of the room.
+// leaving would drop the player out of the room, and so does a full-screen arcade game,
+// which uses it to pause.
 const goUp = () => {
+  if ('arcade' in document.body.dataset) return
   if (selectedGame.value) {
     if (!ONLINE_GAMES.includes(selectedGame.value)) closeGame()
   } else if (selectedCategory.value !== 'all') {
@@ -423,6 +437,12 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'tanks'"
         :t="t"
         :initialCode="inviteCodeFor('tanks')"
+        @go-back="closeGame"
+      />
+
+      <SudokuGame
+        v-else-if="selectedGame === 'sudoku'"
+        :t="t"
         @go-back="closeGame"
       />
 

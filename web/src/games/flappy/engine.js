@@ -1,3 +1,5 @@
+import { mulberry32 } from '../ascii/random'
+
 // Flappy ASCII simulation, kept free of drawing and timing so it plays the same everywhere.
 // A seed fixes the whole course, which is how every player in an online race flies through
 // the same pipes on their own device.
@@ -36,17 +38,6 @@ const HALF_W = 2.3
 export const HALF_H = 0.95
 // Outlines are drawn through the middle of the character cells at the pipe edges
 const EDGE = 0.5
-
-export function mulberry32 (seed) {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
