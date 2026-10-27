@@ -17,6 +17,7 @@ import { IPV4 } from './ipInfo'
 // Chats are end-to-end encrypted (see chatCrypto.js) and only kept in the two tabs' memory.
 // When someone leaves, the chat with them is deleted, and a tab that loses its own connection
 // loses everyone and so deletes all of its chats, just as everyone else deletes theirs with it.
+// A chat message is either text or an invite to an online game room.
 
 const KEEPALIVE_S = 60 // background tabs may only run timers once a minute, and pings must keep up
 const RECONNECT_MS = 3000
@@ -27,6 +28,7 @@ export const MAX_TEXT = 500
 
 const ID = /^[0-9a-z]{14}$/
 const PUBLIC_KEY = /^[A-Za-z0-9+/]{87}=$/ // a raw P-256 public key: 65 bytes
+const ROOM_CODE = /^[A-Z0-9]{4}$/
 
 const randomId = () => Array.from(crypto.getRandomValues(new Uint32Array(2)), n => n.toString(36).padStart(7, '0')).join('')
 
@@ -34,14 +36,17 @@ const randomId = () => Array.from(crypto.getRandomValues(new Uint32Array(2)), n 
  * @param {object} options
  * @param {import('vue').Ref<string>} options.ip  This visitor's IPv4 address; anything else counts as unknown.
  * @param {string} options.space  Keeps the live site's list apart from the dev sites'.
- * @param {(person: object, text: string) => void} [options.onMessage]  Someone sent this tab a chat message.
+ * @param {string[]} [options.games]  Ids of the online games someone can be invited to.
+ * @param {(person: object, message: { text } | { invite: { game, code } }) => void} [options.onMessage]
+ *   Someone sent this tab a chat message.
  */
-export function useUsers ({ ip, space, onMessage }) {
+export function useUsers ({ ip, space, games = [], onMessage }) {
   const myId = randomId()
   const arrived = Date.now()
 
   const people = reactive(new Map()) // everyone else, by id -> { id, ip, key, since }
-  const chats = reactive(new Map()) // by the other person's id -> { messages: [{ id, mine, text, at }], unread }
+  // By the other person's id -> { messages: [{ id, mine, at, text } or { id, mine, at, invite: { game, code } }], unread }
+  const chats = reactive(new Map())
   const active = ref(null) // whose chat is on screen; what they send doesn't count as unread
   const online = ref(false) // connected to at least one broker
   const canChat = ref(false) // this tab has its keys
@@ -177,15 +182,18 @@ export function useUsers ({ ip, space, onMessage }) {
     return chat
   }
 
-  /** Encrypts a message and sends it through every broker. Resolves false if it couldn't be sent. */
-  async function send (id, rawText) {
-    const text = String(rawText).trim().slice(0, MAX_TEXT)
+  // An invite names one of the online games and a room code
+  const readInvite = (invite) =>
+    invite && games.includes(invite.game) && ROOM_CODE.test(invite.code) ? { game: invite.game, code: invite.code } : null
+
+  // Encrypts { text } or { invite } and sends it through every broker
+  async function deliver (id, content) {
     const person = people.get(id)
-    if (!text || !canChatWith(person)) return false
-    const message = { id: randomId(), mine: true, text, at: Date.now() }
+    if (!canChatWith(person)) return false
+    const message = { id: randomId(), mine: true, at: Date.now(), ...content }
     let sealed
     try {
-      sealed = await seal(await keyFor(person), { from: myId, to: id, id: message.id, text })
+      sealed = await seal(await keyFor(person), { from: myId, to: id, id: message.id, ...content })
     } catch {
       return false
     }
@@ -193,6 +201,18 @@ export function useUsers ({ ip, space, onMessage }) {
     relays.forEach(relay => relay.publish(inboxTopic(id), { type: 'msg', from: myId, ...sealed }))
     addMessage(id, message)
     return true
+  }
+
+  /** Sends a chat message. Resolves false if it couldn't be sent. */
+  async function send (id, rawText) {
+    const text = String(rawText).trim().slice(0, MAX_TEXT)
+    return text ? deliver(id, { text }) : false
+  }
+
+  /** Invites someone into an online game room. Resolves false if it couldn't be sent. */
+  async function sendInvite (id, game, code) {
+    const invite = readInvite({ game, code })
+    return invite ? deliver(id, { invite }) : false
   }
 
   async function readMessage (msg) {
@@ -206,13 +226,15 @@ export function useUsers ({ ip, space, onMessage }) {
     }
     // Sender and receiver are checked inside the encryption too, so nobody can bounce a
     // message back to the person who wrote it
-    if (plain?.from !== msg.from || plain.to !== myId || typeof plain.text !== 'string' || !ID.test(plain.id)) return
-    const text = plain.text.trim().slice(0, MAX_TEXT)
-    // Gone in the meantime, or the same message again through the other broker
-    if (!text || !people.has(msg.from) || chats.get(msg.from)?.messages.some(m => m.id === plain.id)) return
-    const chat = addMessage(msg.from, { id: plain.id, mine: false, text, at: Date.now() })
+    if (plain?.from !== msg.from || plain.to !== myId || !ID.test(plain.id)) return
+    const invite = readInvite(plain.invite)
+    const text = typeof plain.text === 'string' ? plain.text.trim().slice(0, MAX_TEXT) : ''
+    const content = invite ? { invite } : { text }
+    // Empty, gone in the meantime, or the same message again through the other broker
+    if ((!invite && !text) || !people.has(msg.from) || chats.get(msg.from)?.messages.some(m => m.id === plain.id)) return
+    const chat = addMessage(msg.from, { id: plain.id, mine: false, at: Date.now(), ...content })
     if (active.value !== msg.from || document.hidden) chat.unread++
-    onMessage?.(person, text)
+    onMessage?.(person, content)
   }
 
   function markRead () {
@@ -274,6 +296,6 @@ export function useUsers ({ ip, space, onMessage }) {
 
   return reactive({
     myId, online, canChat, list, people, chats, active, unread,
-    canChatWith, send
+    canChatWith, send, sendInvite
   })
 }

@@ -11,7 +11,9 @@ import { JP, useJapaneseFont } from './ascii/paint'
 const props = defineProps({
   t: { type: Object, required: true },
   // Room code from a shared invite link
-  initialCode: { type: String, default: '' }
+  initialCode: { type: String, default: '' },
+  // Open a room straight away: a chat invite is waiting for its code
+  hostRoom: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['go-back'])
@@ -48,8 +50,8 @@ const formatTime = (seconds) => {
   return s >= 3600 ? `${Math.floor(s / 3600)}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-// null while choosing, then solo or online; an invite link goes straight online
-const mode = ref(props.initialCode ? 'online' : null)
+// null while choosing, then solo or online; an invite link or a chat invite goes straight online
+const mode = ref(props.initialCode || props.hostRoom ? 'online' : null)
 
 // ---------- Kept on this device ----------
 
@@ -241,6 +243,7 @@ function onAction (s, playerId, action) {
 const room = useOnlineRoom({
   game: 'sudoku',
   initialCode: props.initialCode,
+  hostRoom: props.hostRoom,
   initialState: () => ({ level: 'easy', round: 0, puzzle: '', solution: '', deadline: null, startedAt: 0, owners: {}, scores: {}, standings: [], wins: {}, outcome: null, time: 0 }),
   // A page that comes in mid-round needs to know how long the round has been going
   project: (s) => (s.phase === 'playing' ? { ...s, msPlayed: Date.now() - s.startedAt } : s),

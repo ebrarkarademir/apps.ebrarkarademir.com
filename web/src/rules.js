@@ -396,6 +396,7 @@ export const rules = {
         'Everyone with the site open is on the list with their IP address and flag, you included.',
         'Pick someone to see what public lookup services know about their IP: country and flag, city, time zone, internet provider and more.',
         'Write in the chat box to message them. They get a pop-up wherever they are on the site.',
+        'Press [+] Invite to a game and pick one: you open a room in it, and they get a Join button that takes them straight in.',
         'A chat only lasts while you’re both here: when either of you closes the site or loses connection, it’s deleted on both sides.'
       ],
       tips: [
@@ -412,6 +413,7 @@ export const rules = {
         'Siteyi açık tutan herkes IP adresi ve bayrağıyla listede görünür, sen de dahil.',
         'Birini seçerek herkese açık sorgulama servislerinin o IP hakkında bildiklerini gör: ülke ve bayrak, şehir, saat dilimi, internet sağlayıcı ve daha fazlası.',
         'Mesaj göndermek için sohbet kutusuna yaz. Karşı taraf sitenin neresinde olursa olsun bildirim alır.',
+        '[+] Oyuna davet et’e basıp bir oyun seç: o oyunda bir oda açarsın, karşı taraf da doğrudan katılması için bir Katıl butonu alır.',
         'Sohbet sadece ikiniz de buradayken sürer: biriniz siteyi kapatır ya da bağlantısı koparsa iki tarafta da silinir.'
       ],
       tips: [

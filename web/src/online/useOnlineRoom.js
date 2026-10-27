@@ -1,4 +1,4 @@
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import Peer from 'peerjs'
 import { iceServers } from './iceServers'
 import { RELAY_BROKERS, connectRelay, relayTopic } from './relay'
@@ -54,6 +54,10 @@ const waitFor = (check, ms) => new Promise((resolve) => {
 
 export const cleanName = (name) => String(name || '').trim().slice(0, 18)
 
+// The room this tab is in, for the rest of the app: { game, code, isHost }, or null.
+// A chat invite goes out with its code once the room is open.
+export const currentRoom = shallowRef(null)
+
 // Stable per-tab id, so a player who drops out (phone locked, page reloaded) rejoins as themselves
 const getClientId = () => {
   try {
@@ -89,6 +93,7 @@ const loadName = () => {
  * @param {number} [options.liveMs]          How often the host passes on live data.
  * @param {(data, from) => void} [options.onEvent]  Everyone: another player's one-off event.
  * @param {string} [options.initialCode] Room code from an invite link; joins straight away.
+ * @param {boolean} [options.hostRoom]   Creates a room straight away, for a chat invite.
  */
 export function useOnlineRoom (options) {
   const { game, initialState, project = (state) => state, onAction, onJoin, onLeave, onTick, onLive, onEvent } = options
@@ -320,6 +325,13 @@ export function useOnlineRoom (options) {
   // Any change to the host's state reaches every guest on the next tick
   watch(state, () => guests.forEach(sendTo), { deep: true })
 
+  // Let the rest of the app know while this room is open
+  const owner = Symbol(game)
+  watch([screen, roomCode, role], () => {
+    if (screen.value === 'room') currentRoom.value = { game, code: roomCode.value, isHost: role.value === 'host', owner }
+    else if (currentRoom.value?.owner === owner) currentRoom.value = null
+  })
+
   function flushLive () {
     if (role.value !== 'host' || !state.value || !liveChanged) return
     liveChanged = false
@@ -543,7 +555,9 @@ export function useOnlineRoom (options) {
       onTick?.(state.value, now.value)
     }, TICK_MS)
     liveTimer = setInterval(flushLive, liveMs)
+    // Without a name the player picks one first, then creates or joins as usual
     if (joinCode.value.length === 4 && playerName.value) joinRoom()
+    else if (options.hostRoom && playerName.value) createRoom()
   })
 
   onUnmounted(() => {
@@ -551,6 +565,7 @@ export function useOnlineRoom (options) {
     clearInterval(tickTimer)
     clearInterval(liveTimer)
     resetConnection()
+    if (currentRoom.value?.owner === owner) currentRoom.value = null
   })
 
   return reactive({

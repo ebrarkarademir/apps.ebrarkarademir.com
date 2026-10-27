@@ -435,7 +435,15 @@ export const translations = {
     usersThisIsYou: 'This is you. Everyone on the Users page sees your IP address and this information.',
     usersNewMessage: 'Message from {name}',
     usersOpenChat: 'Open the chat',
+    usersReplyLater: 'Answer from the Users tab after the game',
     usersDismiss: 'Dismiss',
+    usersInvite: 'Invite to a game',
+    usersInviteHint: 'Pick a game: you open a room in it, and {name} gets an invite to join.',
+    usersInvitedThem: 'invited them to {game}',
+    usersInvitedYou: 'invites you to {game}',
+    usersInviteFrom: '{name} invites you to play',
+    usersInviteWaiting: 'Opening a room: the invite goes to {name} as soon as it’s open',
+    usersInviteSent: 'Invite sent to {name}',
   },
   TR: {
     // App-wide translations
@@ -873,6 +881,14 @@ export const translations = {
     usersThisIsYou: 'Bu sensin. Kullanıcılar sayfasındaki herkes IP adresini ve bu bilgileri görür.',
     usersNewMessage: '{name} mesaj gönderdi',
     usersOpenChat: 'Sohbeti aç',
+    usersReplyLater: 'Oyundan sonra Kullanıcılar sekmesinden cevap ver',
     usersDismiss: 'Kapat',
+    usersInvite: 'Oyuna davet et',
+    usersInviteHint: 'Bir oyun seç: o oyunda bir oda açarsın, karşı taraf da katılması için davet alır.',
+    usersInvitedThem: '{game} oyununa davet ettin',
+    usersInvitedYou: 'seni {game} oyununa davet ediyor',
+    usersInviteFrom: '{name} seni oyuna davet ediyor',
+    usersInviteWaiting: 'Oda açılıyor: açılır açılmaz davet {name} adresine gidecek',
+    usersInviteSent: 'Davet {name} adresine gönderildi',
   }
 } 

@@ -9,7 +9,9 @@ import FlappyStage from './flappy/FlappyStage.vue'
 const props = defineProps({
   t: { type: Object, required: true },
   // Room code from a shared invite link
-  initialCode: { type: String, default: '' }
+  initialCode: { type: String, default: '' },
+  // Open a room straight away: a chat invite is waiting for its code
+  hostRoom: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['go-back'])
@@ -44,8 +46,8 @@ const medalArt = (mark) => [' \\ /', ".-'-.", `| ${mark} |`, "'---'"].join('\n')
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 const randomSeed = () => Math.floor(Math.random() * 2 ** 31)
 
-// null while choosing, then solo or online; an invite link goes straight online
-const mode = ref(props.initialCode ? 'online' : null)
+// null while choosing, then solo or online; an invite link or a chat invite goes straight online
+const mode = ref(props.initialCode || props.hostRoom ? 'online' : null)
 
 // ---------- Solo ----------
 
@@ -206,6 +208,7 @@ function countOut (s, id) {
 const room = useOnlineRoom({
   game: 'flappy',
   initialCode: props.initialCode,
+  hostRoom: props.hostRoom,
   initialState: () => ({ round: 0, seed: 0, deadline: null, runners: {}, standings: [], wins: {} }),
   onAction,
   onLive,

@@ -9,7 +9,9 @@ const props = defineProps({
     required: true
   },
   // Room code from a shared invite link
-  initialCode: { type: String, default: '' }
+  initialCode: { type: String, default: '' },
+  // Open a room straight away: a chat invite is waiting for its code
+  hostRoom: { type: Boolean, default: false }
 })
 
 defineEmits(['go-back'])
@@ -128,6 +130,7 @@ function onAction (s, playerId, action) {
 const room = useOnlineRoom({
   game: 'tabu',
   initialCode: props.initialCode,
+  hostRoom: props.hostRoom,
   initialState: () => ({
     teams: {}, deck: [], cardIndex: 0, scores: [0, 0], currentTeam: 0, turns: [0, 0], playing: false, deadline: null
   }),

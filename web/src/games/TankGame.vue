@@ -9,7 +9,9 @@ import { HEARTS, INVULNERABLE, MAPS, SPAWNS } from './tank/engine'
 const props = defineProps({
   t: { type: Object, required: true },
   // Room code from a shared invite link
-  initialCode: { type: String, default: '' }
+  initialCode: { type: String, default: '' },
+  // Open a room straight away: a chat invite is waiting for its code
+  hostRoom: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['go-back'])
@@ -130,6 +132,7 @@ function onAction (s, playerId, action) {
 const room = useOnlineRoom({
   game: 'tanks',
   initialCode: props.initialCode,
+  hostRoom: props.hostRoom,
   liveMs: 50,
   initialState: () => ({ round: 0, map: 0, deadline: null, tanks: {}, knockedOut: 0, standings: [], wins: {}, outcome: null }),
   onAction,

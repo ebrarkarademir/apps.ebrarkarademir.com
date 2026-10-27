@@ -5,17 +5,20 @@ import { lookUpIp, flagEmoji, flagPng } from '../online/ipInfo'
 import { MAX_TEXT } from '../online/useUsers'
 
 // The Users page: everyone with the site open, what their IP address gives away, and a chat with
-// whoever is picked. The list and the chats themselves live in App (see useUsers.js), so
-// messages reach the visitor anywhere on the site.
+// whoever is picked, where they can also be invited to an online game. The list and the chats
+// themselves live in App (see useUsers.js), so messages reach the visitor anywhere on the site.
 
 const props = defineProps({
   users: { type: Object, required: true },
+  // The online games someone can be invited to
+  games: { type: Array, required: true },
   t: { type: Object, required: true },
   // Id of the person picked
   selected: { type: String, default: null }
 })
 
-const emit = defineEmits(['back', 'update:selected'])
+// invite: { to, game } opens a room to invite someone into; join: { game, code } joins one
+const emit = defineEmits(['back', 'update:selected', 'invite', 'join'])
 
 const LANGUAGE_CODE = /^[a-z]{2,3}(-[A-Z]{2})?$/
 
@@ -197,6 +200,18 @@ watch([() => person.value?.id, () => messages.value.length], async () => {
   if (log.value) log.value.scrollTop = log.value.scrollHeight
 })
 
+// ---------- Game invites ----------
+
+const picking = ref(false) // the game picker is open
+const gameTitle = (id) => props.games.find(game => game.id === id)?.title || id
+
+watch(() => person.value?.id, () => { picking.value = false })
+
+function invite (game) {
+  picking.value = false
+  emit('invite', { to: person.value.id, game })
+}
+
 onMounted(() => {
   clockTimer = setInterval(() => { now.value = Date.now() }, 1000)
 })
@@ -320,7 +335,19 @@ onUnmounted(() => clearInterval(clockTimer))
               <li v-for="message in messages" :key="message.id" class="break-words leading-relaxed">
                 <span class="term-muted tabular-nums mr-2">[{{ clock(message.at) }}]</span>
                 <span :class="['mr-2', message.mine ? 'term-muted' : 'font-semibold']">{{ message.mine ? t.usersYou : person.ip || t.usersGuest }}&gt;</span>
-                <span>{{ message.text }}</span>
+                <template v-if="message.invite">
+                  <span class="mr-2">{{ fmt(message.mine ? t.usersInvitedThem : t.usersInvitedYou, { game: gameTitle(message.invite.game) }) }}</span>
+                  <span class="term-chip mr-2 tracking-[0.25em]">{{ message.invite.code }}</span>
+                  <button
+                    v-if="!message.mine"
+                    type="button"
+                    class="term-btn min-h-8 px-2 py-0.5 text-xs"
+                    @click="emit('join', message.invite)"
+                  >
+                    {{ t.onlineJoin }}
+                  </button>
+                </template>
+                <span v-else>{{ message.text }}</span>
               </li>
             </ol>
             <form class="flex gap-2 p-2 border-t border-term-low" @submit.prevent="sendDraft">
@@ -338,6 +365,30 @@ onUnmounted(() => clearInterval(clockTimer))
                 {{ t.usersSend }}
               </button>
             </form>
+            <!-- Invite to an online game: this device opens a room in it, and they get a Join button -->
+            <div class="px-2 pb-2">
+              <button
+                type="button"
+                class="term-link"
+                :aria-expanded="picking"
+                :disabled="!theyCanChat"
+                @click="picking = !picking"
+              >
+                <span aria-hidden="true">{{ picking ? '[-]' : '[+]' }}</span>
+                <span>{{ t.usersInvite }}</span>
+              </button>
+              <div v-if="picking" class="mt-2 px-1">
+                <p class="term-muted text-xs leading-relaxed mb-2">{{ fmt(t.usersInviteHint, { name: person.ip || t.usersGuest }) }}</p>
+                <ul class="grid grid-cols-2 gap-2">
+                  <li v-for="game in games" :key="game.id">
+                    <button type="button" class="term-option w-full min-h-10 justify-start text-left text-sm" @click="invite(game.id)">
+                      <span class="shrink-0" aria-hidden="true">{{ game.icon }}</span>
+                      <span class="truncate">{{ game.title }}</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
             <p class="px-3 pb-3 term-muted text-xs leading-relaxed">{{ t.usersChatNote }}</p>
           </section>
           <p v-else class="term-panel p-4 text-sm leading-relaxed term-muted xl:order-2">{{ t.usersThisIsYou }}</p>

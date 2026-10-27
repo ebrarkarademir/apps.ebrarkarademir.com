@@ -17,6 +17,7 @@ import { translations } from './translations'
 import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
 import { useUsers } from './online/useUsers'
+import { currentRoom } from './online/useOnlineRoom'
 
 // Initialize language from localStorage or default to 'EN'
 const currentLang = ref(localStorage.getItem('preferredLanguage') || 'EN')
@@ -194,8 +195,14 @@ if (legacyInviteGame) initialRoute.game = legacyInviteGame
 
 const selectedGame = ref(initialRoute.game)
 const page = ref(initialRoute.page || null)
-// The invite code only applies to the game the link was for
-const inviteCodeFor = (gameId) => (gameId === inviteGame ? inviteCode : '')
+// An online game can open with a room in mind: { game, code } to join one (an invite link or a
+// chat invite), or { game, host: true } to open one for a chat invite. It only applies to that
+// game, until the visitor leaves it.
+const launch = ref(inviteCode ? { game: inviteGame, code: inviteCode } : null)
+// Bumped by every launch from the chat, so a game that's already open starts over
+const launches = ref(0)
+const inviteCodeFor = (gameId) => (launch.value?.game === gameId ? launch.value.code || '' : '')
+const hostRoomFor = (gameId) => launch.value?.game === gameId && !!launch.value.host
 const showRules = ref(false)
 
 // The dev Firebase site (apps-76619-dev.web.app) and the local dev server get a DEV mark
@@ -230,21 +237,52 @@ async function lookUpIp () {
 }
 
 // ---------- Online users ----------
-// Every visitor shows up on the Users page, whichever page they're on, and can be messaged there.
-// A message whose chat isn't on screen pops up at the bottom for a few seconds.
+// Every visitor shows up on the Users page, whichever page they're on, and can be messaged and
+// invited to online games there. A message whose chat isn't on screen pops up at the bottom for
+// a few seconds.
 
 const TOAST_MS = 7000
 
-const users = useUsers({ ip: visitor, space: isDevSite ? 'dev' : 'live', onMessage: showToast })
+const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
+const gameTitle = (id) => games.value.find(game => game.id === id)?.title || id
+const personName = (person) => person.ip || t.value.usersGuest
+// What the chat's game picker offers
+const onlineGames = computed(() => ONLINE_GAMES.map(id => games.value.find(game => game.id === id)))
+
+const users = useUsers({ ip: visitor, space: isDevSite ? 'dev' : 'live', games: ONLINE_GAMES, onMessage: onChatMessage })
 const selectedUser = ref(null)
+// { id, title, text, hint, run }: id is the person it's about, run what clicking it does, if anything
 const toast = ref(null)
 let toastTimer = null
 
-function showToast (person, text) {
-  if (users.active === person.id) return
-  toast.value = { id: person.id, name: person.ip || t.value.usersGuest, text }
+function showToast (next) {
+  toast.value = next
   clearTimeout(toastTimer)
   toastTimer = setTimeout(() => { toast.value = null }, TOAST_MS)
+}
+
+function onChatMessage (person, { text, invite }) {
+  if (users.active === person.id) return
+  const name = personName(person)
+  if (invite) {
+    showToast({
+      id: person.id,
+      title: fmt(t.value.usersInviteFrom, { name }),
+      text: `${gameTitle(invite.game)} · ${t.value.onlineRoomLabel}: ${invite.code}`,
+      hint: t.value.onlineJoin,
+      run: () => joinGame(invite)
+    })
+    return
+  }
+  // Opening the chat leaves the page, and with it any online room this tab is in
+  const inRoom = !!currentRoom.value
+  showToast({
+    id: person.id,
+    title: fmt(t.value.usersNewMessage, { name }),
+    text,
+    hint: inRoom ? t.value.usersReplyLater : t.value.usersOpenChat,
+    run: inRoom ? null : () => openChat(person.id)
+  })
 }
 
 const openChat = (id) => {
@@ -257,6 +295,46 @@ const openChat = (id) => {
 watch([page, selectedUser], () => {
   users.active = page.value === 'users' ? selectedUser.value : null
 }, { immediate: true })
+
+// ---------- Game invites ----------
+// Inviting someone opens a room in that game on this device, and the invite with the room code
+// goes out as soon as the room is open. Joining opens the game with the code filled in.
+
+const inviting = ref(null) // { to, game } until the room is open
+
+function launchGame (next) {
+  launch.value = next
+  launches.value++
+  navigate(`/${next.game}`)
+}
+
+function inviteToGame ({ to, game }) {
+  const person = users.people.get(to)
+  if (!person || !ONLINE_GAMES.includes(game)) return
+  inviting.value = { to, game }
+  launchGame({ game, host: true })
+  showToast({ id: to, title: fmt(t.value.usersInviteWaiting, { name: personName(person) }), text: gameTitle(game) })
+}
+
+function joinGame ({ game, code }) {
+  if (!ONLINE_GAMES.includes(game)) return
+  toast.value = null
+  launchGame({ game, code })
+}
+
+watch(currentRoom, async (room) => {
+  const pending = inviting.value
+  if (!room?.isHost || room.game !== pending?.game) return
+  inviting.value = null
+  const person = users.people.get(pending.to)
+  if (person && await users.sendInvite(pending.to, room.game, room.code)) {
+    showToast({
+      id: pending.to,
+      title: fmt(t.value.usersInviteSent, { name: personName(person) }),
+      text: `${gameTitle(room.game)} · ${t.value.onlineRoomLabel}: ${room.code}`
+    })
+  }
+})
 
 // Menu card turned over to its info side
 const flippedGame = ref(null)
@@ -275,6 +353,9 @@ const applyRoute = ({ category, game, page: pageName }) => {
   if (category) selectedCategory.value = category
   selectedGame.value = game
   page.value = pageName || null
+  // A launch, and an invite waiting for its room, only last while their game is open
+  if (launch.value?.game !== game) launch.value = null
+  if (inviting.value?.game !== game) inviting.value = null
   showRules.value = false
   flippedGame.value = null
 }
@@ -482,13 +563,16 @@ const toggleLanguage = () => {
       </div>
     </nav>
 
-    <div class="px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10 max-w-7xl mx-auto">
+    <div :key="launches" class="px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10 max-w-7xl mx-auto">
       <UsersView
         v-if="page === 'users'"
         v-model:selected="selectedUser"
         :users="users"
+        :games="onlineGames"
         :t="t"
         @back="closeGame"
+        @invite="inviteToGame"
+        @join="joinGame"
       />
 
       <GameMenu
@@ -503,6 +587,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'flappy'"
         :t="t"
         :initialCode="inviteCodeFor('flappy')"
+        :hostRoom="hostRoomFor('flappy')"
         @go-back="closeGame"
       />
 
@@ -510,6 +595,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'tanks'"
         :t="t"
         :initialCode="inviteCodeFor('tanks')"
+        :hostRoom="hostRoomFor('tanks')"
         @go-back="closeGame"
       />
 
@@ -517,6 +603,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'sudoku'"
         :t="t"
         :initialCode="inviteCodeFor('sudoku')"
+        :hostRoom="hostRoomFor('sudoku')"
         @go-back="closeGame"
       />
 
@@ -524,6 +611,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'quiz-race'"
         :t="t"
         :initialCode="inviteCodeFor('quiz-race')"
+        :hostRoom="hostRoomFor('quiz-race')"
         @go-back="closeGame"
       />
 
@@ -551,6 +639,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'casus-kim'"
         :t="t"
         :initialCode="inviteCodeFor('casus-kim')"
+        :hostRoom="hostRoomFor('casus-kim')"
         @go-back="closeGame"
       />
 
@@ -558,6 +647,7 @@ const toggleLanguage = () => {
         v-else-if="selectedGame === 'tabu'"
         :t="t"
         :initialCode="inviteCodeFor('tabu')"
+        :hostRoom="hostRoomFor('tabu')"
         @go-back="closeGame"
       />
 
@@ -683,18 +773,23 @@ const toggleLanguage = () => {
       </div>
     </Transition>
 
-    <!-- A chat message from someone whose chat isn't on screen -->
+    <!-- A chat message or game invite from someone whose chat isn't on screen, or how an invite is going -->
     <Transition name="toast">
       <div
         v-if="toast && users.people.has(toast.id)"
         role="status"
         class="term-window fixed z-30 bottom-4 left-4 right-4 sm:left-auto sm:w-96 flex items-start gap-2 p-3"
       >
-        <button type="button" class="flex-1 min-w-0 text-left" @click="openChat(toast.id)">
-          <span class="term-label block">[&gt;] {{ t.usersNewMessage.replace('{name}', toast.name) }}</span>
+        <component
+          :is="toast.run ? 'button' : 'div'"
+          :type="toast.run ? 'button' : undefined"
+          class="flex-1 min-w-0 text-left"
+          @click="toast.run?.()"
+        >
+          <span class="term-label block">[&gt;] {{ toast.title }}</span>
           <span class="block truncate mt-1">{{ toast.text }}</span>
-          <span class="block text-xs term-muted mt-1 uppercase tracking-wider">{{ t.usersOpenChat }}</span>
-        </button>
+          <span v-if="toast.hint" class="block text-xs term-muted mt-1 uppercase tracking-wider">{{ toast.hint }}</span>
+        </component>
         <button type="button" class="term-icon-btn shrink-0 h-8 min-w-8" :aria-label="t.usersDismiss" @click="toast = null">
           [x]
         </button>

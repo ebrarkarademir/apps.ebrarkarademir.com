@@ -7,7 +7,9 @@ import OnlineRoom from '../online/OnlineRoom.vue'
 const props = defineProps({
   t: { type: Object, required: true },
   // Room code from a shared invite link
-  initialCode: { type: String, default: '' }
+  initialCode: { type: String, default: '' },
+  // Open a room straight away: a chat invite is waiting for its code
+  hostRoom: { type: Boolean, default: false }
 })
 
 defineEmits(['go-back'])
@@ -89,6 +91,7 @@ function onAction (s, playerId, action) {
 const room = useOnlineRoom({
   game: 'quiz-race',
   initialCode: props.initialCode,
+  hostRoom: props.hostRoom,
   initialState: () => ({ rounds: 10, round: 0, totalRounds: 0, question: null, deadline: null, order: [], results: {} }),
   // Guests don't need the list of upcoming questions
   project: ({ order, ...visible }) => visible,
