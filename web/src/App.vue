@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import LanguageToggle from './components/LanguageToggle.vue'
 import TermWindow from './components/TermWindow.vue'
 import GameMenu from './views/GameMenu.vue'
+import UsersView from './views/UsersView.vue'
 // import WordleGame from './games/WordleGame.vue' // under development
 import NumberGuessingGame from './games/NumberGuessingGame.vue'
 import BottleSpinGame from './games/BottleSpinGame.vue'
@@ -15,6 +16,7 @@ import SudokuGame from './games/SudokuGame.vue'
 import { translations } from './translations'
 import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
+import { useUsers } from './online/useUsers'
 
 // Initialize language from localStorage or default to 'EN'
 const currentLang = ref(localStorage.getItem('preferredLanguage') || 'EN')
@@ -163,14 +165,17 @@ const games = computed(() => [
 // /            menu, all games
 // /party       menu, one category (also /online and /solo)
 // /quiz-race   a game, by its id
+// /users       a page that isn't a game: everyone online
 // Unknown paths fall back to the menu. Firebase serves index.html for every path.
 
 const CATEGORY_KEYS = ['all', 'party', 'online', 'solo']
 const GAME_IDS = games.value.map(game => game.id)
+const PAGES = ['users']
 
 const parsePath = (pathname) => {
   const slug = decodeURIComponent(pathname).replace(/^\/+|\/+$/g, '').toLowerCase()
   if (GAME_IDS.includes(slug)) return { category: null, game: slug }
+  if (PAGES.includes(slug)) return { category: null, game: null, page: slug }
   if (CATEGORY_KEYS.includes(slug) && slug !== 'all') return { category: slug, game: null }
   return { category: 'all', game: null }
 }
@@ -188,6 +193,7 @@ const inviteCode = inviteGame ? (inviteParams.get('join') || '') : ''
 if (legacyInviteGame) initialRoute.game = legacyInviteGame
 
 const selectedGame = ref(initialRoute.game)
+const page = ref(initialRoute.page || null)
 // The invite code only applies to the game the link was for
 const inviteCodeFor = (gameId) => (gameId === inviteGame ? inviteCode : '')
 const showRules = ref(false)
@@ -223,6 +229,35 @@ async function lookUpIp () {
   }
 }
 
+// ---------- Online users ----------
+// Every visitor shows up on the Users page, whichever page they're on, and can be messaged there.
+// A message whose chat isn't on screen pops up at the bottom for a few seconds.
+
+const TOAST_MS = 7000
+
+const users = useUsers({ ip: visitor, space: isDevSite ? 'dev' : 'live', onMessage: showToast })
+const selectedUser = ref(null)
+const toast = ref(null)
+let toastTimer = null
+
+function showToast (person, text) {
+  if (users.active === person.id) return
+  toast.value = { id: person.id, name: person.ip || t.value.usersGuest, text }
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toast.value = null }, TOAST_MS)
+}
+
+const openChat = (id) => {
+  toast.value = null
+  selectedUser.value = id
+  navigate('/users')
+}
+
+// Messages from whoever is picked count as read only while the Users page is open
+watch([page, selectedUser], () => {
+  users.active = page.value === 'users' ? selectedUser.value : null
+}, { immediate: true })
+
 // Menu card turned over to its info side
 const flippedGame = ref(null)
 
@@ -233,12 +268,13 @@ const selectedCategory = ref(initialRoute.category || 'all')
 window.history.replaceState(
   { inApp: false },
   '',
-  initialRoute.game ? `/${initialRoute.game}` : categoryPath(selectedCategory.value)
+  initialRoute.game || initialRoute.page ? `/${initialRoute.game || initialRoute.page}` : categoryPath(selectedCategory.value)
 )
 
-const applyRoute = ({ category, game }) => {
+const applyRoute = ({ category, game, page: pageName }) => {
   if (category) selectedCategory.value = category
   selectedGame.value = game
+  page.value = pageName || null
   showRules.value = false
   flippedGame.value = null
 }
@@ -274,14 +310,22 @@ const categories = computed(() => [
 // A game can belong to more than one category
 const categoriesOf = (game) => [].concat(game.category)
 
-// Inside a game, highlight the category that game belongs to: the open list when it's one of them
+// Inside a game, highlight the category that game belongs to: the open list when it's one of them.
+// A page of its own (Users) has its own tab instead.
 const activeCategory = computed(() => {
+  if (page.value) return null
   if (!selectedGame.value) return selectedCategory.value
   const game = games.value.find(item => item.id === selectedGame.value)
   if (!game) return selectedCategory.value
   const list = categoriesOf(game)
   return list.includes(selectedCategory.value) ? selectedCategory.value : list[0]
 })
+
+// On a phone the tabs scroll sideways: keep the active one in view, e.g. Users at the far end,
+// also when the labels change length with the language
+watch([activeCategory, page, currentLang], () => {
+  document.querySelector('nav li [aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}, { flush: 'post' })
 
 const filteredGames = computed(() =>
   selectedCategory.value === 'all'
@@ -295,24 +339,27 @@ const selectedGameTitle = computed(() => games.value.find(game => game.id === se
 // Every part but the last is a link to that level.
 const crumbs = computed(() => {
   const list = [{ text: '~', path: '/', label: t.value.crumbHome }]
-  if (activeCategory.value !== 'all') {
+  if (activeCategory.value && activeCategory.value !== 'all') {
     const category = categories.value.find(item => item.key === activeCategory.value)
     list.push({ text: activeCategory.value, path: categoryPath(activeCategory.value), label: category?.label })
   }
-  if (selectedGame.value) list.push({ text: selectedGame.value })
+  if (selectedGame.value || page.value) list.push({ text: selectedGame.value || page.value })
   return list.map((crumb, index) => (index === list.length - 1 ? { ...crumb, path: null } : crumb))
 })
 
 const selectCategory = (key) => navigate(categoryPath(key))
 
-// Tab title follows the page
-watch([selectedGame, selectedGameTitle], () => {
-  const title = selectedGame.value ? `${selectedGameTitle.value} | Games & Tools` : 'Games & Tools'
+// Tab title follows the page, with the number of unread chat messages in front
+const pageTitle = computed(() => (page.value === 'users' ? t.value.usersTitle : selectedGameTitle.value))
+
+watch([pageTitle, () => users.unread], () => {
+  let title = pageTitle.value ? `${pageTitle.value} | Games & Tools` : 'Games & Tools'
+  if (users.unread) title = `(${users.unread}) ${title}`
   document.title = isDevSite ? `[DEV] ${title}` : title
 }, { immediate: true })
 
 const currentRules = computed(() => {
-  const entry = rules[selectedGame.value] || rules.menu
+  const entry = rules[selectedGame.value || page.value] || rules.menu
   return entry[currentLang.value] || entry.EN
 })
 const rulesText = computed(() => rulesLabels[currentLang.value] || rulesLabels.EN)
@@ -326,13 +373,15 @@ const legendStyles = {
 
 const isTyping = (target) => !!target.closest?.('input, textarea, select, [contenteditable="true"]')
 
-// Esc climbs one level: game -> its list, category -> all. Online games ignore it, since
-// leaving would drop the player out of the room, and so does a full-screen arcade game,
+// Esc climbs one level: game or page -> its list, category -> all. Online games ignore it,
+// since leaving would drop the player out of the room, and so does a full-screen arcade game,
 // which uses it to pause.
 const goUp = () => {
   if ('arcade' in document.body.dataset) return
   if (selectedGame.value) {
     if (!ONLINE_GAMES.includes(selectedGame.value)) closeGame()
+  } else if (page.value) {
+    closeGame()
   } else if (selectedCategory.value !== 'all') {
     navigate('/')
   }
@@ -349,7 +398,7 @@ const onKeydown = (e) => {
   }
 
   // 1-9 on the menu opens the game on that card
-  if (selectedGame.value || showRules.value || isTyping(e.target)) return
+  if (selectedGame.value || page.value || showRules.value || isTyping(e.target)) return
   const game = /^[1-9]$/.test(e.key) && filteredGames.value[Number(e.key) - 1]
   if (game) openGame(game.id)
 }
@@ -398,6 +447,22 @@ const toggleLanguage = () => {
               <span>{{ category.label }}</span>
             </button>
           </li>
+          <li class="shrink-0 flex items-center px-1 text-term-low" aria-hidden="true">|</li>
+          <li class="shrink-0">
+            <button
+              @click="navigate('/users')"
+              :aria-current="page === 'users' ? 'page' : undefined"
+              :class="['term-tab px-2 sm:px-3 text-xs sm:text-sm', { 'is-active': page === 'users' }]"
+            >
+              <span aria-hidden="true">{{ page === 'users' ? '(*)' : '( )' }}</span>
+              <span>{{ t.navUsers }}</span>
+              <span class="tabular-nums">[{{ users.online ? users.list.length : '-' }}]</span>
+              <span v-if="users.unread" :class="['px-1 tabular-nums', page === 'users' ? 'bg-black text-term' : 'term-inverse']">
+                <span aria-hidden="true">{{ users.unread }}</span>
+                <span class="sr-only">{{ t.usersUnread.replace('{n}', users.unread) }}</span>
+              </span>
+            </button>
+          </li>
         </ul>
 
         <div class="order-2 md:order-3 ml-auto flex items-center gap-2">
@@ -418,8 +483,16 @@ const toggleLanguage = () => {
     </nav>
 
     <div class="px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10 max-w-7xl mx-auto">
+      <UsersView
+        v-if="page === 'users'"
+        v-model:selected="selectedUser"
+        :users="users"
+        :t="t"
+        @back="closeGame"
+      />
+
       <GameMenu
-        v-if="!selectedGame"
+        v-else-if="!selectedGame"
         v-model:flipped="flippedGame"
         :games="filteredGames"
         :t="t"
@@ -609,6 +682,24 @@ const toggleLanguage = () => {
         </div>
       </div>
     </Transition>
+
+    <!-- A chat message from someone whose chat isn't on screen -->
+    <Transition name="toast">
+      <div
+        v-if="toast && users.people.has(toast.id)"
+        role="status"
+        class="term-window fixed z-30 bottom-4 left-4 right-4 sm:left-auto sm:w-96 flex items-start gap-2 p-3"
+      >
+        <button type="button" class="flex-1 min-w-0 text-left" @click="openChat(toast.id)">
+          <span class="term-label block">[&gt;] {{ t.usersNewMessage.replace('{name}', toast.name) }}</span>
+          <span class="block truncate mt-1">{{ toast.text }}</span>
+          <span class="block text-xs term-muted mt-1 uppercase tracking-wider">{{ t.usersOpenChat }}</span>
+        </button>
+        <button type="button" class="term-icon-btn shrink-0 h-8 min-w-8" :aria-label="t.usersDismiss" @click="toast = null">
+          [x]
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -640,10 +731,29 @@ const toggleLanguage = () => {
   100% { transform: scale(0, 0.01); }
 }
 
+/* Chat message pop-up: slides up from the bottom edge */
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(1rem);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rules-enter-active .rules-panel,
   .rules-leave-active .rules-panel {
     animation: none;
+  }
+  .toast-enter-active,
+  .toast-leave-active {
+    transition: opacity 0.18s ease;
+  }
+  .toast-enter-from,
+  .toast-leave-to {
+    transform: none;
   }
 }
 

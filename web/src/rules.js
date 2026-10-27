@@ -386,6 +386,40 @@ export const rules = {
         'Her cihaz soruları kendi dil ayarında gösterir.'
       ]
     }
+  },
+  users: {
+    EN: {
+      icon: 'who',
+      title: 'Online users',
+      goal: 'See who else has the site open right now, what their IP address gives away, and chat with them.',
+      steps: [
+        'Everyone with the site open is on the list with their IP address and flag, you included.',
+        'Pick someone to see what public lookup services know about their IP: country and flag, city, time zone, internet provider and more.',
+        'Write in the chat box to message them. They get a pop-up wherever they are on the site.',
+        'A chat only lasts while you’re both here: when either of you closes the site or loses connection, it’s deleted on both sides.'
+      ],
+      tips: [
+        'Messages are end-to-end encrypted and never stored, not even by the relay that carries them.',
+        'IP locations are approximate: usually the internet provider’s city, not a street address.',
+        'Everyone here can see your IP address, so think twice before sharing anything private with strangers.'
+      ]
+    },
+    TR: {
+      icon: 'who',
+      title: 'Çevrim içi kullanıcılar',
+      goal: 'Siteyi şu an kimlerin açık tuttuğunu, IP adreslerinin neleri ele verdiğini gör ve onlarla sohbet et.',
+      steps: [
+        'Siteyi açık tutan herkes IP adresi ve bayrağıyla listede görünür, sen de dahil.',
+        'Birini seçerek herkese açık sorgulama servislerinin o IP hakkında bildiklerini gör: ülke ve bayrak, şehir, saat dilimi, internet sağlayıcı ve daha fazlası.',
+        'Mesaj göndermek için sohbet kutusuna yaz. Karşı taraf sitenin neresinde olursa olsun bildirim alır.',
+        'Sohbet sadece ikiniz de buradayken sürer: biriniz siteyi kapatır ya da bağlantısı koparsa iki tarafta da silinir.'
+      ],
+      tips: [
+        'Mesajlar uçtan uca şifrelidir ve hiçbir yerde saklanmaz, onları taşıyan aktarıcıda bile.',
+        'IP konumları yaklaşıktır: genellikle sokak adresi değil, internet sağlayıcısının şehridir.',
+        'Buradaki herkes IP adresini görebilir, yabancılarla özel bir şey paylaşmadan önce iki kez düşün.'
+      ]
+    }
   }
 }
 

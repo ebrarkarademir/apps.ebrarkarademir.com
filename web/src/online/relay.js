@@ -1,8 +1,9 @@
 // Message relay for when two devices can't open a direct WebRTC link: routers that keep Wi-Fi
 // devices apart, mobile data, and no TURN server configured. It speaks just enough MQTT 3.1.1
-// over a secure WebSocket to talk to a free public broker: connect, subscribe, publish at
-// QoS 0 and keep-alive pings. Topics are namespaced by game and room code; what travels is the
-// same game state the direct link carries, nothing secret.
+// over a secure WebSocket to talk to a free public broker: connect (optionally with a will),
+// subscribe, publish at QoS 0 and keep-alive pings. Topics are namespaced by game and room
+// code; what travels is the same game state the direct link carries, nothing secret.
+// The online users list uses it too (see useUsers.js), with its chats encrypted end to end.
 
 // The host listens on every broker, a guest uses the first one that gets an answer
 export const RELAY_BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt']
@@ -58,10 +59,14 @@ const mqttPacket = (type, body) => {
  * Connects to one broker. Resolves with { subscribe, publish, close } once the broker accepts
  * the connection, rejects if it can't be reached in time.
  * @param {string} url
- * @param {{ onMessage: (topic: string, message: any) => void, onClose?: () => void }} handlers
- *   onClose runs when an established connection drops, not after close().
+ * @param {object} handlers
+ * @param {(topic: string, message: any) => void} handlers.onMessage
+ * @param {() => void} [handlers.onClose]  Runs when an established connection drops, not after close().
+ * @param {{ topic: string, message: any }} [handlers.will]  Published by the broker when the
+ *   connection drops without close(): a closed tab, lost network, or keep-alive pings stopping.
+ * @param {number} [handlers.keepAlive]  Seconds; the broker gives up after 1.5 times this without a ping.
  */
-export function connectRelay (url, { onMessage, onClose }) {
+export function connectRelay (url, { onMessage, onClose, will, keepAlive = KEEPALIVE_S }) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url, 'mqtt')
     ws.binaryType = 'arraybuffer'
@@ -99,8 +104,13 @@ export function connectRelay (url, { onMessage, onClose }) {
 
     ws.onopen = () => {
       const clientId = 'ebrar-' + Math.random().toString(36).slice(2, 12)
-      const header = concat(mqttString('MQTT'), new Uint8Array([4, 0x02, 0, KEEPALIVE_S])) // v3.1.1, clean session
-      ws.send(mqttPacket(CONNECT, concat(header, mqttString(clientId))))
+      // v3.1.1, clean session, plus the will flag when there is one (QoS 0, not retained)
+      const flags = will ? 0x06 : 0x02
+      const header = concat(mqttString('MQTT'), new Uint8Array([4, flags, keepAlive >> 8, keepAlive & 255]))
+      const payload = will
+        ? concat(mqttString(clientId), mqttString(will.topic), mqttString(JSON.stringify(will.message)))
+        : mqttString(clientId)
+      ws.send(mqttPacket(CONNECT, concat(header, payload)))
     }
 
     ws.onmessage = (event) => {
@@ -142,7 +152,7 @@ export function connectRelay (url, { onMessage, onClose }) {
         clearTimeout(connectTimer)
         pingTimer = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) ws.send(PINGREQ)
-        }, (KEEPALIVE_S * 1000) / 2)
+        }, (keepAlive * 1000) / 2)
         resolve(client)
       } else if (type === SUBACK) {
         const id = (body[0] << 8) | body[1]
