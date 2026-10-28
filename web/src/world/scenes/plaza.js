@@ -1,11 +1,18 @@
 // The plaza: a bright town square everyone shares. A fountain in the middle, benches around
-// it, lamps, flower beds and trees, hedges at the edge, and shop fronts beyond: clothes and
-// furniture to the north (clicking them opens the shop), a café and an arcade east and west.
+// it under strings of bunting, lamps, flower beds and trees, hedges at the edge with flower
+// arches where the paths leave, and shop fronts beyond: clothes and furniture to the north
+// (clicking them opens the shop), a café and an arcade east and west. Around it all, a town
+// of cottages, a forest, a pond, a windmill and a balloon in the sky.
+//
+// Everything that stands still ends up merged into a mesh or two, so the whole plaza is a
+// handful of draw calls: that's what lets it run smoothly on phones.
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { createDaylight, createSky } from '../engine/sky.js'
 import { createFountain } from '../engine/particles.js'
-import { bench, BENCH_SEATS, lamp, flowerBed, hedge, fountain, shopFront, treeLod } from './props.js'
+import { QUALITY } from '../engine/quality.js'
+import { bench, BENCH_SEATS, lamp, flowerBed, hedge, fountain, shopFront, tree } from './props.js'
+import { arch, bunting, town, pond, windmill, balloon } from './scenery.js'
 
 export const PLAZA_EDGE = 19 // walkable from -19 to 19 (the server agrees)
 const PAVED = 13.5 // radius of the paved circle
@@ -20,6 +27,13 @@ function grassTexture () {
   for (let i = 0; i < 1600; i++) {
     g.fillStyle = ['#97d47c', '#afe597', '#9ad882', '#b6e9a0'][i % 4]
     g.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 3, 2 + Math.random() * 5)
+  }
+  // Little flowers in the grass
+  for (let i = 0; i < 26; i++) {
+    g.fillStyle = ['#ffffff', '#ffe06a', '#ffb3d1', '#cbbcff'][i % 4]
+    g.beginPath()
+    g.arc(Math.random() * 256, Math.random() * 256, 1.6, 0, Math.PI * 2)
+    g.fill()
   }
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
@@ -104,6 +118,33 @@ function hills () {
   return new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: '#9bd88a', roughness: 1 }))
 }
 
+// Every mesh that never moves, merged: one per material (and shadow setting) instead of one
+// per bench, lamp and tree. `keep` are objects left alone (the clickable shops).
+function batch (scene, materials, keep) {
+  scene.updateMatrixWorld(true)
+  const groups = new Map()
+  scene.traverse((node) => {
+    if (!node.isMesh || !materials.includes(node.material) || node.userData.dynamic) return
+    for (let p = node; p; p = p.parent) if (keep.includes(p)) return
+    const key = `${node.material.uuid}:${node.castShadow}`
+    if (!groups.has(key)) groups.set(key, { material: node.material, castShadow: node.castShadow, nodes: [] })
+    groups.get(key).nodes.push(node)
+  })
+  for (const { material, castShadow, nodes } of groups.values()) {
+    const parts = nodes.map(node => node.geometry.clone().applyMatrix4(node.matrixWorld))
+    const geometry = mergeGeometries(parts)
+    parts.forEach(part => part.dispose())
+    if (!geometry) continue // shapes that don't fit together stay as they are
+    const merged = new THREE.Mesh(geometry, material)
+    merged.castShadow = castShadow
+    merged.receiveShadow = true
+    scene.add(merged)
+    const used = new Set(nodes.map(node => node.geometry))
+    nodes.forEach(node => node.removeFromParent())
+    used.forEach(g => g.dispose())
+  }
+}
+
 export function createPlaza (env) {
   const scene = new THREE.Scene()
   scene.fog = new THREE.Fog('#e3f3ff', 50, 150)
@@ -124,7 +165,7 @@ export function createPlaza (env) {
   // Fountain
   const water = fountain(env)
   scene.add(water.object)
-  const spray = createFountain(water.sources, water.floor)
+  const spray = createFountain(water.sources, water.floor, QUALITY.fountainDrops)
   scene.add(spray.object)
   colliders.push({ x: 0, z: 0, r: 3.35 })
   aoSpots.push({ x: 0, z: 0, r: 4.2, k: 0.28 })
@@ -181,15 +222,43 @@ export function createPlaza (env) {
       const r = 16.6 + (seed % 2) * 0.8
       const x = Math.sin(a) * r
       const z = Math.cos(a) * r
-      add(treeLod(env, { seed, blossom: seed % 3 === 0 }), x, z, seed)
+      add(tree(env, { seed, blossom: seed % 3 === 0 }), x, z, seed)
       colliders.push({ x, z, r: 0.5 })
       seed++
     }
   }
   for (const [x, z] of [[-17.5, -17.5], [17.5, -17.5], [-17.5, 17.5], [17.5, 17.5]]) {
-    add(treeLod(env, { seed: seed++, blossom: seed % 2 === 0 }), x, z)
+    add(tree(env, { seed: seed++, blossom: seed % 2 === 0 }), x, z)
     colliders.push({ x, z, r: 0.5 })
   }
+
+  // Bunting from lamp to lamp round the fountain, high over everyone's heads
+  const diagonal = lamps.filter((_, i) => i % 3 === 0)
+  for (let i = 0; i < diagonal.length; i++) {
+    const [ax, az] = diagonal[i]
+    const [bx, bz] = diagonal[(i + 1) % diagonal.length]
+    scene.add(bunting(env, { x: ax, y: 3.9, z: az }, { x: bx, y: 3.9, z: bz }, 0.4))
+  }
+
+  // Flower arches where the four paths leave, just past where players can walk
+  for (let i = 0; i < 4; i++) {
+    const a = i * (Math.PI / 2)
+    add(arch(env, i + 1), Math.sin(a) * (PLAZA_EDGE + 0.9), Math.cos(a) * (PLAZA_EDGE + 0.9), a)
+  }
+
+  // The town around: cottages and forest, a pond where the south path ends (its bridge carries
+  // the path on), a windmill on the far side
+  scene.add(town(env))
+  const lake = pond(env)
+  lake.object.position.set(0, 0, 38)
+  lake.object.rotation.y = Math.PI / 2
+  scene.add(lake.object)
+  const mill = windmill(env)
+  mill.object.position.set(-44, 0, -42)
+  mill.object.rotation.y = Math.atan2(44, 42)
+  scene.add(mill.object)
+  const hotAir = balloon(env)
+  scene.add(hotAir.object)
 
   // Hedges along the edge, open where the paths leave
   const edge = PLAZA_EDGE + 0.9
@@ -239,6 +308,7 @@ export function createPlaza (env) {
   paths.receiveShadow = true
   scene.add(paths)
   scene.add(hills())
+  batch(scene, [env.material, env.glow], interactives)
 
   return {
     scene,
@@ -254,6 +324,9 @@ export function createPlaza (env) {
       daylight.follow(focus)
       spray.update(dt)
       sky.update(dt)
+      lake.update(dt)
+      mill.update(dt)
+      hotAir.update(dt)
     }
   }
 }

@@ -38,6 +38,34 @@
 /* Its own stacking layer, so name tags sorted by distance never rise above the menus */
 .world .labels { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
 
+/* The touch joystick, under the left thumb */
+.world .stick {
+  position: absolute;
+  width: 7.5rem;
+  height: 7.5rem;
+  margin: -3.75rem 0 0 -3.75rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.12));
+  box-shadow: 0 8px 24px -10px rgba(70, 40, 120, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+.world .stick.on { opacity: 1; }
+.world .stick .knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3.2rem;
+  height: 3.2rem;
+  margin: -1.6rem 0 0 -1.6rem;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffffff, #ffd9ec);
+  box-shadow: 0 4px 12px -4px rgba(70, 40, 120, 0.5);
+}
+
 /* ---------- Buttons ---------- */
 
 .world .btn {

@@ -73,6 +73,8 @@ export function createGame ({ canvas, labelLayer, on }) {
     // Start the camera behind the player
     controls.view.yaw = (me?.ry ?? 0) + Math.PI
     controls.view.distance = room.kind === 'home' ? 7.5 : 9
+    controls.view.pitch = 0.42
+    controls.snap()
     stage.resize()
     start()
   }
@@ -85,6 +87,7 @@ export function createGame ({ canvas, labelLayer, on }) {
     controls.enabled = false
     controls.view.distance = 17
     controls.view.pitch = 0.3
+    controls.snap()
   }
 
   function leave () {
@@ -232,7 +235,7 @@ export function createGame ({ canvas, labelLayer, on }) {
     }
     if (dir) {
       if (seat || emoteUntil > now) standUp()
-      const step = WALK_SPEED * dt
+      const step = WALK_SPEED * (dir.strength ?? 1) * dt
       const [x, z] = collide(me.x + dir.x * step, me.z + dir.z * step)
       const moved = Math.hypot(x - me.x, z - me.z)
       // Walking into a wall for a while gives up on a click target

@@ -66,10 +66,32 @@ const FACES = [[1, 0.98, 1], [0.93, 1.07, 0.97], [1.07, 0.95, 1]]
 const EYE_STYLES = [
   { w: 1, h: 1 }, // round
   { w: 1.18, h: 0.78 }, // almond
-  { w: 1.1, h: 0.68, lid: true }, // sleepy
+  { w: 1.1, h: 0.62 }, // sleepy
   { w: 1.15, h: 1.15, sparkle: true }, // sparkly
   { w: 1.28, h: 1.12 } // wide
 ]
+
+// Where the face's features sit, measured from the head's center
+const EYE_X = 0.085
+const EYE_Y = -0.01
+const BROW_Y = 0.075
+const MOUTH_Y = -0.1
+
+/**
+ * A point on the front of a head shaped fx·fy·fz, `out` above the skin, with the turn that lays
+ * a flat shape (thin along z) onto the skin there.
+ */
+function onFace (fx, fy, fz, x, y, out = 0) {
+  const a = R * fx
+  const b = R * fy
+  const c = R * fz
+  const z = c * Math.sqrt(Math.max(0, 1 - (x / a) ** 2 - (y / b) ** 2))
+  const n = new THREE.Vector3(x / (a * a), y / (b * b), z / (c * c)).normalize()
+  return {
+    position: [x + n.x * out, HC + y + n.y * out, z + n.z * out],
+    rotation: [Math.atan2(-n.y, n.z), Math.asin(n.x), 0]
+  }
+}
 // Brows: tilt of the inner end, and thickness
 const BROWS = [{ tilt: 0, r: 0.012 }, { tilt: -0.28, r: 0.012 }, { tilt: 0.32, r: 0.014 }, { tilt: -0.1, r: 0.008 }]
 
@@ -108,10 +130,8 @@ function buildParts (look) {
     // Bare shoulders, with a trimmed neckline and armholes so the top reads as clothing
     for (const side of [-1, 1]) chest.add(SMALL, skin, { position: [side * (female ? 0.135 : 0.15), 0.44, 0], scale: 0.06 })
     chest.add(new THREE.TorusGeometry(0.085, 0.016, 6, 20), shade(top.hex, 0.8), { position: [0, 0.47, 0.012], rotation: [Math.PI / 2 - 0.25, 0, 0], scale: [1, 0.75, 1] })
-    for (const side of [-1, 1]) chest.add(new THREE.TorusGeometry(0.06, 0.012, 6, 14), shade(top.hex, 0.8), { position: [side * (female ? 0.125 : 0.14), 0.42, 0], rotation: [0, Math.PI / 2, 0] })
   }
   if (top.model === 'hoodie') {
-    chest.add(new THREE.TorusGeometry(0.12, 0.05, 8, 18), top.hex, { position: [0, 0.47, -0.08], rotation: [1.25, 0, 0] })
     chest.add(BOX, shade(top.hex, 0.85), { position: [0, 0.12, 0.112], scale: [0.2, 0.08, 0.02] })
     for (const side of [-1, 1]) chest.add(capsule(0.008, 0.08), '#ffffff', { position: [side * 0.04, 0.4, 0.108] })
   } else if (top.model === 'sweater') {
@@ -126,138 +146,145 @@ function buildParts (look) {
     chest.add(BOX, acc.hex, { position: [0.06, 0.35, 0.11], rotation: [0.15, 0, 0.12], scale: [0.07, 0.2, 0.03] })
   }
 
-  // ----- Head: face, hair, head-worn accessories
+  // ----- Head: face, hair, head-worn accessories. Kept simple: every face feature sits on the
+  // head's own surface (whatever its shape), and hair is one shell over the top and back whose
+  // front edge stays above the brows, so nothing pokes through anything else.
   const head = b()
-  const S = (k = 1) => [R * fx * k, R * fy * k, R * fz * k]
-  head.add(SPHERE, skin, { position: [0, HC, 0], scale: S() })
+  const ra = R * fx
+  const rb = R * fy
+  const rc = R * fz
+  head.add(SPHERE, skin, { position: [0, HC, 0], scale: [ra, rb, rc] })
+  const brow = BROWS[look.brows] ?? BROWS[0]
   for (const side of [-1, 1]) {
-    head.add(SMALL, skin, { position: [side * 0.238 * fx, HC - 0.01, 0], scale: [0.04, 0.055, 0.035] })
-    head.add(SMALL, mix(skin, '#ff8fa3', 0.55), { position: [side * 0.125, HC - 0.06, 0.2 * fz], scale: [0.045, 0.024, 0.02] })
-    const brow = BROWS[look.brows] ?? BROWS[0]
-    head.add(capsule(brow.r, 0.055), shade(hair, 0.7), { position: [side * 0.088, HC + 0.105, 0.226 * fz], rotation: [0, 0, Math.PI / 2 + side * brow.tilt] })
+    const cheek = onFace(fx, fy, fz, side * 0.13, -0.065, 0.002)
+    head.add(SMALL, mix(skin, '#ff8fa3', 0.5), { ...cheek, scale: [0.042, 0.024, 0.01] })
+    const browAt = onFace(fx, fy, fz, side * EYE_X, BROW_Y, 0.006)
+    head.add(capsule(brow.r, 0.05), shade(hair, 0.7), { position: browAt.position, rotation: [browAt.rotation[0], browAt.rotation[1], Math.PI / 2 + side * brow.tilt] })
   }
-  head.add(SMALL, shade(skin, 0.93), { position: [0, HC - 0.04, 0.245 * fz], scale: 0.026 })
+  head.add(SMALL, shade(skin, 0.92), { ...onFace(fx, fy, fz, 0, -0.045, 0.004), scale: 0.022 })
 
   const hatted = acc?.model === 'cap'
-  const hairCap = (theta, k = 1.06, tilt = -0.18) => head.add(cap(theta), hair, { position: [0, HC, -0.005], rotation: [tilt, 0, 0], scale: S(k) })
-  const fringe = () => head.add(SPHERE, hair, { position: [0.03, HC + 0.17, 0.19 * fz], rotation: [0.3, 0, -0.35], scale: [0.16, 0.05, 0.07] })
+  const hairR = R * Math.max(fx, fy, fz) * 1.06
+  // The shell: `reach` radians from its middle, tilted back until its front edge is `front`
+  // radians above the eye line
+  const shell = (reach, front, k = 1) => {
+    const tilt = front + reach - Math.PI / 2
+    head.add(cap(reach), hair, { position: [0, HC, 0], rotation: [-tilt, 0, 0], scale: hairR * k })
+  }
+  // A point on the hair: up `elevation` radians, round `turn` radians from the front (+ is left)
+  const onHair = (elevation, turn, out = 0) => {
+    const r = hairR + out
+    return [Math.sin(turn) * Math.cos(elevation) * r, HC + Math.sin(elevation) * r, Math.cos(turn) * Math.cos(elevation) * r]
+  }
   switch (look.hair) {
     case 0: // short
-      hairCap(Math.PI * 0.5)
-      fringe()
+      shell(Math.PI * 0.52, 0.46)
       break
     case 1: // spiky
-      hairCap(Math.PI * 0.44)
+      shell(Math.PI * 0.5, 0.45)
       if (!hatted) {
-        for (let i = 0; i < 8; i++) {
-          const a = (i / 8) * Math.PI * 2
-          const n = new THREE.Vector3(Math.sin(a) * 0.55, 0.85, Math.cos(a) * 0.55 - 0.15)
-          const p = n.clone().normalize().multiplyScalar(R * 0.98)
-          head.add(new THREE.ConeGeometry(0.055, 0.16, 8), hair, { position: [p.x, HC + p.y, p.z], rotation: toward(n) })
+        for (let i = 0; i < 7; i++) {
+          const turn = Math.PI + (i - 3) * 0.55
+          const elevation = i % 2 ? 0.95 : 1.2
+          const n = new THREE.Vector3(...onHair(elevation, turn)).sub(new THREE.Vector3(0, HC, 0)).normalize()
+          head.add(new THREE.ConeGeometry(0.05, 0.13, 8), hair, { position: onHair(elevation, turn, 0.03), rotation: toward(n) })
         }
       }
       break
     case 2: // long
-      hairCap(Math.PI * 0.56)
-      head.add(SPHERE, hair, { position: [0, HC - 0.12, -0.13], scale: [0.235, 0.32, 0.12] })
-      for (const side of [-1, 1]) head.add(SPHERE, hair, { position: [side * 0.2 * fx, HC - 0.1, -0.02], scale: [0.07, 0.24, 0.1] })
-      fringe()
+      shell(Math.PI * 0.6, 0.48)
+      head.add(SPHERE, hair, { position: [0, HC - 0.13, -0.11], scale: [0.25, 0.3, 0.13] })
       break
     case 3: // ponytail
-      hairCap(Math.PI * 0.5)
-      head.add(capsule(0.065, 0.22), hair, { position: [0, HC - 0.03, -0.31], rotation: [0.45, 0, 0] })
-      head.add(new THREE.TorusGeometry(0.04, 0.015, 6, 12), shade(hair, 0.6), { position: [0, HC + 0.08, -0.25], rotation: [1.1, 0, 0] })
-      fringe()
+      shell(Math.PI * 0.52, 0.46)
+      head.add(SMALL, shade(hair, 0.6), { position: onHair(0.25, Math.PI, -0.005), scale: 0.045 })
+      head.add(capsule(0.06, 0.2), hair, { position: [0, HC - 0.07, -hairR - 0.06], rotation: [0.3, 0, 0] })
       break
     case 4: // bob
-      head.add(cap(Math.PI * 0.7), hair, { position: [0, HC, -0.01], rotation: [-0.12, 0, 0], scale: S(1.09) })
-      head.add(SPHERE, hair, { position: [0, HC + 0.15, 0.19 * fz], rotation: [0.35, 0, 0], scale: [0.2, 0.06, 0.08] })
+      shell(Math.PI * 0.66, 0.5)
       break
     case 5: // curly
-      hairCap(Math.PI * 0.45, 1.03)
-      for (let i = 0; i < 18; i++) {
-        const y = 0.15 + (i / 18) * 0.85
-        const r = Math.sqrt(1 - y * y)
-        const a = i * 2.39996
-        const p = new THREE.Vector3(Math.cos(a) * r * fx, y * fy, Math.sin(a) * r * fz - 0.06).multiplyScalar(R * 1.02)
-        if (p.z > 0.17 && p.y < 0.17) continue // keep the face clear
-        head.add(SMALL, hair, { position: [p.x, HC + p.y, p.z], scale: 0.075 + (i % 3) * 0.01 })
+      shell(Math.PI * 0.52, 0.46, 0.98)
+      // Curls round the sides, back and top only, well away from the face
+      for (let i = 0; i < 14; i++) {
+        const elevation = hatted ? -0.35 + (i % 3) * 0.2 : 0.1 + (i % 4) * 0.3
+        const turn = Math.PI + (i - 6.5) * 0.25
+        head.add(SMALL, hair, { position: onHair(elevation, turn, -0.01), scale: 0.07 + (i % 3) * 0.01 })
       }
       break
     case 6: // buns
-      hairCap(Math.PI * 0.5)
-      if (!hatted) for (const side of [-1, 1]) head.add(SPHERE, hair, { position: [side * 0.15, HC + 0.21, -0.03], scale: 0.095 })
-      fringe()
+      shell(Math.PI * 0.5, 0.45)
+      if (!hatted) for (const side of [-1, 1]) head.add(SPHERE, hair, { position: onHair(1.05, side * 0.75 + Math.PI, 0.02), scale: 0.085 })
       break
     default: // buzz
-      hairCap(Math.PI * 0.48, 1.015, -0.1)
+      shell(Math.PI * 0.5, 0.5, 0.97)
   }
 
   if (acc) {
     switch (acc.model) {
-      case 'cap':
-        head.add(cap(Math.PI * 0.42), acc.hex, { position: [0, HC + 0.01, 0], rotation: [-0.05, 0, 0], scale: S(1.13) })
-        head.add(CYLINDER, acc.hex, { position: [0, HC + 0.1, 0.21], rotation: [0.12, 0, 0], scale: [0.16, 0.014, 0.13] })
-        head.add(SMALL, shade(acc.hex, 0.8), { position: [0, HC + 0.28, 0], scale: 0.022 })
+      case 'cap': {
+        const capR = hairR * 1.06
+        head.add(cap(Math.PI / 2), acc.hex, { position: [0, HC, 0], rotation: [-0.52, 0, 0], scale: capR })
+        head.add(CYLINDER, acc.hex, { position: [0, HC + Math.sin(0.52) * capR - 0.01, Math.cos(0.52) * capR + 0.06], rotation: [0.25, 0, 0], scale: [0.15, 0.014, 0.12] })
+        head.add(SMALL, shade(acc.hex, 0.8), { position: [0, HC + capR * 0.88, -capR * 0.45], scale: 0.022 })
         break
+      }
       case 'glasses':
         for (const side of [-1, 1]) {
-          head.add(new THREE.TorusGeometry(1, 0.14, 6, 20), acc.hex, { position: [side * 0.088, HC + 0.03, 0.248 * fz], scale: 0.055 })
-          head.add(BOX, acc.hex, { position: [side * 0.17 * fx, HC + 0.04, 0.14 * fz], scale: [0.008, 0.008, 0.2] })
+          const ring = onFace(fx, fy, fz, side * EYE_X, EYE_Y, 0.03)
+          head.add(new THREE.TorusGeometry(1, 0.13, 6, 20), acc.hex, { ...ring, scale: 0.056 })
         }
-        head.add(BOX, acc.hex, { position: [0, HC + 0.035, 0.255 * fz], scale: [0.05, 0.009, 0.009] })
+        head.add(BOX, acc.hex, { ...onFace(fx, fy, fz, 0, EYE_Y + 0.01, 0.03), scale: [0.06, 0.009, 0.009] })
         break
       case 'bow':
-        for (const side of [-1, 1]) head.add(SPHERE, acc.hex, { position: [0.13 + side * 0.045, HC + 0.24, 0.05], rotation: [0, 0, side * 0.5], scale: [0.065, 0.045, 0.03] })
-        head.add(SMALL, shade(acc.hex, 0.85), { position: [0.13, HC + 0.24, 0.06], scale: 0.025 })
+        for (const side of [-1, 1]) head.add(SPHERE, acc.hex, { position: onHair(0.95, 0.75 + side * 0.17, 0.02), rotation: [0, 0.75, side * 0.5], scale: [0.06, 0.042, 0.03] })
+        head.add(SMALL, shade(acc.hex, 0.85), { position: onHair(0.95, 0.75, 0.03), scale: 0.024 })
         break
       case 'headphones':
-        head.add(new THREE.TorusGeometry(1, 0.055, 8, 28, Math.PI), acc.hex, { position: [0, HC + 0.02, 0], scale: [R * 1.14 * fx, R * 1.14 * fy, 1] })
-        for (const side of [-1, 1]) {
-          head.add(CYLINDER, acc.hex, { position: [side * 0.27 * fx, HC - 0.01, 0], rotation: [0, 0, Math.PI / 2], scale: [0.075, 0.05, 0.075] })
-          head.add(CYLINDER, shade(acc.hex, 0.7), { position: [side * 0.245 * fx, HC - 0.01, 0], rotation: [0, 0, Math.PI / 2], scale: [0.06, 0.02, 0.06] })
-        }
+        head.add(new THREE.TorusGeometry(1, 0.05, 8, 28, Math.PI), acc.hex, { position: [0, HC, 0], scale: [hairR * 1.08, hairR * 1.08, 1] })
+        for (const side of [-1, 1]) head.add(CYLINDER, acc.hex, { position: [side * hairR * 1.04, HC - 0.02, 0], rotation: [0, 0, Math.PI / 2], scale: [0.075, 0.06, 0.075] })
         break
       case 'flower':
-        head.add(SMALL, '#ffd75e', { position: [-0.16, HC + 0.17, 0.13], scale: 0.022 })
+        head.add(SMALL, '#ffd75e', { position: onHair(0.8, -0.85, 0.035), scale: 0.022 })
         for (let i = 0; i < 5; i++) {
           const a = (i / 5) * Math.PI * 2
-          head.add(SMALL, acc.hex, { position: [-0.16 + Math.cos(a) * 0.035, HC + 0.17 + Math.sin(a) * 0.035, 0.12], rotation: [0, 0, a], scale: [0.03, 0.02, 0.012] })
+          const [x, y, z] = onHair(0.8, -0.85, 0.025)
+          head.add(SMALL, acc.hex, { position: [x + Math.cos(a) * 0.03, y + Math.sin(a) * 0.03, z], scale: [0.028, 0.02, 0.012], rotation: [0, -0.85, a] })
         }
         break
       case 'crown':
-        head.add(new THREE.CylinderGeometry(0.13, 0.12, 0.08, 20, 1, true), acc.hex, { position: [0, HC + 0.25, 0] })
+        head.add(new THREE.CylinderGeometry(0.12, 0.11, 0.08, 20, 1, true), acc.hex, { position: [0, HC + hairR * 0.93, 0] })
         for (let i = 0; i < 5; i++) {
           const a = (i / 5) * Math.PI * 2
-          head.add(new THREE.ConeGeometry(0.025, 0.07, 6), acc.hex, { position: [Math.sin(a) * 0.125, HC + 0.32, Math.cos(a) * 0.125] })
-          head.add(SMALL, i % 2 ? '#7cc7f4' : '#ef5060', { position: [Math.sin(a) * 0.13, HC + 0.25, Math.cos(a) * 0.13], scale: 0.016 })
+          head.add(new THREE.ConeGeometry(0.024, 0.07, 6), acc.hex, { position: [Math.sin(a) * 0.115, HC + hairR * 0.93 + 0.07, Math.cos(a) * 0.115] })
+          head.add(SMALL, i % 2 ? '#7cc7f4' : '#ef5060', { position: [Math.sin(a) * 0.122, HC + hairR * 0.93, Math.cos(a) * 0.122], scale: 0.015 })
         }
         break
     }
   }
 
-  // ----- Eyes, on their own so they can blink. Built around the eye line.
+  // ----- Eyes, on their own so they can blink: big cartoon ovals with a shine, laid on the
+  // face around the eye line
   const eyes = b()
   const style = EYE_STYLES[look.eyes] ?? EYE_STYLES[0]
   for (const side of [-1, 1]) {
-    const ex = side * 0.088
-    const ez = 0.205 * fz
-    eyes.add(SPHERE, '#ffffff', { position: [ex, 0, ez], scale: [0.055 * style.w, 0.06 * style.h, 0.03] })
-    eyes.add(SPHERE, eyeColor, { position: [ex, -0.005, ez + 0.021], scale: [0.036 * style.w, 0.043 * style.h, 0.016] })
-    eyes.add(SMALL, '#1d1b2a', { position: [ex, -0.005, ez + 0.031], scale: [0.019 * style.w, 0.025 * style.h, 0.01] })
-    eyes.add(SMALL, '#ffffff', { position: [ex - 0.012, 0.014 * style.h, ez + 0.039], scale: 0.011 })
-    if (style.sparkle) eyes.add(SMALL, '#ffffff', { position: [ex + 0.013, -0.02, ez + 0.038], scale: 0.006 })
-    if (style.lid) eyes.add(cap(Math.PI / 2), skin, { position: [ex, 0.002, ez + 0.004], rotation: [0.35, 0, 0], scale: [0.06 * style.w, 0.05, 0.036] })
-    if (female) {
-      for (const k of [0, 1]) eyes.add(BOX, '#2a2230', { position: [ex + side * (0.042 + k * 0.012) * style.w, (0.04 - k * 0.012) * style.h, ez + 0.012], rotation: [0, 0, side * (0.5 + k * 0.4)], scale: [0.026, 0.007, 0.008] })
+    const at = (out, dx = 0, dy = 0) => {
+      const p = onFace(fx, fy, fz, side * EYE_X + dx, EYE_Y + dy, out)
+      p.position[1] -= HC + EYE_Y
+      return p
     }
+    eyes.add(SPHERE, mix(eyeColor, '#1d1b2a', 0.25), { ...at(0.004), scale: [0.04 * style.w, 0.05 * style.h, 0.012] })
+    eyes.add(SPHERE, '#1d1b2a', { ...at(0.009), scale: [0.022 * style.w, 0.03 * style.h, 0.01] })
+    eyes.add(SMALL, '#ffffff', { ...at(0.017, -0.012, 0.014 * style.h), scale: 0.011 })
+    if (style.sparkle) eyes.add(SMALL, '#ffffff', { ...at(0.017, 0.012, -0.016 * style.h), scale: 0.006 })
   }
 
-  // ----- Mouth: a smile, and an open laugh
-  const smile = b().add(new THREE.TorusGeometry(0.03, 0.007, 6, 14, Math.PI), '#c2565f', { position: [0, 0, 0], rotation: [0, 0, Math.PI] })
+  // ----- Mouth: a smile, and an open laugh, tipped to the face below the nose
+  const tip = onFace(fx, fy, fz, 0, MOUTH_Y, 0).rotation[0]
+  const smile = b().add(new THREE.TorusGeometry(0.03, 0.007, 6, 14, Math.PI), '#c2565f', { rotation: [tip, 0, Math.PI] })
   const laugh = b()
-  laugh.add(SPHERE, '#8c2f3b', { scale: [0.042, 0.032, 0.014] })
-  laugh.add(SMALL, '#ff8fa3', { position: [0, -0.014, 0.005], scale: [0.022, 0.012, 0.01] })
+  laugh.add(SPHERE, '#8c2f3b', { rotation: [tip, 0, 0], scale: [0.04, 0.03, 0.012] })
+  laugh.add(SMALL, '#ff8fa3', { position: [0, -0.013, 0.004], rotation: [tip, 0, 0], scale: [0.02, 0.011, 0.008] })
 
   // ----- Arms and legs (one geometry for both sides). Each starts with a ball at its joint,
   // so bending never opens a gap.
@@ -439,7 +466,7 @@ export function createAvatar (look) {
   const spine = bone(hips, 0, 0.02)
   const neck = bone(spine, 0, 0.52)
   const head = bone(neck, 0, 0.04)
-  const eyesBone = bone(head, 0, HC + 0.03)
+  const eyesBone = bone(head, 0, HC + EYE_Y)
   const smileBone = bone(head, 0, HC - 0.105, 0.234)
   const laughBone = bone(head, 0, HC - 0.105, 0.234)
   const shoulderL = bone(spine, 0.2, 0.45)
@@ -496,7 +523,9 @@ export function createAvatar (look) {
     })
     shoulderL.position.x = female ? 0.185 : 0.205
     shoulderR.position.x = -shoulderL.position.x
-    smileBone.position.z = laughBone.position.z = 0.234 * (FACES[next.face] ?? FACES[0])[2]
+    const [, mouthY, mouthZ] = onFace(...(FACES[next.face] ?? FACES[0]), 0, MOUTH_Y, 0.004).position
+    smileBone.position.set(0, mouthY, mouthZ)
+    laughBone.position.set(0, mouthY, mouthZ)
     root.updateMatrixWorld(true)
     bodyInverse.copy(body.matrixWorld).invert()
 

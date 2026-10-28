@@ -68,14 +68,6 @@ export function tree (env, { seed = 1, far = false, blossom = false } = {}) {
   return mesh(b.build({ ao: 0.6 }), env.material, { shadows: !far })
 }
 
-/** A tree that swaps to its simpler self far away: the plaza's level of detail. */
-export function treeLod (env, options) {
-  const lod = new THREE.LOD()
-  lod.addLevel(tree(env, options), 0)
-  lod.addLevel(tree(env, { ...options, far: true }), 28)
-  return lod
-}
-
 /** A park bench facing +z. Its two seats are at x = ±0.42. */
 export function bench (env, wood = '#c98f5a', metal = '#4a5a7a') {
   const b = new Builder(env.atlas)

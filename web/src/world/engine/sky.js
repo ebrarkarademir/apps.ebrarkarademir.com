@@ -2,6 +2,7 @@
 // bounce from the sky and a green one from the grass, under a gradient sky with puffy clouds.
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { QUALITY } from './quality.js'
 
 const SHADOW_SPAN = 22 // meters of shadow around the player
 
@@ -13,7 +14,7 @@ export function createDaylight (scene, { sunColor = '#fff1d6', sunStrength = 2.4
   const sun = new THREE.DirectionalLight(sunColor, sunStrength)
   const offset = new THREE.Vector3(18, 30, 14)
   sun.castShadow = true
-  sun.shadow.mapSize.set(2048, 2048)
+  sun.shadow.mapSize.set(QUALITY.shadowSize, QUALITY.shadowSize)
   sun.shadow.radius = 5
   sun.shadow.bias = -0.0004
   sun.shadow.normalBias = 0.02

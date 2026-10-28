@@ -13,7 +13,9 @@ import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-const MAX_PIXEL_RATIO = 1.5
+import { QUALITY } from './quality.js'
+
+const MAX_PIXEL_RATIO = QUALITY.maxPixelRatio
 const MIN_PIXEL_RATIO = 0.6
 const SLOW_MS = 1000 / 50 // frames slower than this, on average, cost resolution
 const FAST_MS = 1000 / 58
@@ -25,7 +27,7 @@ export function createStage (canvas) {
   renderer.toneMapping = THREE.NeutralToneMapping
   renderer.toneMappingExposure = 1.0
   renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.shadowMap.type = QUALITY.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap
   // Counted over a whole frame (every pass), not just the last one
   renderer.info.autoReset = false
 
@@ -47,7 +49,8 @@ export function createStage (canvas) {
   const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.4, 1.5)
   composer.addPass(renderPass)
   composer.addPass(bokeh)
-  composer.addPass(bloom)
+  // Phones skip the glow: a handful of blur passes over the whole screen
+  if (QUALITY.bloom) composer.addPass(bloom)
   composer.addPass(new OutputPass())
 
   let width = 1
