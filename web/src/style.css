@@ -3,13 +3,15 @@
 /*
  * Design tokens: a green-phosphor CRT terminal.
  * - the default palette is cleared, so black and these greens are the only colors a class can use
- * - JetBrains Mono for text, VT323 (`font-display`) for big terminal type: titles, timers, scores
+ * - JetBrains Mono for text, VT323 (`font-display`) for big terminal type: titles, timers, scores.
+ *   VT323 has no Cyrillic, so Russian and Kazakh letters come from Handjet, a pixel font of the
+ *   same width and height (only its Cyrillic part is ever downloaded)
  * - no corner radius and no drop shadows: thin green wireframe lines and phosphor glow instead
  */
 @theme {
   --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --font-display: "VT323", "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "VT323", "Handjet", "JetBrains Mono", ui-monospace, monospace;
 
   --color-*: initial;
   --color-black: #000000;
@@ -258,7 +260,7 @@
     text-decoration-color: transparent;
   }
 
-  /* Small bracketed icon buttons: [?], [x], EN/TR */
+  /* Small bracketed icon buttons: [?], [x], the language menu */
   .term-icon-btn {
     display: inline-flex;
     align-items: center;

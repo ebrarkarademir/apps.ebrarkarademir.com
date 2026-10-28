@@ -18,18 +18,18 @@ defineEmits(['go-back'])
 
 const ROUND_MS = 60000
 
-// Card database: each card has an EN and a TR version so the shown card follows each device's language
+// Card database: each card comes in every site language so the shown card follows each device's language
 const cards = [
-  { id: 'phone', TR: { word: 'TELEFON', taboo: ['ARAMAK', 'NUMARA', 'CEP', 'KONUŞMAK', 'MESAJ'] }, EN: { word: 'PHONE', taboo: ['CALL', 'NUMBER', 'MOBILE', 'TALK', 'TEXT'] } },
-  { id: 'coffee', TR: { word: 'KAHVE', taboo: ['İÇMEK', 'SICAK', 'FİNCAN', 'TÜRK', 'NESCAFE'] }, EN: { word: 'COFFEE', taboo: ['DRINK', 'HOT', 'CUP', 'CAFFEINE', 'MORNING'] } },
-  { id: 'computer', TR: { word: 'BİLGİSAYAR', taboo: ['KLAVYE', 'MOUSE', 'EKRAN', 'İNTERNET', 'LAPTOP'] }, EN: { word: 'COMPUTER', taboo: ['KEYBOARD', 'MOUSE', 'SCREEN', 'INTERNET', 'LAPTOP'] } },
-  { id: 'football', TR: { word: 'FUTBOL', taboo: ['TOP', 'GOL', 'STADYUM', 'TAKIM', 'MAÇ'] }, EN: { word: 'FOOTBALL', taboo: ['BALL', 'GOAL', 'STADIUM', 'TEAM', 'MATCH'] } },
-  { id: 'book', TR: { word: 'KİTAP', taboo: ['OKUMAK', 'SAYFA', 'YAZAR', 'ROMAN', 'KAPAK'] }, EN: { word: 'BOOK', taboo: ['READ', 'PAGE', 'AUTHOR', 'NOVEL', 'COVER'] } },
-  { id: 'beach', TR: { word: 'PLAJ', taboo: ['DENİZ', 'KUM', 'GÜNEŞ', 'YÜZMEK', 'TATİL'] }, EN: { word: 'BEACH', taboo: ['SEA', 'SAND', 'SUN', 'SWIM', 'HOLIDAY'] } },
-  { id: 'doctor', TR: { word: 'DOKTOR', taboo: ['HASTANE', 'HASTA', 'İLAÇ', 'REÇETE', 'MUAYENE'] }, EN: { word: 'DOCTOR', taboo: ['HOSPITAL', 'SICK', 'MEDICINE', 'PRESCRIPTION', 'NURSE'] } },
-  { id: 'cinema', TR: { word: 'SİNEMA', taboo: ['FİLM', 'SALON', 'BİLET', 'PATLAMIŞ MISIR', 'PERDE'] }, EN: { word: 'CINEMA', taboo: ['MOVIE', 'THEATER', 'TICKET', 'POPCORN', 'SCREEN'] } },
-  { id: 'cake', TR: { word: 'PASTA', taboo: ['TATLI', 'KREMALI', 'DOĞUM GÜNÜ', 'ŞEKER', 'FIRIN'] }, EN: { word: 'CAKE', taboo: ['SWEET', 'CREAM', 'BIRTHDAY', 'SUGAR', 'BAKE'] } },
-  { id: 'car', TR: { word: 'ARABA', taboo: ['SÜRMEK', 'TEKERLEK', 'MOTOR', 'YOLCULUK', 'EHLİYET'] }, EN: { word: 'CAR', taboo: ['DRIVE', 'WHEEL', 'ENGINE', 'ROAD', 'LICENSE'] } }
+  { id: 'phone', TR: { word: 'TELEFON', taboo: ['ARAMAK', 'NUMARA', 'CEP', 'KONUŞMAK', 'MESAJ'] }, EN: { word: 'PHONE', taboo: ['CALL', 'NUMBER', 'MOBILE', 'TALK', 'TEXT'] }, RU: { word: 'ТЕЛЕФОН', taboo: ['ЗВОНИТЬ', 'НОМЕР', 'МОБИЛЬНЫЙ', 'ГОВОРИТЬ', 'СООБЩЕНИЕ'] }, KK: { word: 'ТЕЛЕФОН', taboo: ['ҚОҢЫРАУ', 'НӨМІР', 'ҰЯЛЫ', 'СӨЙЛЕСУ', 'ХАБАРЛАМА'] } },
+  { id: 'coffee', TR: { word: 'KAHVE', taboo: ['İÇMEK', 'SICAK', 'FİNCAN', 'TÜRK', 'NESCAFE'] }, EN: { word: 'COFFEE', taboo: ['DRINK', 'HOT', 'CUP', 'CAFFEINE', 'MORNING'] }, RU: { word: 'КОФЕ', taboo: ['ПИТЬ', 'ГОРЯЧИЙ', 'ЧАШКА', 'КОФЕИН', 'УТРО'] }, KK: { word: 'КОФЕ', taboo: ['ІШУ', 'ЫСТЫҚ', 'КЕСЕ', 'КОФЕИН', 'ТАҢЕРТЕҢ'] } },
+  { id: 'computer', TR: { word: 'BİLGİSAYAR', taboo: ['KLAVYE', 'MOUSE', 'EKRAN', 'İNTERNET', 'LAPTOP'] }, EN: { word: 'COMPUTER', taboo: ['KEYBOARD', 'MOUSE', 'SCREEN', 'INTERNET', 'LAPTOP'] }, RU: { word: 'КОМПЬЮТЕР', taboo: ['КЛАВИАТУРА', 'МЫШЬ', 'ЭКРАН', 'ИНТЕРНЕТ', 'НОУТБУК'] }, KK: { word: 'КОМПЬЮТЕР', taboo: ['ПЕРНЕТАҚТА', 'ТЫШҚАН', 'ЭКРАН', 'ИНТЕРНЕТ', 'НОУТБУК'] } },
+  { id: 'football', TR: { word: 'FUTBOL', taboo: ['TOP', 'GOL', 'STADYUM', 'TAKIM', 'MAÇ'] }, EN: { word: 'FOOTBALL', taboo: ['BALL', 'GOAL', 'STADIUM', 'TEAM', 'MATCH'] }, RU: { word: 'ФУТБОЛ', taboo: ['МЯЧ', 'ГОЛ', 'СТАДИОН', 'КОМАНДА', 'МАТЧ'] }, KK: { word: 'ФУТБОЛ', taboo: ['ДОП', 'ГОЛ', 'СТАДИОН', 'КОМАНДА', 'МАТЧ'] } },
+  { id: 'book', TR: { word: 'KİTAP', taboo: ['OKUMAK', 'SAYFA', 'YAZAR', 'ROMAN', 'KAPAK'] }, EN: { word: 'BOOK', taboo: ['READ', 'PAGE', 'AUTHOR', 'NOVEL', 'COVER'] }, RU: { word: 'КНИГА', taboo: ['ЧИТАТЬ', 'СТРАНИЦА', 'АВТОР', 'РОМАН', 'ОБЛОЖКА'] }, KK: { word: 'КІТАП', taboo: ['ОҚУ', 'БЕТ', 'АВТОР', 'РОМАН', 'МҰҚАБА'] } },
+  { id: 'beach', TR: { word: 'PLAJ', taboo: ['DENİZ', 'KUM', 'GÜNEŞ', 'YÜZMEK', 'TATİL'] }, EN: { word: 'BEACH', taboo: ['SEA', 'SAND', 'SUN', 'SWIM', 'HOLIDAY'] }, RU: { word: 'ПЛЯЖ', taboo: ['МОРЕ', 'ПЕСОК', 'СОЛНЦЕ', 'ПЛАВАТЬ', 'ОТПУСК'] }, KK: { word: 'ЖАҒАЖАЙ', taboo: ['ТЕҢІЗ', 'ҚҰМ', 'КҮН', 'ЖҮЗУ', 'ДЕМАЛЫС'] } },
+  { id: 'doctor', TR: { word: 'DOKTOR', taboo: ['HASTANE', 'HASTA', 'İLAÇ', 'REÇETE', 'MUAYENE'] }, EN: { word: 'DOCTOR', taboo: ['HOSPITAL', 'SICK', 'MEDICINE', 'PRESCRIPTION', 'NURSE'] }, RU: { word: 'ВРАЧ', taboo: ['БОЛЬНИЦА', 'БОЛЬНОЙ', 'ЛЕКАРСТВО', 'РЕЦЕПТ', 'МЕДСЕСТРА'] }, KK: { word: 'ДӘРІГЕР', taboo: ['АУРУХАНА', 'НАУҚАС', 'ДӘРІ', 'РЕЦЕПТ', 'МЕЙІРБИКЕ'] } },
+  { id: 'cinema', TR: { word: 'SİNEMA', taboo: ['FİLM', 'SALON', 'BİLET', 'PATLAMIŞ MISIR', 'PERDE'] }, EN: { word: 'CINEMA', taboo: ['MOVIE', 'THEATER', 'TICKET', 'POPCORN', 'SCREEN'] }, RU: { word: 'КИНОТЕАТР', taboo: ['ФИЛЬМ', 'ЗАЛ', 'БИЛЕТ', 'ПОПКОРН', 'ЭКРАН'] }, KK: { word: 'КИНОТЕАТР', taboo: ['ФИЛЬМ', 'ЗАЛ', 'БИЛЕТ', 'ПОПКОРН', 'ЭКРАН'] } },
+  { id: 'cake', TR: { word: 'PASTA', taboo: ['TATLI', 'KREMALI', 'DOĞUM GÜNÜ', 'ŞEKER', 'FIRIN'] }, EN: { word: 'CAKE', taboo: ['SWEET', 'CREAM', 'BIRTHDAY', 'SUGAR', 'BAKE'] }, RU: { word: 'ТОРТ', taboo: ['СЛАДКИЙ', 'КРЕМ', 'ДЕНЬ РОЖДЕНИЯ', 'САХАР', 'ПЕЧЬ'] }, KK: { word: 'ТОРТ', taboo: ['ТӘТТІ', 'КРЕМ', 'ТУҒАН КҮН', 'ҚАНТ', 'ПЕШ'] } },
+  { id: 'car', TR: { word: 'ARABA', taboo: ['SÜRMEK', 'TEKERLEK', 'MOTOR', 'YOLCULUK', 'EHLİYET'] }, EN: { word: 'CAR', taboo: ['DRIVE', 'WHEEL', 'ENGINE', 'ROAD', 'LICENSE'] }, RU: { word: 'МАШИНА', taboo: ['ВОДИТЬ', 'КОЛЕСО', 'ДВИГАТЕЛЬ', 'ДОРОГА', 'ПРАВА'] }, KK: { word: 'КӨЛІК', taboo: ['ЖҮРГІЗУ', 'ДӨҢГЕЛЕК', 'ҚОЗҒАЛТҚЫШ', 'ЖОЛ', 'КУӘЛІК'] } }
   // Add more cards as needed
 ]
 
@@ -154,7 +154,7 @@ const room = useOnlineRoom({
 // ---------- View ----------
 
 const view = computed(() => room.view)
-const lang = computed(() => (props.t.langCode === 'TR' ? 'TR' : 'EN'))
+const lang = computed(() => (props.t.langCode in cards[0] ? props.t.langCode : 'EN'))
 const teamName = (index) => fmt(props.t.tabuTeam, { n: index + 1 })
 const nameOf = (id) => view.value?.players.find(p => p.id === id)?.name || ''
 const membersOf = (team) => (view.value?.players || []).filter(p => view.value.teams[p.id] === team)

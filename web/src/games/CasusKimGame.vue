@@ -26,35 +26,49 @@ const ADD_TIME_MS = 30000
 const BAR_CELLS = 24
 const TALLY_CELLS = 12
 
-// Same index in EN and TR refers to the same word, so every device can show its own language
+// The same index refers to the same word in every language, so every device can show its own
 const themeWords = {
   animals: {
     EN: ['Lion', 'Elephant', 'Giraffe', 'Penguin', 'Kangaroo', 'Dolphin', 'Owl', 'Crocodile', 'Panda', 'Horse', 'Octopus', 'Butterfly'],
-    TR: ['Aslan', 'Fil', 'Zürafa', 'Penguen', 'Kanguru', 'Yunus', 'Baykuş', 'Timsah', 'Panda', 'At', 'Ahtapot', 'Kelebek']
+    TR: ['Aslan', 'Fil', 'Zürafa', 'Penguen', 'Kanguru', 'Yunus', 'Baykuş', 'Timsah', 'Panda', 'At', 'Ahtapot', 'Kelebek'],
+    RU: ['Лев', 'Слон', 'Жираф', 'Пингвин', 'Кенгуру', 'Дельфин', 'Сова', 'Крокодил', 'Панда', 'Лошадь', 'Осьминог', 'Бабочка'],
+    KK: ['Арыстан', 'Піл', 'Керік', 'Пингвин', 'Кенгуру', 'Дельфин', 'Үкі', 'Қолтырауын', 'Панда', 'Жылқы', 'Сегізаяқ', 'Көбелек']
   },
   countries: {
     EN: ['Turkey', 'Japan', 'Brazil', 'Egypt', 'France', 'India', 'Italy', 'Mexico', 'Canada', 'Australia', 'Norway', 'Greece'],
-    TR: ['Türkiye', 'Japonya', 'Brezilya', 'Mısır', 'Fransa', 'Hindistan', 'İtalya', 'Meksika', 'Kanada', 'Avustralya', 'Norveç', 'Yunanistan']
+    TR: ['Türkiye', 'Japonya', 'Brezilya', 'Mısır', 'Fransa', 'Hindistan', 'İtalya', 'Meksika', 'Kanada', 'Avustralya', 'Norveç', 'Yunanistan'],
+    RU: ['Турция', 'Япония', 'Бразилия', 'Египет', 'Франция', 'Индия', 'Италия', 'Мексика', 'Канада', 'Австралия', 'Норвегия', 'Греция'],
+    KK: ['Түркия', 'Жапония', 'Бразилия', 'Мысыр', 'Франция', 'Үндістан', 'Италия', 'Мексика', 'Канада', 'Австралия', 'Норвегия', 'Грекия']
   },
   jobs: {
     EN: ['Doctor', 'Teacher', 'Chef', 'Pilot', 'Painter', 'Engineer', 'Firefighter', 'Lawyer', 'Farmer', 'Dentist', 'Photographer', 'Police officer'],
-    TR: ['Doktor', 'Öğretmen', 'Aşçı', 'Pilot', 'Ressam', 'Mühendis', 'İtfaiyeci', 'Avukat', 'Çiftçi', 'Diş hekimi', 'Fotoğrafçı', 'Polis']
+    TR: ['Doktor', 'Öğretmen', 'Aşçı', 'Pilot', 'Ressam', 'Mühendis', 'İtfaiyeci', 'Avukat', 'Çiftçi', 'Diş hekimi', 'Fotoğrafçı', 'Polis'],
+    RU: ['Врач', 'Учитель', 'Повар', 'Пилот', 'Художник', 'Инженер', 'Пожарный', 'Юрист', 'Фермер', 'Стоматолог', 'Фотограф', 'Полицейский'],
+    KK: ['Дәрігер', 'Мұғалім', 'Аспаз', 'Ұшқыш', 'Суретші', 'Инженер', 'Өрт сөндіруші', 'Заңгер', 'Фермер', 'Тіс дәрігері', 'Фотограф', 'Полицей']
   },
   foods: {
     EN: ['Pizza', 'Sushi', 'Kebab', 'Pasta', 'Burger', 'Taco', 'Baklava', 'Soup', 'Pancake', 'Salad', 'Ice cream', 'Popcorn'],
-    TR: ['Pizza', 'Suşi', 'Kebap', 'Makarna', 'Hamburger', 'Tako', 'Baklava', 'Çorba', 'Pankek', 'Salata', 'Dondurma', 'Patlamış mısır']
+    TR: ['Pizza', 'Suşi', 'Kebap', 'Makarna', 'Hamburger', 'Tako', 'Baklava', 'Çorba', 'Pankek', 'Salata', 'Dondurma', 'Patlamış mısır'],
+    RU: ['Пицца', 'Суши', 'Кебаб', 'Паста', 'Бургер', 'Тако', 'Пахлава', 'Суп', 'Блины', 'Салат', 'Мороженое', 'Попкорн'],
+    KK: ['Пицца', 'Суши', 'Кәуап', 'Макарон', 'Бургер', 'Тако', 'Пахлава', 'Сорпа', 'Құймақ', 'Салат', 'Балмұздақ', 'Попкорн']
   },
   sports: {
     EN: ['Football', 'Basketball', 'Tennis', 'Swimming', 'Boxing', 'Golf', 'Volleyball', 'Skiing', 'Cycling', 'Chess', 'Archery', 'Surfing'],
-    TR: ['Futbol', 'Basketbol', 'Tenis', 'Yüzme', 'Boks', 'Golf', 'Voleybol', 'Kayak', 'Bisiklet', 'Satranç', 'Okçuluk', 'Sörf']
+    TR: ['Futbol', 'Basketbol', 'Tenis', 'Yüzme', 'Boks', 'Golf', 'Voleybol', 'Kayak', 'Bisiklet', 'Satranç', 'Okçuluk', 'Sörf'],
+    RU: ['Футбол', 'Баскетбол', 'Теннис', 'Плавание', 'Бокс', 'Гольф', 'Волейбол', 'Лыжи', 'Велоспорт', 'Шахматы', 'Стрельба из лука', 'Сёрфинг'],
+    KK: ['Футбол', 'Баскетбол', 'Теннис', 'Жүзу', 'Бокс', 'Гольф', 'Волейбол', 'Шаңғы', 'Велоспорт', 'Шахмат', 'Садақ ату', 'Серфинг']
   },
   places: {
     EN: ['Beach', 'Hospital', 'School', 'Airport', 'Cinema', 'Library', 'Supermarket', 'Museum', 'Zoo', 'Restaurant', 'Gym', 'Train station'],
-    TR: ['Plaj', 'Hastane', 'Okul', 'Havalimanı', 'Sinema', 'Kütüphane', 'Süpermarket', 'Müze', 'Hayvanat bahçesi', 'Restoran', 'Spor salonu', 'Tren garı']
+    TR: ['Plaj', 'Hastane', 'Okul', 'Havalimanı', 'Sinema', 'Kütüphane', 'Süpermarket', 'Müze', 'Hayvanat bahçesi', 'Restoran', 'Spor salonu', 'Tren garı'],
+    RU: ['Пляж', 'Больница', 'Школа', 'Аэропорт', 'Кинотеатр', 'Библиотека', 'Супермаркет', 'Музей', 'Зоопарк', 'Ресторан', 'Спортзал', 'Вокзал'],
+    KK: ['Жағажай', 'Аурухана', 'Мектеп', 'Әуежай', 'Кинотеатр', 'Кітапхана', 'Супермаркет', 'Мұражай', 'Хайуанаттар бағы', 'Мейрамхана', 'Спортзал', 'Вокзал']
   },
   objects: {
     EN: ['Umbrella', 'Mirror', 'Guitar', 'Clock', 'Toothbrush', 'Candle', 'Backpack', 'Scissors', 'Pillow', 'Camera', 'Key', 'Glasses'],
-    TR: ['Şemsiye', 'Ayna', 'Gitar', 'Saat', 'Diş fırçası', 'Mum', 'Sırt çantası', 'Makas', 'Yastık', 'Fotoğraf makinesi', 'Anahtar', 'Gözlük']
+    TR: ['Şemsiye', 'Ayna', 'Gitar', 'Saat', 'Diş fırçası', 'Mum', 'Sırt çantası', 'Makas', 'Yastık', 'Fotoğraf makinesi', 'Anahtar', 'Gözlük'],
+    RU: ['Зонт', 'Зеркало', 'Гитара', 'Часы', 'Зубная щётка', 'Свеча', 'Рюкзак', 'Ножницы', 'Подушка', 'Фотоаппарат', 'Ключ', 'Очки'],
+    KK: ['Қолшатыр', 'Айна', 'Гитара', 'Сағат', 'Тіс щеткасы', 'Балауыз шам', 'Арқа сөмке', 'Қайшы', 'Жастық', 'Фотоаппарат', 'Кілт', 'Көзілдірік']
   }
 }
 const themeKeys = Object.keys(themeWords)
@@ -289,7 +303,7 @@ const room = useOnlineRoom({
 // ---------- View ----------
 
 const view = computed(() => room.view)
-const lang = computed(() => (props.t.langCode === 'TR' ? 'TR' : 'EN'))
+const lang = computed(() => (props.t.langCode in themeWords.animals ? props.t.langCode : 'EN'))
 const players = computed(() => view.value?.players || [])
 const nameOf = (id) => players.value.find(p => p.id === id)?.name || ''
 const onlineCount = computed(() => players.value.filter(p => p.online).length)

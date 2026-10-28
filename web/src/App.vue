@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import LanguageToggle from './components/LanguageToggle.vue'
+import LanguageMenu from './components/LanguageMenu.vue'
 import TermWindow from './components/TermWindow.vue'
 import GameMenu from './views/GameMenu.vue'
 import UsersView from './views/UsersView.vue'
@@ -20,11 +20,15 @@ import { cardArt } from './cardArt'
 import { useUsers } from './online/useUsers'
 import { currentRoom } from './online/useOnlineRoom'
 
-// Initialize language from localStorage or default to 'EN'
-const currentLang = ref(localStorage.getItem('preferredLanguage') || 'EN')
+// The language menu lists every language in translations.js, each by its own name
+const languages = Object.entries(translations).map(([code, text]) => ({ code, name: text.languageName }))
 
-// Translation helper
-const t = computed(() => translations[currentLang.value])
+// Initialize language from localStorage or default to 'EN'
+const savedLang = localStorage.getItem('preferredLanguage')
+const currentLang = ref(Object.hasOwn(translations, savedLang ?? '') ? savedLang : 'EN')
+
+// Translation helper: anything a language doesn't have yet shows in English
+const t = computed(() => ({ ...translations.EN, ...translations[currentLang.value] }))
 
 // Persist language preference; the page language also makes uppercase text correct in Turkish
 watch(currentLang, (newLang) => {
@@ -505,10 +509,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
   window.removeEventListener('popstate', onPopState)
 })
-
-const toggleLanguage = () => {
-  currentLang.value = currentLang.value === 'EN' ? 'TR' : 'EN'
-}
 </script>
 
 <template>
@@ -567,9 +567,11 @@ const toggleLanguage = () => {
           >
             [?]
           </button>
-          <LanguageToggle
+          <LanguageMenu
             :currentLang="currentLang"
-            @toggle="toggleLanguage"
+            :languages="languages"
+            :label="t.languageMenu"
+            @select="currentLang = $event"
           />
         </div>
       </div>

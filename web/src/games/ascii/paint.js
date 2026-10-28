@@ -10,7 +10,7 @@ export const DEEP = '#002600'
 export const HOT = '#c8ffc8'
 export const GLOW = 'rgba(0, 255, 0, 0.45)'
 export const MONO = '"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace'
-export const DISPLAY = '"VT323", "JetBrains Mono", monospace'
+export const DISPLAY = '"VT323", "Handjet", "JetBrains Mono", monospace'
 // Kanji and kana: a dot-matrix Japanese font (see useJapaneseFont), and the smooth gothic each
 // system has for text that should look printed
 export const JP = '"DotGothic16", "JetBrains Mono", monospace'
@@ -20,6 +20,12 @@ export const JP_PRINT = '"Hiragino Sans", "Yu Gothic", "YuGothic", "Meiryo", "No
 // them again once these have arrived.
 export const CANVAS_FONTS = ['600 16px "JetBrains Mono"', '700 16px "JetBrains Mono"', '16px "VT323"']
 
+// Russian and Kazakh pages also need the Cyrillic parts of the fonts, which Google Fonts sends
+// in two pieces: one letter from each brings in both. Handjet draws the Cyrillic VT323 lacks.
+const CYRILLIC_SAMPLE = 'ЯҚ'
+const CYRILLIC_FONTS = [...CANVAS_FONTS.filter(font => font.includes('JetBrains')), '16px "Handjet"'].map(font => [font, CYRILLIC_SAMPLE])
+const usesCyrillic = () => /^(ru|kk)\b/.test(document.documentElement.lang)
+
 /**
  * Calls `onLoad` once the canvas fonts have arrived, and again whenever more fonts finish
  * loading later, so sprites first painted with a fallback font get painted again. A font can
@@ -28,7 +34,7 @@ export const CANVAS_FONTS = ['600 16px "JetBrains Mono"', '700 16px "JetBrains M
  */
 export function watchFonts (onLoad, fonts = CANVAS_FONTS) {
   const load = (font) => (Array.isArray(font) ? document.fonts?.load(font[0], font[1]) : document.fonts?.load(font))
-  Promise.all(fonts.map(load)).then(() => onLoad(), () => {})
+  Promise.all([...fonts, ...(usesCyrillic() ? CYRILLIC_FONTS : [])].map(load)).then(() => onLoad(), () => {})
   const onDone = () => onLoad()
   document.fonts?.addEventListener?.('loadingdone', onDone)
   return () => document.fonts?.removeEventListener?.('loadingdone', onDone)

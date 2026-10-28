@@ -74,7 +74,7 @@ const particles = []
 const ghosts = new Map() // id -> smoothed position of another player's bird
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
-const upper = (text) => text.toLocaleUpperCase(props.t.langCode === 'TR' ? 'tr' : 'en')
+const upper = (text) => text.toLocaleUpperCase(props.t.langCode.toLowerCase())
 const round2 = (value) => Math.round(value * 100) / 100
 
 function newRun () {

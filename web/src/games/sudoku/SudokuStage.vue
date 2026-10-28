@@ -134,7 +134,7 @@ const formatTime = (seconds) => {
   return s >= 3600 ? `${Math.floor(s / 3600)}:${mm}:${ss}` : `${mm}:${ss}`
 }
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
-const upper = (text) => text.toLocaleUpperCase(props.t.langCode === 'TR' ? 'tr' : 'en')
+const upper = (text) => text.toLocaleUpperCase(props.t.langCode.toLowerCase())
 const isActive = () => game && !finished && !isSolved(game) && !isOver(game)
 // Online, digits only go down once the board has opened, and not by someone watching
 const canPlay = () => isActive() && (!online || (started && props.player))

@@ -106,7 +106,7 @@ let lastView = null
 let lastBall = null
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
-const upper = (text) => text.toLocaleUpperCase(props.t.langCode === 'TR' ? 'tr' : 'en')
+const upper = (text) => text.toLocaleUpperCase(props.t.langCode.toLowerCase())
 const seconds = () => performance.now() / 1000
 const lerp = (a, b, f) => a + (b - a) * f
 
