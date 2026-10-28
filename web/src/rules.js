@@ -124,15 +124,16 @@ export const rules = {
       goal: 'Score more goals than the other team before the clock runs out.',
       steps: [
         'Solo: you play for the home team, with bot teammates, against a team of bots. Online: one person creates a room, the others join with the code and pick a team. The host can add bots to fill the places.',
-        'Run with the arrow keys or WASD. On a phone, drag on the left half of the screen to steer.',
-        'To kick, hold Space (or X, K, or the right half of the screen) to wind up, then let go. A tap is a soft pass and a full wind-up a hard shot. You run slower while winding up.',
-        'A kick sends the ball straight away from you, so get behind it in the direction you want it to go. Running into the ball dribbles it.',
-        'Over a touchline the ball comes back with a kick-in; over a goal line it’s a corner or a goal clearance. The other team stays out of the dotted ring, and a restart not taken within 4 seconds goes to the other team.',
-        'The clock only runs while the ball is in play. Level at full time? The next goal wins (golden goal).'
+        'Run with the arrow keys or WASD. On a phone, drag on the left half of the screen to steer. Players have weight: they take a moment to get going and to stop.',
+        'Press Space (or X, K, or the right half of the screen) to kick. The kick goes off the moment the ball is within reach, so hold it down as the ball comes to you. You run a little slower while holding it.',
+        'A kick sends the ball straight away from the middle of your circle, so get behind it in the direction you want it to go. Running into the ball pushes it along.',
+        'The ball never goes out: it bounces off the lines round the court, so there are no throw-ins or corners. Players can run on past the lines, and step into the goal mouth, but not through the nets.',
+        'At a kick-off the other team stays out of the dotted ring until the ball is touched, and a kick-off not taken within 4 seconds goes to them. Level at full time? The next goal wins (golden goal).'
       ],
       tips: [
-        'Home players are round ( ) and away players square [ ]. Yours has a v over it.',
-        'Fully wound-up shots from close to the goal are the hardest to stop.',
+        'Everyone is a circle of the same size, and the ring is exactly where a player ends. Home players are filled (#), away players hollow ( ). Yours has a v over it, and a ring lights up while its player holds kick.',
+        'A kick adds to the ball’s pace: a ball already rolling the way you kick flies off, one coming straight at you mostly stops.',
+        'Play it off the lines: a ball banked off a touchline goes round a defender.',
         'If someone drops out, a bot plays for them until they’re back.',
         'M turns the sound on or off; P or Esc pauses a solo match.'
       ]
@@ -145,15 +146,16 @@ export const rules = {
       goal: 'Süre bitmeden rakip takımdan daha çok gol at.',
       steps: [
         'Tek kişilik: ev sahibi takımda, bot takım arkadaşlarınla, botlardan oluşan bir takıma karşı oynarsın. Çevrim içi: bir kişi oda oluşturur, diğerleri kodla katılıp takım seçer. Sunucu boş yerlere bot ekleyebilir.',
-        'Ok tuşları ya da WASD ile koş. Telefonda ekranın sol yarısında parmağını sürükleyerek yön ver.',
-        'Vurmak için Boşluk’a (ya da X, K veya ekranın sağ yarısına) basılı tutup güç topla, sonra bırak. Kısa dokunuş yumuşak bir pas, tam güç sert bir şut olur. Güç toplarken daha yavaş koşarsın.',
-        'Vuruş topu senden dümdüz uzağa gönderir; topun gitmesini istediğin yönün tam arkasına geç. Topa koşarak çarpmak onu sürer.',
-        'Top yan çizgiden çıkarsa taç vuruşuyla, kale çizgisinden çıkarsa korner ya da kale atışıyla oyuna döner. Rakip takım noktalı halkanın dışında kalır; 4 saniye içinde kullanılmayan duran top rakibe geçer.',
-        'Süre yalnızca top oyundayken akar. Normal süre berabere mi bitti? İlk golü atan kazanır (altın gol).'
+        'Ok tuşları ya da WASD ile koş. Telefonda ekranın sol yarısında parmağını sürükleyerek yön ver. Oyuncuların ağırlığı var: hızlanmaları da durmaları da biraz zaman alır.',
+        'Vurmak için Boşluk’a (ya da X, K veya ekranın sağ yarısına) bas. Vuruş, top menzile girdiği an gerçekleşir; top sana gelirken basılı tut. Basılı tutarken biraz daha yavaş koşarsın.',
+        'Vuruş topu dairenin ortasından dümdüz uzağa gönderir; topun gitmesini istediğin yönün tam arkasına geç. Topa koşarak çarpmak onu önünde sürer.',
+        'Top hiç dışarı çıkmaz: sahanın çevresindeki çizgilerden seker, yani taç ya da korner yok. Oyuncular çizgilerin dışına koşabilir, kale ağzına girebilir, ama fileden geçemez.',
+        'Başlama vuruşunda rakip takım topa dokunulana kadar noktalı halkanın dışında kalır; 4 saniye içinde yapılmayan başlama vuruşu rakibe geçer. Normal süre berabere mi bitti? İlk golü atan kazanır (altın gol).'
       ],
       tips: [
-        'Ev sahibi oyuncular yuvarlak ( ), deplasman oyuncuları kare [ ]. Seninkinin üstünde v işareti var.',
-        'Kaleye yakından, tam güçle vurulan şutlar en zor kurtarılanlardır.',
+        'Herkes aynı boyda bir daire ve halka oyuncunun tam sınırı. Ev sahibi oyuncular dolu (#), deplasman oyuncuları boş ( ). Seninkinin üstünde v işareti var; vuruş tuşunu basılı tutan oyuncunun halkası parlar.',
+        'Vuruş topun hızına eklenir: vurduğun yöne zaten yuvarlanan top uçar, doğrudan sana gelen top ise neredeyse durur.',
+        'Çizgileri kullan: yan çizgiden sektirilen top defansın etrafından dolaşır.',
         'Biri oyundan düşerse, o dönene kadar yerine bir bot oynar.',
         'M sesi açar ya da kapatır; P veya Esc tek kişilik maçı duraklatır.'
       ]

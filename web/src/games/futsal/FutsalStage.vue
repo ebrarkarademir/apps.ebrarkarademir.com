@@ -1,8 +1,8 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
-  STEP, HALF_W, CIRCLE_R, RESTART_GAP, RESTART_TIME, FULL_CHARGE,
-  createMatch, stepMatch, setInput, kick, snapshot, viewOf, readSnapshot
+  STEP, HALF_W, CIRCLE_R, RESTART_TIME,
+  createMatch, stepMatch, setInput, pressKick, snapshot, viewOf, readSnapshot, attackDir
 } from './engine'
 import { LEVELS, newBrain, botControls } from './bots'
 import { createRenderer, VIEW_W, VIEW_H } from './renderer'
@@ -15,9 +15,9 @@ import { sound } from '../ascii/sound'
 import { haptics } from '../ascii/haptics'
 
 // The full-screen match: the court as large as the screen allows with the score and clock
-// above it, the game loop, the controls and the sound. Arrow keys or WASD run; holding Space
-// winds up a kick and letting go kicks. On a touch screen the left half of the screen is a
-// stick and the right half the kick button. On a tall screen the court stands on end, with
+// above it, the game loop, the controls and the sound. Arrow keys or WASD run; Space kicks, the
+// moment the ball is in reach while it's held. On a touch screen the left half of the screen is
+// a stick and the right half the kick button. On a tall screen the court stands on end, with
 // this player's team attacking up it.
 //
 // In a solo game and on an online host this device runs the match (engine.js) and plays the
@@ -64,7 +64,7 @@ const CONFETTI = ['*', '+', 'o', '.', "'", '*']
 const area = ref(null)
 const canvas = ref(null)
 const box = reactive({ w: 0, h: 0, bottom: BOTTOM_MIN })
-const hud = reactive({ score: [0, 0], clock: '', status: '', golden: false, hurry: false, charge: 0 })
+const hud = reactive({ score: [0, 0], clock: '', status: '', golden: false, hurry: false, kicking: false })
 const stick = reactive({ on: false, x: 0, y: 0, kx: 0, ky: 0 })
 const touchUi = window.matchMedia?.('(pointer: coarse)').matches
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -89,13 +89,12 @@ let mountedAt = 0
 let lastSent = 0
 let lastSentKey = ''
 let kickCount = 0
-let lastPower = 0
 
 const keys = new Set()
 let stickPointer = null // { id, ox, oy, x, y }
 const kickPointers = new Set()
 let kickKey = false
-let windFrom = 0 // when the wind-up started (performance.now), 0 while not winding up
+let kickWasDown = false
 
 const particles = []
 const trail = []
@@ -114,11 +113,6 @@ const lerp = (a, b, f) => a + (b - a) * f
 const teamNames = computed(() => [props.t.futsalHome, props.t.futsalAway])
 const myTeam = () => (meIndex >= 0 ? props.roster[meIndex]?.team ?? 0 : -1)
 const nameOf = (index) => props.roster[index]?.name || '?'
-// The wind-up meter: [#####-----]
-const meter = computed(() => {
-  const lit = Math.round(hud.charge * 10)
-  return `[${'#'.repeat(lit)}${'-'.repeat(10 - lit)}]`
-})
 const watching = computed(() => !props.roster.some(p => p.id === props.myId))
 
 function newMatch () {
@@ -131,8 +125,6 @@ function newMatch () {
   mountedAt = performance.now()
   lastSentKey = ''
   kickCount = 0
-  lastPower = 0
-  windFrom = 0
   particles.length = 0
   trail.length = 0
   flash = shake = 0
@@ -187,24 +179,20 @@ function screenDirection () {
   return d ? [x / d, y / d] : [0, 0]
 }
 
-const charge = () => (windFrom ? Math.min(1, (performance.now() - windFrom) / 1000 / FULL_CHARGE) : 0)
+const kickDown = () => kickKey || kickPointers.size > 0
 
-// Holding starts the wind-up; letting go of everything kicks with what's built up
+// Pressing kick readies a kick, which goes off as soon as the ball is in reach. A guest counts
+// its presses, so the host hears even a tap that's let go before the next message.
 function syncKick () {
-  const down = kickKey || kickPointers.size > 0
-  if (down && !windFrom) {
-    windFrom = performance.now()
-  } else if (!down && windFrom) {
-    const power = charge()
-    windFrom = 0
-    if (meIndex < 0 || props.paused) return
-    if (match) {
-      kick(match, meIndex, power)
-    } else {
-      kickCount++
-      lastPower = power
-      sendControls(true)
-    }
+  const down = kickDown()
+  if (down === kickWasDown) return
+  kickWasDown = down
+  if (meIndex < 0 || props.paused) return
+  if (match) {
+    if (down) pressKick(match, meIndex)
+  } else {
+    if (down) kickCount++
+    sendControls(true)
   }
 }
 
@@ -282,14 +270,14 @@ function onPointerUp (event) {
   if (kickPointers.delete(event.pointerId)) syncKick()
 }
 
-// Switching apps or windows lets go of everything, without kicking
+// Switching apps or windows lets go of everything
 function releaseAll () {
   keys.clear()
   stickPointer = null
   stick.on = false
   kickPointers.clear()
   kickKey = false
-  windFrom = 0
+  kickWasDown = false
 }
 
 const onVisibility = () => {
@@ -309,12 +297,12 @@ function sendControls (now = false) {
     x = Math.round(Math.cos(angle) * speed * 100) / 100
     y = Math.round(Math.sin(angle) * speed * 100) / 100
   }
-  const held = windFrom ? 1 : 0
+  const held = kickDown() ? 1 : 0
   const key = `${x},${y},${held},${kickCount}`
   if (!now && (key === lastSentKey ? at - lastSent < INPUT_RESEND_MS : at - lastSent < INPUT_MS)) return
   lastSentKey = key
   lastSent = at
-  emit('input', { r: props.round, x, y, h: held, n: kickCount, p: Math.round(lastPower * 100) / 100 })
+  emit('input', { r: props.round, x, y, h: held, n: kickCount })
 }
 
 // ---------- Running the match (solo and host) ----------
@@ -331,11 +319,11 @@ function guestControls (index, id) {
   setInput(match, index, input.x, input.y, input.h === 1)
   const seen = seenKicks.get(id) ?? 0
   if (Number.isInteger(input.n)) {
-    // A page that came back counts its kicks from zero again
+    // A page that came back counts its presses from zero again
     if (input.n < seen) seenKicks.set(id, input.n)
     else if (input.n > seen) {
       seenKicks.set(id, input.n)
-      kick(match, index, input.p)
+      pressKick(match, index)
     }
   }
 }
@@ -347,7 +335,7 @@ function tick () {
   props.roster.forEach((entry, i) => {
     if (i === meIndex) {
       const [x, y] = direction()
-      setInput(match, i, x, y, !!windFrom)
+      setInput(match, i, x, y, kickDown())
     } else if (!entry.bot && props.mode === 'host' && guestHere(entry.id)) {
       guestControls(i, entry.id)
     } else {
@@ -355,8 +343,8 @@ function tick () {
       let brain = brains.get(i)
       if (!brain) brains.set(i, (brain = newBrain()))
       const c = botControls(match, i, brain, level)
-      setInput(match, i, c.x, c.y, c.charging)
-      if (c.kick !== null) kick(match, i, c.kick)
+      setInput(match, i, c.x, c.y, c.held)
+      if (c.press) pressKick(match, i)
     }
   })
   stepMatch(match)
@@ -408,32 +396,25 @@ function guestView () {
   const blend = (p, q) => (Math.hypot(q.x - p.x, q.y - p.y) > 6 ? { x: q.x, y: q.y } : { x: lerp(p.x, q.x, f), y: lerp(p.y, q.y, f) })
   return {
     ...a,
-    timer: ['ready', 'kickoff', 'set'].includes(a.phase) ? a.timer - since : a.timer,
+    timer: ['ready', 'kickoff'].includes(a.phase) ? a.timer - since : a.timer,
     clock: a.phase === 'play' ? a.clock - since : a.clock,
     ball: blend(a.ball, b.ball),
-    players: a.players.map((p, i) => ({ ...blend(p, b.players[i]), charge: p.charge }))
+    players: a.players.map((p, i) => ({ ...blend(p, b.players[i]), held: p.held }))
   }
 }
 
 // ---------- Sounds, effects and messages ----------
 
-const restartName = (kind) => ({
-  kickoff: props.t.futsalKickOff,
-  kickin: props.t.futsalKickIn,
-  corner: props.t.futsalCorner,
-  clearance: props.t.futsalClearance
-})[kind] || ''
-
 function say (text, sub, time) {
   message = { text, sub, until: seconds() + time }
 }
 
-// What changed since the last frame: counts of kicks, posts, whistles and goals only go up, so
-// a skipped snapshot still sounds every one of them
+// What changed since the last frame: counts of kicks, posts, whistles, goals and bounces only go
+// up, so a skipped snapshot still sounds every one of them
 function react (before, view) {
   if (!before) return
-  const [kicks0, posts0, whistles0, goals0] = before.counts
-  const [kicks1, posts1, whistles1, goals1] = view.counts
+  const [kicks0, posts0, whistles0, goals0, bounces0] = before.counts
+  const [kicks1, posts1, whistles1, goals1, bounces1] = view.counts
   if (kicks1 > kicks0) {
     sound.play('kick', view.lastKick)
     throwSparks(particles, view.ball.x, view.ball.y, { count: 3 + Math.round(view.lastKick * 6), speed: 6 + view.lastKick * 10, life: 0.3 })
@@ -444,11 +425,12 @@ function react (before, view) {
     haptics.buzz('hit')
     throwSparks(particles, view.ball.x, view.ball.y, { count: 8, speed: 9, life: 0.4 })
   }
+  if (bounces1 > bounces0) sound.play('board', view.lastBounce)
   if (whistles1 > whistles0) sound.play('whistle', view.longWhistle)
   if (goals1 > goals0 && view.lastGoal) celebrate(view)
   if (view.golden && !before.golden) say(props.t.futsalGolden, props.t.futsalGoldenHint, 2.5)
-  if (before.restart && view.restart && before.phase === view.phase && view.restart.kind === before.restart.kind && view.restart.team !== before.restart.team) {
-    say(props.t.futsalTooSlow, fmt(props.t.futsalTeamBall, { team: teamNames.value[view.restart.team] }), 1.4)
+  if (before.phase === 'kickoff' && view.phase === 'kickoff' && view.kickoff !== before.kickoff) {
+    say(props.t.futsalTooSlow, fmt(props.t.futsalTeamBall, { team: teamNames.value[view.kickoff] }), 1.4)
   }
   if (view.phase === 'ready' && Math.ceil(view.timer) !== Math.ceil(before.timer)) sound.play('tick')
   if (view.phase === 'end' && before.phase !== 'end') {
@@ -521,12 +503,12 @@ function render (view, time) {
       if (!entry) return
       const me = i === meIndex
       const look = me ? 'me' : (mine < 0 ? entry.team === 0 : entry.team === mine) ? 'mate' : 'foe'
-      scene.players.push({ x: p.x, y: p.y, team: entry.team, mark: entry.mark || '?', look, charge: me ? charge() : p.charge, label: entry.bot ? '' : entry.name, marker: me })
+      scene.players.push({ x: p.x, y: p.y, team: entry.team, mark: entry.mark || '?', look, held: me ? kickDown() : p.held, label: entry.bot ? '' : entry.name, marker: me })
     })
-    if (view.phase === 'set') scene.zone = { x: view.ball.x, y: view.ball.y, r: RESTART_GAP }
-    else if (view.phase === 'kickoff') scene.zone = { x: 0, y: 0, r: CIRCLE_R }
-    if ((view.phase === 'set' || view.phase === 'kickoff') && view.timer < RESTART_TIME - 0.5) {
-      scene.countdown = { x: view.ball.x, y: view.ball.y, text: String(Math.max(1, Math.ceil(view.timer))) }
+    if (view.phase === 'kickoff') scene.zone = { x: 0, y: 0, r: CIRCLE_R }
+    // In front of the ball, in the half the kicker faces, which the other team keeps clear of
+    if (view.phase === 'kickoff' && view.timer < RESTART_TIME - 0.5) {
+      scene.countdown = { x: view.ball.x + attackDir(view.kickoff) * 3.6, y: view.ball.y, text: String(Math.max(1, Math.ceil(view.timer))) }
     }
     banners(view, scene.texts)
   }
@@ -537,16 +519,14 @@ function render (view, time) {
 }
 
 function updateHud (view) {
-  hud.charge = charge()
+  hud.kicking = kickDown()
   if (!view) return
   if (hud.score[0] !== view.score[0] || hud.score[1] !== view.score[1]) hud.score = view.score.slice()
   hud.golden = view.golden
   const left = Math.max(0, Math.ceil(view.clock))
   hud.clock = view.golden ? upper(props.t.futsalGolden) : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`
   hud.hurry = !view.golden && view.phase === 'play' && left <= 10
-  hud.status = view.restart && ['out', 'set', 'kickoff'].includes(view.phase)
-    ? upper(`${restartName(view.restart.kind)} · ${teamNames.value[view.restart.team]}`)
-    : ''
+  hud.status = view.phase === 'kickoff' ? upper(`${props.t.futsalKickOff} · ${teamNames.value[view.kickoff]}`) : ''
 }
 
 let lastFrame = 0
@@ -594,11 +574,12 @@ watch(() => props.round, () => {
   newMatch()
   fit()
 })
-watch(teamNames, (names) => renderer?.setLabels([`( ) ${upper(names[0])}`, `${upper(names[1])} [ ]`]))
+const courtLabels = (names) => [`(#) ${upper(names[0])}`, `${upper(names[1])} ( )`]
+watch(teamNames, (names) => renderer?.setLabels(courtLabels(names)))
 
 onMounted(() => {
   renderer = createRenderer(canvas.value)
-  renderer.setLabels([`( ) ${upper(teamNames.value[0])}`, `${upper(teamNames.value[1])} [ ]`])
+  renderer.setLabels(courtLabels(teamNames.value))
   newMatch()
   observer = new ResizeObserver(fit)
   observer.observe(area.value)
@@ -642,10 +623,10 @@ onUnmounted(() => {
       @pointercancel="onPointerUp"
       @contextmenu.prevent
     >
-      <!-- Scoreboard: each team's score boxed beside its name, the clock between, and a waiting restart under it -->
+      <!-- Scoreboard: each team's score boxed beside its name, the clock between, and a waiting kick-off under it -->
       <div class="w-full shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4" :style="{ maxWidth: `${Math.max(box.w, 300)}px`, height: `${TOP_BAR}px` }" aria-hidden="true">
         <p class="flex items-center justify-end gap-2 min-w-0">
-          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">( ) {{ teamNames[0] }}</span>
+          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">(#) {{ teamNames[0] }}</span>
           <span class="score">{{ hud.score[0] }}</span>
         </p>
         <div class="text-center leading-none">
@@ -654,7 +635,7 @@ onUnmounted(() => {
         </div>
         <p class="flex items-center gap-2 min-w-0">
           <span class="score">{{ hud.score[1] }}</span>
-          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">{{ teamNames[1] }} [ ]</span>
+          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">{{ teamNames[1] }} ( )</span>
         </p>
       </div>
       <p class="sr-only" aria-live="polite">{{ teamNames[0] }} {{ hud.score[0] }}, {{ teamNames[1] }} {{ hud.score[1] }}</p>
@@ -670,8 +651,8 @@ onUnmounted(() => {
           <div class="border border-term-low flex items-center justify-center px-2 text-center term-muted">
             {{ touchUi ? t.futsalStickHint : t.futsalKeysHint }}
           </div>
-          <div :class="['border flex flex-col items-center justify-center gap-1 px-2 text-center', hud.charge > 0 ? 'border-term' : 'border-term-low term-muted']">
-            <span class="font-semibold tracking-normal">{{ meter }}</span>
+          <div :class="['border flex flex-col items-center justify-center gap-1 px-2 text-center', hud.kicking ? 'border-term' : 'border-term-low term-muted']">
+            <span class="font-semibold tracking-normal">{{ hud.kicking ? '((o))' : '(o)' }}</span>
             <span>{{ touchUi ? t.futsalHoldKick : t.futsalKickKeys }}</span>
           </div>
         </template>

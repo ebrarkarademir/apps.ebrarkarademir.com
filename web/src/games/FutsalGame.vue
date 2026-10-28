@@ -21,7 +21,7 @@ const emit = defineEmits(['go-back'])
 const SETUP_KEY = 'futsalSolo'
 const LEVEL_NAMES = Object.keys(LEVELS)
 const TEAMS = [0, 1]
-const SHAPE = ['( )', '[ ]']
+const SHAPE = ['(#)', '( )']
 
 const LETTERS = {
   F: [' ___ ', '| __|', '| _| ', '|_|  '],
@@ -32,8 +32,8 @@ const LETTERS = {
   L: [' _    ', '| |   ', '| |__ ', '|____|']
 }
 const TITLE_ART = [0, 1, 2, 3].map(row => [...'FUTSAL'].map(letter => LETTERS[letter][row]).join(' ')).join('\n')
-const SOLO_ART = [' .-.            +---+', '( * )   o       | 2 |', " '-'            +---+"].join('\n')
-const ONLINE_ART = [' .-. .-.      +---+ +---+', '( A )( B )  o | C | | D |', " '-' '-'      +---+ +---+"].join('\n')
+const SOLO_ART = [' .-.            .-.', '(#*#)   o      ( 2 )', " '-'            '-'"].join('\n')
+const ONLINE_ART = [' .-. .-.      .-. .-.', '(#A#)(#B#)  o ( C )( D )', " '-' '-'      '-' '-'"].join('\n')
 const TROPHY_ART = [' .---.', '(|   |)', " '-.-'", '  _|_'].join('\n')
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')

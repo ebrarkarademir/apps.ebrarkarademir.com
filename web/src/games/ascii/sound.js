@@ -181,6 +181,8 @@ const patches = {
     thud(t, 0.06, 0.08 + power * 0.16, 700 + power * 1300)
     tone(t, { type: 'sine', from: 150 + power * 90, to: 60, duration: 0.08, volume: 0.05 + power * 0.06 })
   },
+  // The ball off the boards round the court: a dull knock, louder the faster it hits
+  board: (t, power = 0.5) => thud(t, 0.05, 0.05 + power * 0.12, 450 + power * 900),
   // The ball off a post: a short ring of metal
   post: (t) => {
     ;[[1, 0.05, 0.4], [2.76, 0.025, 0.3], [5.4, 0.015, 0.2]].forEach(([ratio, volume, duration]) => {

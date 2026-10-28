@@ -1,9 +1,10 @@
-import { HALF_W, HALF_H, WALL_X, WALL_Y, GOAL_HALF, GOAL_DEPTH, AREA_R, CIRCLE_R, SECOND_SPOT, PLAYER_R } from './engine'
-import { GREEN, DIM, LOW, DEEP, HOT, GLOW, MONO, paint, drawSprite, drawText, truncate } from '../ascii/paint'
+import { HALF_W, HALF_H, WALL_X, WALL_Y, GOAL_HALF, GOAL_DEPTH, AREA_R, CIRCLE_R, SECOND_SPOT, PLAYER_R, BALL_R } from './engine'
+import { GREEN, DIM, LOW, DEEP, HOT, GLOW, MONO, drawSprite, drawText, truncate } from '../ascii/paint'
 import { mulberry32 } from '../ascii/random'
 
 // Draws Futsal on a canvas. The court is painted once per size out of characters laid along its
-// lines; players and the ball are pre-painted sprites moved freely on top.
+// lines; players and the ball are pre-painted discs moved freely on top, drawn at exactly the
+// size they are in the engine, so what touches on screen touches in the match.
 //
 // On a screen taller than it is wide the court stands on end, turned so that one team attacks up
 // the screen (turn 1: home, turn -1: away). Characters always stay upright; only where they go
@@ -12,11 +13,14 @@ import { mulberry32 } from '../ascii/random'
 export const VIEW_W = WALL_X * 2
 export const VIEW_H = WALL_Y * 2
 
-// Home players are round and away players square, so the teams tell apart without colour
-const SHAPES = [
-  (mark) => [' .-. ', `( ${mark} )`, " '-' "],
-  (mark) => ['+---+', `| ${mark} |`, '+---+']
+// Home players are filled discs and away players hollow ones, so the teams tell apart without
+// colour; everyone is the same size
+const TEAM_LOOKS = [
+  { fill: DIM, mark: DEEP },
+  { fill: '#000', mark: GREEN }
 ]
+const BALL_FILL = '#ffffff'
+const BALL_GLOW = 'rgba(230, 255, 230, 0.9)'
 
 // The character for a stretch of line heading (dx, dy) on screen
 function slant (dx, dy) {
@@ -33,6 +37,52 @@ function arcPoints (cx, cy, r, from, to, gap = 0.55) {
     const a = from + ((to - from) * i) / steps
     return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]
   })
+}
+
+/**
+ * A disc `r` units across the middle, painted at the screen's pixel density: a fill, a ring whose
+ * outside is the disc's edge, and a character in the middle. `halo` is [r, g, b, alpha] for a
+ * soft bloom round it. Returns a sprite for drawSprite.
+ */
+function paintDisc (unit, dpr, { r, fill, ring, width, mark = '', markColor = GREEN, glow = 0, glowColor = GLOW, halo = null }) {
+  const k = unit * dpr
+  const radius = r * k
+  const bloom = halo ? radius * 2 : 0
+  const pad = Math.ceil(Math.max(glow * 2, bloom - radius)) + 2
+  const size = Math.ceil(radius * 2 + pad * 2)
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')
+  const c = size / 2
+  if (halo) {
+    const [red, green, blue, alpha] = halo
+    const gradient = ctx.createRadialGradient(c, c, radius * 0.7, c, c, bloom)
+    gradient.addColorStop(0, `rgba(${red}, ${green}, ${blue}, ${alpha})`)
+    gradient.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0)`)
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, size, size)
+  }
+  const line = Math.max(1.5 * dpr, width * k)
+  ctx.beginPath()
+  ctx.arc(c, c, radius - line / 2, 0, Math.PI * 2)
+  if (glow) {
+    ctx.shadowColor = glowColor
+    ctx.shadowBlur = glow
+  }
+  ctx.fillStyle = fill
+  ctx.fill()
+  ctx.lineWidth = line
+  ctx.strokeStyle = ring
+  ctx.stroke()
+  if (mark) {
+    ctx.shadowBlur = 0
+    ctx.font = `700 ${radius * 1.15}px ${MONO}`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = markColor
+    ctx.fillText(mark, c, c + radius * 0.06)
+  }
+  return { canvas, pad, cx: c, cy: c }
 }
 
 /** Screen size in units, and where a court position lands on screen (units from the top left). */
@@ -101,13 +151,16 @@ function paintCourt (unit, dpr, labels, turn) {
     }
   }
 
-  // Touchlines, goal lines, the halfway line and the center circle
+  // The touchlines and the goal lines either side of the goals, which the ball bounces off, are
+  // bright; the goal mouths are open. Then the halfway line and the center circle.
   for (const s of [-1, 1]) {
-    line(-HALF_W, s * HALF_H, HALF_W, s * HALF_H, { ends: false })
-    line(s * HALF_W, -HALF_H, s * HALF_W, HALF_H, { ends: false })
+    line(-HALF_W, s * HALF_H, HALF_W, s * HALF_H, { color: GREEN, ends: false })
+    line(s * HALF_W, -HALF_H, s * HALF_W, -GOAL_HALF, { color: GREEN, ends: false })
+    line(s * HALF_W, GOAL_HALF, s * HALF_W, HALF_H, { color: GREEN, ends: false })
+    line(s * HALF_W, -GOAL_HALF, s * HALF_W, GOAL_HALF, { dotted: true, ends: false })
   }
   line(0, -HALF_H, 0, HALF_H, { dotted: true, ends: false })
-  for (const sx of [-1, 1]) for (const sy of [-1, 1]) put('+', sx * HALF_W, sy * HALF_H)
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) put('+', sx * HALF_W, sy * HALF_H, GREEN)
   curve(arcPoints(0, 0, CIRCLE_R, 0, Math.PI * 2))
   put('+', 0, 0, GREEN)
 
@@ -122,12 +175,6 @@ function paintCourt (unit, dpr, labels, turn) {
     line(front, -GOAL_HALF, front, GOAL_HALF, { ends: false })
     put('+', front, 0, GREEN)
     put('+', goalLine - s * SECOND_SPOT, 0)
-    // Corner arcs
-    for (const sy of [-1, 1]) {
-      const [c0x, c0y] = screen.at(goalLine - s, sy * HALF_H)
-      const [c1x, c1y] = screen.at(goalLine, sy * (HALF_H - 1))
-      glyph(slant(c1x - c0x, c1y - c0y), (c0x + c1x) / 2, (c0y + c1y) / 2, LOW)
-    }
     // The goal: the net's mesh, its frame and the posts
     for (let x = HALF_W + 0.45; x < HALF_W + GOAL_DEPTH - 0.2; x += 0.6) {
       for (let y = -GOAL_HALF + 0.75; y < GOAL_HALF - 0.4; y += 1) put('#', s * x, y, LOW, 0.9, 400)
@@ -172,26 +219,33 @@ export function createRenderer (canvas) {
   let labels = null
   let court = null
   let ball = null
-  const sprites = new Map() // `${team}${mark}${look}` -> a player sprite
+  const sprites = new Map() // `${team}${mark}${me}${held}` -> a player sprite
 
   function build () {
     sprites.clear()
     if (!width) return
     court = paintCourt(unit, dpr, labels, turn)
-    const rh = unit * dpr
-    const glow = Math.max(1.5, unit * 0.4) * dpr
-    ball = paint(['o'], () => HOT, { cw: rh * 0.6, rh, glow: glow * 1.6, weight: 800, scale: 2.1, halo: 0.18 })
+    // White, glowing and ringed in black, so it stands out against the floor and the players alike
+    ball = paintDisc(unit, dpr, { r: BALL_R, fill: BALL_FILL, ring: '#000', width: 0.14, glow: Math.max(3, unit * 0.7) * dpr, glowColor: BALL_GLOW, halo: [220, 255, 220, 0.3] })
   }
 
-  // look: me (bright, with a halo), mate (bright) or foe (dim)
-  function playerSprite (team, mark, look) {
-    const key = `${team}${mark}${look}`
+  // me: this device's own player, with a halo; held: the kick button's down, which lights the ring
+  function playerSprite (team, mark, me, held) {
+    const key = `${team}${mark}${me}${held}`
     let sprite = sprites.get(key)
     if (!sprite) {
-      const rh = unit * dpr
+      const look = TEAM_LOOKS[team]
       const glow = Math.max(1.5, unit * 0.4) * dpr
-      const color = look === 'foe' ? DIM : GREEN
-      sprite = paint(SHAPES[team](mark), () => color, { cw: rh * 0.6, rh, glow: look === 'me' ? glow * 1.6 : glow, weight: 700, halo: look === 'me' ? 0.24 : 0 })
+      sprite = paintDisc(unit, dpr, {
+        r: PLAYER_R,
+        fill: look.fill,
+        ring: held ? HOT : GREEN,
+        width: held ? 0.3 : 0.17,
+        mark,
+        markColor: look.mark,
+        glow: held || me ? glow * 1.6 : glow,
+        halo: me ? [0, 255, 0, 0.2] : null
+      })
       sprites.set(key, sprite)
     }
     return sprite
@@ -210,8 +264,8 @@ export function createRenderer (canvas) {
   /**
    * scene: {
    *   ball: { x, y }, trail: [{ x, y }],
-   *   players: [{ x, y, team, mark, look, charge, label, marker }],
-   *   zone: { x, y, r } (the ring a restart keeps opponents out of), countdown: { x, y, text },
+   *   players: [{ x, y, team, mark, look, held, label, marker }] (look: me, mate or foe),
+   *   zone: { x, y, r } (the ring the kick-off keeps opponents out of), countdown: { x, y, text },
    *   particles: [{ x, y, ch, color, life, ttl }],
    *   texts: [{ text, dy, size, display, color, alpha }] (dy: units below the middle of the screen),
    *   flash, shake, time
@@ -229,7 +283,7 @@ export function createRenderer (canvas) {
     if (scene.shake > 0) ctx.translate((Math.random() * 2 - 1) * scene.shake * unit * 0.6, (Math.random() * 2 - 1) * scene.shake * unit * 0.6)
     ctx.drawImage(court, 0, 0, court.width / dpr, court.height / dpr)
 
-    // A restart's ring: dots that slowly turn, so it reads as a rule rather than a line
+    // The kick-off's ring: dots that slowly turn, so it reads as a rule rather than a line
     if (scene.zone) {
       const { x, y, r } = scene.zone
       const count = Math.round(r * 5)
@@ -240,23 +294,11 @@ export function createRenderer (canvas) {
     }
 
     scene.trail.forEach((point, i) => {
-      text('.', at(point.x, point.y), { size: 1.1, min: 8, color: DIM, alpha: ((i + 1) / (scene.trail.length + 1)) * 0.6, glow: false, outline: false })
+      text('.', at(point.x, point.y), { size: 1.3, min: 8, color: HOT, alpha: ((i + 1) / (scene.trail.length + 1)) * 0.7, glow: false, outline: false })
     })
 
     for (const p of scene.players) {
-      const [x, y] = at(p.x, p.y)
-      drawSprite(ctx, playerSprite(p.team, p.mark, p.look), x, y, { dpr })
-      // Winding up a kick: a ring of dots fills up round the player
-      if (p.charge > 0) {
-        const dots = 14
-        const lit = Math.max(1, Math.round(p.charge * dots))
-        const full = p.charge >= 1
-        for (let i = 0; i < lit; i++) {
-          const a = -Math.PI / 2 + (i / dots) * Math.PI * 2
-          const r = (PLAYER_R + 0.75) * unit
-          text(full ? '*' : '.', [x + Math.cos(a) * r, y + Math.sin(a) * r], { size: full ? 0.9 : 1.2, min: 8, color: full ? HOT : GREEN, glow: false, outline: false })
-        }
-      }
+      drawSprite(ctx, playerSprite(p.team, p.mark, p.look === 'me', !!p.held), ...at(p.x, p.y), { dpr })
     }
 
     drawSprite(ctx, ball, ...at(scene.ball.x, scene.ball.y), { dpr })
@@ -274,11 +316,7 @@ export function createRenderer (canvas) {
       if (p.marker) drawText(ctx, 'v', x, above, { px: labelPx * 1.1, dpr, color: GREEN })
       else if (p.label) drawText(ctx, truncate(p.label, 12), x, above, { px: labelPx, dpr, color: p.look === 'foe' ? DIM : GREEN, glow: false })
     }
-    if (scene.countdown) {
-      const [x, y] = at(scene.countdown.x, scene.countdown.y)
-      // Under the ball, clear of the names over the players
-      text(scene.countdown.text, [x, y + (PLAYER_R + 0.6) * unit], { size: 2.2, min: 16, display: true, color: GREEN })
-    }
+    if (scene.countdown) text(scene.countdown.text, at(scene.countdown.x, scene.countdown.y), { size: 2.2, min: 16, display: true, color: GREEN })
     for (const item of scene.texts) text(item.text, [width / 2, height / 2 + item.dy * unit], item)
     if (scene.flash > 0) {
       ctx.fillStyle = `rgba(0, 255, 0, ${0.22 * scene.flash})`

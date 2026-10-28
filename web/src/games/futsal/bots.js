@@ -1,19 +1,20 @@
 import {
-  HALF_W, HALF_H, WALL_X, WALL_Y, GOAL_HALF, PLAYER_R, BALL_R, RUN_SPEED, BALL_DRAG, KICK_REACH,
-  KICK_MIN, KICK_MAX, FULL_CHARGE, RESTART_TIME, attackDir, formationSpot
+  HALF_W, HALF_H, WALL_X, WALL_Y, GOAL_HALF, GOAL_DEPTH, PLAYER_R, BALL_R, RUN_SPEED, BALL_DRAG, KICK_REACH,
+  RESTART_TIME, attackDir, formationSpot
 } from './engine'
 
 // Computer players for Futsal. A bot sizes up the match a few times a second and settles on a
 // plan: go for the ball, guard the goal or keep its place in the team's shape. Between looks it
 // sticks to the plan, so it reacts a beat late, like a person. Better bots look more often, run
-// faster and aim truer. They use the same controls as people: a direction, and a kick that has
-// to be wound up first.
+// faster, aim truer and kick sooner once they're lined up. They use the same controls as
+// people: a direction, and a kick button that sends the ball straight away from them.
 
-// keeper: how much a keeper reads where a shot is going rather than just following the ball
+// react: seconds from lined up to kicking; keeper: how much a keeper reads where a shot is
+// going rather than just following the ball
 export const LEVELS = {
-  easy: { think: 0.36, speed: 0.72, aim: 2.6, power: 0.8, keeper: 0 },
-  normal: { think: 0.2, speed: 0.86, aim: 1.4, power: 0.92, keeper: 0.15 },
-  hard: { think: 0.1, speed: 0.97, aim: 0.6, power: 1, keeper: 0.35 }
+  easy: { think: 0.36, speed: 0.72, aim: 2.6, react: 0.22, keeper: 0 },
+  normal: { think: 0.2, speed: 0.86, aim: 1.4, react: 0.1, keeper: 0.15 },
+  hard: { think: 0.1, speed: 0.97, aim: 0.6, react: 0.03, keeper: 0.35 }
 }
 
 const TOUCHING = PLAYER_R + BALL_R
@@ -21,16 +22,16 @@ const REACH = TOUCHING + KICK_REACH * 0.8
 const SHOT_RANGE = 22
 const KEEPER_RANGE = 8 // a keeper comes out for a ball this close to its goal
 const AIM_HOLD = 0.8 // seconds a bot keeps the spot it aims for
-const SHOT_TOLERANCE = Math.cos(0.12) // how straight a shot must line up (about 7°)
+const SHOT_TOLERANCE = Math.cos(0.07) // how straight a shot must line up (about 4°)
 const PASS_TOLERANCE = Math.cos(0.3)
 const POKE_TOLERANCE = Math.cos(1.2) // a poke out of a scramble only has to go forward
 const STUCK_TIME = 0.5 // at the ball this long without getting lined up: poke it forward
+const HOLD = 0.15 // how long a bot keeps the button down for a kick
+const STALL_TIME = 1 // pushing this long without getting anywhere: step aside for a moment
+const SIDESTEP_TIME = 0.6
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const distance = (a, b) => Math.hypot(b.x - a.x, b.y - a.y)
-
-// How hard to kick for the ball to reach a teammate that far away with a little pace left
-const passPower = (d) => clamp((d * 1.3 + 4 - KICK_MIN) / (KICK_MAX - KICK_MIN), 0, 1)
 
 // Where the ball will be in t seconds, rolling on and slowing
 function ballAt (ball, t) {
@@ -42,10 +43,14 @@ function ballAt (ball, t) {
 function meetPoint (me, ball, speed) {
   let at = ball
   for (let i = 0; i < 4; i++) at = ballAt(ball, Math.max(0, distance(me, at) - TOUCHING) / speed)
-  return { x: clamp(at.x, -WALL_X + BALL_R, WALL_X - BALL_R), y: clamp(at.y, -WALL_Y + BALL_R, WALL_Y - BALL_R) }
+  // On the court, or in a goal mouth
+  const maxX = Math.abs(at.y) < GOAL_HALF ? HALF_W + GOAL_DEPTH - BALL_R : HALF_W - BALL_R
+  return { x: clamp(at.x, -maxX, maxX), y: clamp(at.y, -HALF_H + BALL_R, HALF_H - BALL_R) }
 }
 
-export const newBrain = () => ({ next: 0, tx: 0, ty: 0, lined: false, windup: null, aim: null, plan: null, stuck: 0 })
+// want: a kick waiting for the bot to be lined up, { x, y, tolerance }; post: where it was when
+// it last checked it was getting somewhere; side: a sidestep out of a jam, { x, y, until }
+export const newBrain = () => ({ next: 0, tx: 0, ty: 0, lined: false, want: null, aim: null, plan: null, stuck: 0, readyAt: 0, holdUntil: 0, post: null, side: null })
 
 // How well a kick from where `me` stands would send the ball toward (x, y): 1 is dead on
 function lineUp (me, ball, x, y) {
@@ -57,22 +62,27 @@ function lineUp (me, ball, x, y) {
 }
 
 /**
- * The controls a bot works this step: { x, y, charging, kick }, where kick is the power of a
- * kick it lets go now, or null.
+ * The controls a bot works this step: { x, y, held, press }, where press says the kick button
+ * goes down now.
  */
 export function botControls (match, index, brain, level, random = Math.random) {
   const me = match.players[index]
   if (match.time >= brain.next) {
     think(match, index, brain, level, random)
+    unjam(match, me, brain, random)
     brain.next = match.time + level.think * (0.7 + random() * 0.6)
   }
   let dx = brain.tx - me.x
   let dy = brain.ty - me.y
   const d = Math.hypot(dx, dy)
-  // Slow down into the spot instead of running past it and back
-  const pace = d > 0.05 ? (level.speed * Math.min(1, d / 1.5)) / d : 0
+  // Ease off into the spot instead of sliding past it and back
+  const pace = d > 0.05 ? (level.speed * Math.min(1, d / 2.5)) / d : 0
   dx *= pace
   dy *= pace
+  if (brain.side && match.time < brain.side.until) {
+    dx = brain.side.x * level.speed
+    dy = brain.side.y * level.speed
+  }
   // ...and keep out of teammates' way
   for (const other of match.players) {
     if (other === me || other.team !== me.team) continue
@@ -85,22 +95,41 @@ export function botControls (match, index, brain, level, random = Math.random) {
       dy += (oy / gap) * push
     }
   }
-  let charging = false
-  let kick = null
-  const windup = brain.windup
-  if (windup) {
-    const live = match.phase === 'play' || match.phase === 'kickoff' || match.phase === 'set'
-    if (!live || match.time > windup.giveUp) {
-      brain.windup = null
-    } else if (match.time >= windup.ready && distance(me, match.ball) <= REACH &&
-        lineUp(me, match.ball, windup.x, windup.y) >= windup.tolerance) {
-      kick = windup.power
-      brain.windup = null
-    } else {
-      charging = true
+  // Kick once lined up with the ball in reach, a beat after getting there
+  let press = false
+  const { want } = brain
+  const live = match.phase === 'play' || match.phase === 'kickoff'
+  if (want && live && distance(me, match.ball) <= REACH && lineUp(me, match.ball, want.x, want.y) >= want.tolerance) {
+    if (!brain.readyAt) brain.readyAt = match.time + level.react
+    if (match.time >= brain.readyAt && match.time >= brain.holdUntil) {
+      press = true
+      brain.holdUntil = match.time + HOLD
+      brain.readyAt = 0
+      brain.want = null
     }
+  } else {
+    brain.readyAt = 0
   }
-  return { x: dx, y: dy, charging, kick }
+  return { x: dx, y: dy, held: match.time < brain.holdUntil, press }
+}
+
+// Wedged against a post or another player while heading somewhere: a moment's sidestep, square
+// to the way it was going, gets it round
+function unjam (match, me, brain, random) {
+  const far = Math.hypot(brain.tx - me.x, brain.ty - me.y) > 1.5
+  if (!far || match.phase !== 'play' || !brain.post) {
+    brain.post = { x: me.x, y: me.y, at: match.time }
+    return
+  }
+  if (match.time - brain.post.at < STALL_TIME) return
+  if (Math.hypot(me.x - brain.post.x, me.y - brain.post.y) < 0.6) {
+    const ux = brain.tx - me.x
+    const uy = brain.ty - me.y
+    const length = Math.hypot(ux, uy)
+    const s = random() < 0.5 ? -1 : 1
+    brain.side = { x: (-uy / length) * s, y: (ux / length) * s, until: match.time + SIDESTEP_TIME }
+  }
+  brain.post = { x: me.x, y: me.y, at: match.time }
 }
 
 function think (match, index, brain, level, random) {
@@ -112,30 +141,26 @@ function think (match, index, brain, level, random) {
   const keeper = mates.length >= 3 ? mates.find(i => match.players[i].bot && match.players[i].slot === 0) : undefined
   switch (match.phase) {
     case 'kickoff':
-    case 'set':
-      if (match.restart.team === me.team && nearest(match, mates) === index) {
-        takeRestart(match, index, brain, level, random)
-      } else {
-        brain.windup = null
-        hold(match, me, brain, dir, index === keeper, level)
-      }
+      brain.want = null
+      if (match.kickoff === me.team && nearest(match, mates) === index) takeKickoff(match, me, brain, dir, random)
+      else hold(match, me, brain, dir, index === keeper, level)
       return
     case 'play': {
       const comeOut = nearest(match, mates) === index && distance(match.ball, { x: -dir * HALF_W, y: 0 }) < KEEPER_RANGE
       if (index === keeper && !comeOut) {
-        brain.windup = null
+        brain.want = null
         guard(match, me, brain, dir, level)
       } else if (index === keeper || chaser(match, mates, keeper) === index) {
         attack(match, index, brain, level, random)
       } else {
-        brain.windup = null
+        brain.want = null
         hold(match, me, brain, dir, false, level)
       }
       return
     }
     default:
-      // Out of play, celebrating or waiting for the whistle: back into shape
-      brain.windup = null
+      // Celebrating or waiting for the whistle: back into shape
+      brain.want = null
       brain.aim = null
       hold(match, me, brain, dir, index === keeper, level)
   }
@@ -260,12 +285,6 @@ function approach (me, brain, ball, aimX, aimY, through) {
   brain.ty = clamp(ty, -WALL_Y + PLAYER_R, WALL_Y - PLAYER_R)
 }
 
-function windUp (match, brain, power, patience, x, y, tolerance) {
-  if (brain.windup) return
-  const ready = match.time + power * FULL_CHARGE
-  brain.windup = { power, ready, giveUp: ready + patience, x, y, tolerance }
-}
-
 // The opponent nearest the line from `from` to (x, y), and how near: for spotting a blocked lane
 function laneBlock (match, me, from, x, y) {
   const lx = x - from.x
@@ -302,7 +321,7 @@ function findPass (match, me, from, dir, random) {
     const score = open * 1.2 + (lead.x - from.x) * dir * 0.5 - d * 0.1 + random() * 2
     if (score > bestScore) {
       bestScore = score
-      best = { x: lead.x, y: lead.y, power: passPower(d) }
+      best = { x: lead.x, y: lead.y }
     }
   }
   return best
@@ -315,18 +334,22 @@ function chooseAim (match, me, spot, dir, level, random) {
   const until = match.time + AIM_HOLD
   // Deep in its own end a bot clears the ball out toward a wing instead of walking it out
   if (spot.x * dir < -HALF_W + 11) {
-    return { mode: 'clear', until, x: spot.x + dir * 18, y: clamp(spot.y * 1.4 + (Math.sign(spot.y) || 1) * 4, -HALF_H + 5, HALF_H - 5), power: 0.6 }
+    return { mode: 'clear', until, x: spot.x + dir * 18, y: clamp(spot.y * 1.4 + (Math.sign(spot.y) || 1) * 4, -HALF_H + 5, HALF_H - 5) }
   }
   if (toGoal < SHOT_RANGE) {
     // The corner further from the keeper, a little off for weaker bots
     const keeper = match.players.filter(p => p.team !== me.team).sort((a, b) => Math.abs(a.x - goalX) - Math.abs(b.x - goalX))[0]
     const first = keeper && Math.abs(keeper.x - goalX) < 6 ? (keeper.y > 0 ? -1 : 1) : -(Math.sign(spot.y) || 1)
+    // Right by the goal line there's no angle to pick a corner from: straight in
+    const angle = clamp((Math.abs(goalX - spot.x) - 2) / 6, 0, 1)
     for (const side of [first, -first]) {
-      const y = clamp(side * (GOAL_HALF - 1.9) + (random() * 2 - 1) * level.aim, -GOAL_HALF + 1.2, GOAL_HALF - 1.2)
+      const corner = side * (GOAL_HALF - 2.4) + (random() * 2 - 1) * level.aim
+      const y = clamp(corner * angle + spot.y * (1 - angle), -GOAL_HALF + 2, GOAL_HALF - 2)
       const { off, who } = laneBlock(match, me, spot, goalX + dir, y)
       // A defender right at the ball would block it: try the other corner
       if (who && who !== keeper && off < TOUCHING && distance(who, spot) < 5) continue
-      return { mode: 'shoot', until, x: goalX + dir, y, power: clamp(0.55 + toGoal / 45, 0.6, 1) * level.power }
+      // Aimed at the back of the net, so a ball sitting on the goal line gets knocked in, not across
+      return { mode: 'shoot', until, x: goalX + dir * GOAL_DEPTH, y }
     }
     const pass = findPass(match, me, spot, dir, random)
     if (pass) return { mode: 'pass', until, ...pass }
@@ -342,7 +365,7 @@ function chooseAim (match, me, spot, dir, level, random) {
     if (pass) return { mode: 'pass', until, ...pass }
   }
   if (blocked) y = clamp(spot.y + (who.y > spot.y ? -6 : 6), -HALF_H + 4, HALF_H - 4)
-  return { mode: 'dribble', until, x, y, power: 0 }
+  return { mode: 'dribble', until, x, y }
 }
 
 function attack (match, index, brain, level, random) {
@@ -355,22 +378,19 @@ function attack (match, index, brain, level, random) {
   const aim = brain.aim
   if (!aim || match.time > aim.until || (aim.mode === 'dribble' && inRange) || (aim.mode === 'shoot' && !inRange)) {
     brain.aim = chooseAim(match, me, spot, dir, level, random)
-    brain.windup = null
+    brain.want = null
   }
-  const { mode, x, y, power } = brain.aim
+  const { mode, x, y } = brain.aim
   if (mode === 'dribble') {
-    if (brain.windup?.tolerance !== POKE_TOLERANCE) brain.windup = null
+    if (brain.want?.tolerance !== POKE_TOLERANCE) brain.want = null
     approach(me, brain, spot, x, y, true)
     if (!brain.lined) poke(match, me, brain, dir)
     return
   }
   approach(me, brain, spot, x, y, false)
-  if (brain.lined && distance(me, ball) < REACH + 1) {
-    windUp(match, brain, power, 0.7, x, y, mode === 'shoot' ? SHOT_TOLERANCE : PASS_TOLERANCE)
-    brain.stuck = 0
-  } else {
-    poke(match, me, brain, dir)
-  }
+  brain.want = { x, y, tolerance: mode === 'shoot' ? SHOT_TOLERANCE : PASS_TOLERANCE }
+  if (brain.lined) brain.stuck = 0
+  else poke(match, me, brain, dir)
 }
 
 // At the ball but someone's in the way of getting lined up: after a moment, just poke it on
@@ -382,35 +402,12 @@ function poke (match, me, brain, dir) {
   if (!brain.stuck) brain.stuck = match.time
   if (match.time - brain.stuck < STUCK_TIME) return
   brain.stuck = 0
-  windUp(match, brain, 0.25, 0.4, match.ball.x + dir * 30, match.ball.y * 0.5, POKE_TOLERANCE)
+  brain.want = { x: match.ball.x + dir * 30, y: match.ball.y * 0.5, tolerance: POKE_TOLERANCE }
 }
 
-// Set pieces: pick where the ball should go once, take a breath, then play it
-function takeRestart (match, index, brain, level, random) {
-  const me = match.players[index]
-  const { ball, restart } = match
-  const dir = attackDir(me.team)
-  const key = `${restart.kind}:${restart.team}:${ball.x.toFixed(1)}:${ball.y.toFixed(1)}`
-  if (brain.plan?.key !== key) {
-    brain.plan = { key, ...pickTarget(match, me, dir, random) }
-    brain.windup = null
-  }
-  const { x, y, power } = brain.plan
-  approach(me, brain, ball, x, y, false)
-  if (brain.lined && distance(me, ball) < REACH + 0.5 && match.timer < RESTART_TIME - 0.6) {
-    windUp(match, brain, power, 2, x, y, PASS_TOLERANCE)
-  }
-}
-
-function pickTarget (match, me, dir, random) {
-  const { ball, restart } = match
-  const goalX = dir * HALF_W
-  // From the kick-off spot the ball can only go forward: a short one out to a side
-  if (restart.kind === 'kickoff') return { x: dir * 8, y: (random() < 0.5 ? -1 : 1) * 6, power: 0.05 }
-  if (restart.kind === 'corner') return { x: goalX - dir * 6, y: (random() * 2 - 1) * 3, power: 0.25 }
-  const pass = findPass(match, me, ball, dir, random)
-  if (pass) return pass
-  const toGoal = Math.hypot(goalX - ball.x, ball.y)
-  if (toGoal < SHOT_RANGE) return { x: goalX + dir, y: (random() * 2 - 1) * (GOAL_HALF - 1), power: 1 }
-  return { x: ball.x + dir * 18, y: clamp(ball.y * 0.5, -HALF_H + 4, HALF_H - 4), power: 0.4 }
+// The kick-off: take a breath, then run through the ball to roll it out to one side
+function takeKickoff (match, me, brain, dir, random) {
+  const key = match.counts.whistles
+  if (brain.plan?.key !== key) brain.plan = { key, x: dir * 8, y: (random() < 0.5 ? -1 : 1) * 6 }
+  approach(me, brain, match.ball, brain.plan.x, brain.plan.y, match.timer < RESTART_TIME - 0.6)
 }
