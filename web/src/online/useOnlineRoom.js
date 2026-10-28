@@ -90,13 +90,14 @@ const loadName = () => {
  * @param {(state, player) => void} [options.onLeave]  Host: a player dropped out.
  * @param {(state, now) => void} [options.onTick]      Host: runs a few times a second (timeouts).
  * @param {(data) => void} [options.onLive]  Everyone: every player's latest live data, by player id.
+ * @param {(playerId, data) => void} [options.onGuestLive]  Host: one guest's live data, the moment it arrives.
  * @param {number} [options.liveMs]          How often the host passes on live data.
  * @param {(data, from) => void} [options.onEvent]  Everyone: another player's one-off event.
  * @param {string} [options.initialCode] Room code from an invite link; joins straight away.
  * @param {boolean} [options.hostRoom]   Creates a room straight away, for a chat invite.
  */
 export function useOnlineRoom (options) {
-  const { game, initialState, project = (state) => state, onAction, onJoin, onLeave, onTick, onLive, onEvent } = options
+  const { game, initialState, project = (state) => state, onAction, onJoin, onLeave, onTick, onLive, onGuestLive, onEvent } = options
   const liveMs = options.liveMs || LIVE_MS
 
   const screen = ref('home') // home | connecting | room
@@ -282,6 +283,7 @@ export function useOnlineRoom (options) {
     } else if (msg.type === 'live' && known) {
       liveData.set(known.playerId, msg.data)
       liveChanged = true
+      onGuestLive?.(known.playerId, msg.data)
     } else if (msg.type === 'event' && known && msg.data && typeof msg.data === 'object') {
       passOnEvent(known.playerId, msg.data)
     }

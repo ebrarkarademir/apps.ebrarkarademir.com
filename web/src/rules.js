@@ -115,6 +115,50 @@ export const rules = {
       ]
     }
   },
+  futsal: {
+    EN: {
+      icon: '[o]',
+      title: 'Futsal',
+      players: '1 player against bots, or 2–10 online',
+      duration: '2–5 min matches',
+      goal: 'Score more goals than the other team before the clock runs out.',
+      steps: [
+        'Solo: you play for the home team, with bot teammates, against a team of bots. Online: one person creates a room, the others join with the code and pick a team. The host can add bots to fill the places.',
+        'Run with the arrow keys or WASD. On a phone, drag on the left half of the screen to steer.',
+        'To kick, hold Space (or X, K, or the right half of the screen) to wind up, then let go. A tap is a soft pass and a full wind-up a hard shot. You run slower while winding up.',
+        'A kick sends the ball straight away from you, so get behind it in the direction you want it to go. Running into the ball dribbles it.',
+        'Over a touchline the ball comes back with a kick-in; over a goal line it’s a corner or a goal clearance. The other team stays out of the dotted ring, and a restart not taken within 4 seconds goes to the other team.',
+        'The clock only runs while the ball is in play. Level at full time? The next goal wins (golden goal).'
+      ],
+      tips: [
+        'Home players are round ( ) and away players square [ ]. Yours has a v over it.',
+        'Fully wound-up shots from close to the goal are the hardest to stop.',
+        'If someone drops out, a bot plays for them until they’re back.',
+        'M turns the sound on or off; P or Esc pauses a solo match.'
+      ]
+    },
+    TR: {
+      icon: '[o]',
+      title: 'Futsal',
+      players: 'Botlara karşı tek kişi ya da çevrim içi 2–10 kişi',
+      duration: '2–5 dakikalık maçlar',
+      goal: 'Süre bitmeden rakip takımdan daha çok gol at.',
+      steps: [
+        'Tek kişilik: ev sahibi takımda, bot takım arkadaşlarınla, botlardan oluşan bir takıma karşı oynarsın. Çevrim içi: bir kişi oda oluşturur, diğerleri kodla katılıp takım seçer. Sunucu boş yerlere bot ekleyebilir.',
+        'Ok tuşları ya da WASD ile koş. Telefonda ekranın sol yarısında parmağını sürükleyerek yön ver.',
+        'Vurmak için Boşluk’a (ya da X, K veya ekranın sağ yarısına) basılı tutup güç topla, sonra bırak. Kısa dokunuş yumuşak bir pas, tam güç sert bir şut olur. Güç toplarken daha yavaş koşarsın.',
+        'Vuruş topu senden dümdüz uzağa gönderir; topun gitmesini istediğin yönün tam arkasına geç. Topa koşarak çarpmak onu sürer.',
+        'Top yan çizgiden çıkarsa taç vuruşuyla, kale çizgisinden çıkarsa korner ya da kale atışıyla oyuna döner. Rakip takım noktalı halkanın dışında kalır; 4 saniye içinde kullanılmayan duran top rakibe geçer.',
+        'Süre yalnızca top oyundayken akar. Normal süre berabere mi bitti? İlk golü atan kazanır (altın gol).'
+      ],
+      tips: [
+        'Ev sahibi oyuncular yuvarlak ( ), deplasman oyuncuları kare [ ]. Seninkinin üstünde v işareti var.',
+        'Kaleye yakından, tam güçle vurulan şutlar en zor kurtarılanlardır.',
+        'Biri oyundan düşerse, o dönene kadar yerine bir bot oynar.',
+        'M sesi açar ya da kapatır; P veya Esc tek kişilik maçı duraklatır.'
+      ]
+    }
+  },
   sudoku: {
     EN: {
       icon: '[9]',

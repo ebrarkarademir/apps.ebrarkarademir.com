@@ -12,6 +12,7 @@ import TabuGame from './games/TabuGame.vue'
 import QuizRaceGame from './games/QuizRaceGame.vue'
 import FlappyGame from './games/FlappyGame.vue'
 import TankGame from './games/TankGame.vue'
+import FutsalGame from './games/FutsalGame.vue'
 import SudokuGame from './games/SudokuGame.vue'
 import { translations } from './translations'
 import { rules, rulesLabels } from './rules'
@@ -57,6 +58,17 @@ const games = computed(() => [
     players: '2–8',
     duration: minutes('2–5'),
     mode: t.value.cardModeOnline
+  },
+  {
+    id: 'futsal',
+    category: ['solo', 'online', 'party'],
+    title: t.value.futsalTitle,
+    description: t.value.futsalDesc,
+    icon: '[o]',
+    art: cardArt.futsal,
+    players: '1–10',
+    duration: minutes('3–8'),
+    mode: t.value.cardModeSoloOnline
   },
   {
     id: 'sudoku',
@@ -185,7 +197,7 @@ const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
 
 // An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
 // Older links used /?join=CODE&game=quiz-race.
-const ONLINE_GAMES = ['flappy', 'tanks', 'sudoku', 'quiz-race', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['flappy', 'tanks', 'futsal', 'sudoku', 'quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const initialRoute = parsePath(window.location.pathname)
 const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
@@ -596,6 +608,14 @@ const toggleLanguage = () => {
         :t="t"
         :initialCode="inviteCodeFor('tanks')"
         :hostRoom="hostRoomFor('tanks')"
+        @go-back="closeGame"
+      />
+
+      <FutsalGame
+        v-else-if="selectedGame === 'futsal'"
+        :t="t"
+        :initialCode="inviteCodeFor('futsal')"
+        :hostRoom="hostRoomFor('futsal')"
         @go-back="closeGame"
       />
 

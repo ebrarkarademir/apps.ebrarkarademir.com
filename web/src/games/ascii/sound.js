@@ -92,6 +92,28 @@ function koto (start, frequency, volume) {
 
 const string = (n) => KOTO[Math.max(0, Math.min(KOTO.length - 1, Math.round(n)))]
 
+// A pea whistle: a high note the pea inside makes warble many times a second
+function trill (start, { duration, volume, base = 2650, depth = 170, rate = 27 }) {
+  const osc = audio.createOscillator()
+  const wobble = audio.createOscillator()
+  const depthGain = audio.createGain()
+  const gain = audio.createGain()
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(base, start)
+  wobble.frequency.setValueAtTime(rate, start)
+  depthGain.gain.setValueAtTime(depth, start)
+  wobble.connect(depthGain).connect(osc.frequency)
+  gain.gain.setValueAtTime(0.0001, start)
+  gain.gain.exponentialRampToValueAtTime(volume, start + 0.02)
+  gain.gain.setValueAtTime(volume, start + duration - 0.06)
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
+  osc.connect(gain).connect(audio.destination)
+  osc.start(start)
+  wobble.start(start)
+  osc.stop(start + duration + 0.02)
+  wobble.stop(start + duration + 0.02)
+}
+
 // A temple bowl: a few out-of-tune partials, the high ones dying first
 function bell (start, base, volume) {
   ;[[1, 1, 2.8], [2.76, 0.45, 1.6], [5.4, 0.25, 0.9], [8.93, 0.12, 0.5]].forEach(([ratio, level, decay]) => {
@@ -153,6 +175,25 @@ const patches = {
   // Data scrambling and settling, for a hint
   glitch: (t) => {
     for (let i = 0; i < 7; i++) tone(t + i * 0.045, { from: 1400 + Math.random() * 1800, duration: 0.03, volume: 0.018 })
+  },
+  // A boot on the ball: a thump, harder and brighter the harder the kick
+  kick: (t, power = 0.5) => {
+    thud(t, 0.06, 0.08 + power * 0.16, 700 + power * 1300)
+    tone(t, { type: 'sine', from: 150 + power * 90, to: 60, duration: 0.08, volume: 0.05 + power * 0.06 })
+  },
+  // The ball off a post: a short ring of metal
+  post: (t) => {
+    ;[[1, 0.05, 0.4], [2.76, 0.025, 0.3], [5.4, 0.015, 0.2]].forEach(([ratio, volume, duration]) => {
+      tone(t, { type: 'triangle', from: 740 * ratio, duration, volume })
+    })
+    thud(t, 0.03, 0.1, 3200)
+  },
+  // The referee: a short blast, or a long one for full time
+  whistle: (t, long = false) => trill(t, { duration: long ? 0.85 : 0.3, volume: 0.045 }),
+  // A goal: the crowd roars up and fades
+  cheer: (t) => {
+    hiss(t, { duration: 2.2, volume: 0.2, type: 'bandpass', frequency: 1100, to: 700, attack: 0.18 })
+    hiss(t + 0.05, { duration: 1.8, volume: 0.1, type: 'bandpass', frequency: 2400, to: 1500, attack: 0.25 })
   }
 }
 
