@@ -54,9 +54,10 @@ const onPointerDown = (e) => {
   if (!root.value?.contains(e.target)) hide()
 }
 
-// Tabbing out of the menu closes it
+// Tabbing out of the menu closes it. Focus going nowhere doesn't: Safari doesn't focus a tapped
+// button, so tapping a language would otherwise close the menu before the tap lands.
 const onFocusOut = (e) => {
-  if (open.value && !root.value?.contains(e.relatedTarget)) hide()
+  if (open.value && e.relatedTarget && !root.value?.contains(e.relatedTarget)) hide()
 }
 
 const onKeydown = (e) => {
