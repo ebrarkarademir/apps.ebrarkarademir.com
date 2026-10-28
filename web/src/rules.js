@@ -843,6 +843,88 @@ export const rules = {
       ]
     }
   },
+  doodle: {
+    EN: {
+      icon: '[/]',
+      title: 'Doodle Race',
+      players: '2–10 players, one device each',
+      duration: '10–20 min',
+      goal: 'Draw so the others can guess your word, and guess theirs before the clock runs out.',
+      steps: [
+        'One person creates a room and picks the rounds, the drawing time and whether letter hints show; everyone else joins with the code.',
+        'Players take turns to draw. The drawer picks one of three words: easy, medium (worth double) or hard (worth triple).',
+        'Everyone else types guesses in the chat. Wrong guesses show for all; a right one doesn’t give the word away, it just scores.',
+        'A guess scores 40 to 100 points times the word’s level, more the quicker it comes. The drawer earns the average of what the guessers scored.',
+        'The turn ends when everyone has guessed or time runs out. Once every player has drawn in every round, the most points wins.'
+      ],
+      tips: [
+        'Everyone sees the word in their own language, and a guess counts in any of the four, even typed without special letters like ş, ё or қ.',
+        'With letter hints on, a letter shows at half time and another at three quarters.',
+        'Once you’ve guessed it, your messages only reach the drawer and the others who got it.',
+        'Drawing keys: P pen, F fill, E eraser, 1–3 brush size, Ctrl+Z undo. On a phone, draw with a finger.'
+      ]
+    },
+    TR: {
+      icon: '[/]',
+      title: 'Çizim Yarışı',
+      players: '2–10 oyuncu, herkes kendi cihazından',
+      duration: '10–20 dk',
+      goal: 'Kelimeni diğerleri bilebilsin diye çiz, onlarınkini de süre bitmeden bil.',
+      steps: [
+        'Bir kişi oda oluşturur; tur sayısını, çizim süresini ve harf ipuçlarını seçer. Diğerleri kodla katılır.',
+        'Oyuncular sırayla çizer. Çizen üç kelimeden birini seçer: kolay, orta (iki kat) ya da zor (üç kat).',
+        'Diğerleri tahminlerini sohbete yazar. Yanlış tahminleri herkes görür; doğru tahmin kelimeyi ele vermez, sadece puan kazandırır.',
+        'Bir tahmin, kelimenin seviyesiyle çarpılan 40 ile 100 arası puan getirir; ne kadar hızlıysa o kadar çok. Çizen, bilenlerin aldığı puanların ortalamasını kazanır.',
+        'Herkes bildiğinde ya da süre dolduğunda sıra biter. Her oyuncu her turda çizdikten sonra en çok puanı olan kazanır.'
+      ],
+      tips: [
+        'Herkes kelimeyi kendi dilinde görür; tahmin dört dilin herhangi birinde, ş, ё ya da қ gibi özel harfler olmadan yazılsa bile sayılır.',
+        'Harf ipuçları açıksa sürenin yarısında bir harf, dörtte üçünde bir harf daha görünür.',
+        'Bildikten sonra yazdıklarını sadece çizen ve bilen diğer oyuncular görür.',
+        'Çizim tuşları: P kalem, F boya, E silgi, 1–3 fırça boyutu, Ctrl+Z geri al. Telefonda parmağınla çiz.'
+      ]
+    },
+    RU: {
+      icon: '[/]',
+      title: 'Рисуй и угадай',
+      players: '2–10 игроков, у каждого своё устройство',
+      duration: '10–20 мин',
+      goal: 'Рисуй так, чтобы другие угадали твоё слово, и угадывай их слова, пока не вышло время.',
+      steps: [
+        'Один создаёт комнату и выбирает число раундов, время на рисунок и подсказки букв; остальные входят по коду.',
+        'Игроки рисуют по очереди. Рисующий выбирает одно из трёх слов: лёгкое, среднее (вдвое дороже) или сложное (втрое дороже).',
+        'Остальные пишут догадки в чат. Неверные видят все; верная догадка слово не выдаёт, а просто приносит очки.',
+        'Догадка приносит от 40 до 100 очков, умноженных на уровень слова: чем быстрее, тем больше. Рисующий получает среднее от очков угадывающих.',
+        'Ход заканчивается, когда все угадали или вышло время. Когда каждый игрок порисует в каждом раунде, побеждает тот, у кого больше всего очков.'
+      ],
+      tips: [
+        'Каждый видит слово на своём языке, а догадка засчитывается на любом из четырёх, даже без особых букв вроде ş, ё или қ.',
+        'Если подсказки букв включены, одна буква открывается на половине времени, ещё одна — на трёх четвертях.',
+        'Когда угадаешь, твои сообщения видят только рисующий и другие угадавшие.',
+        'Клавиши для рисования: P кисть, F заливка, E ластик, 1–3 размер кисти, Ctrl+Z отмена. На телефоне рисуй пальцем.'
+      ]
+    },
+    KK: {
+      icon: '[/]',
+      title: 'Сал да тап',
+      players: '2–10 ойыншы, әркімде өз құрылғысы',
+      duration: '10–20 мин',
+      goal: 'Басқалар сөзіңді табатындай етіп сал, ал олардың сөзін уақыт біткенше тап.',
+      steps: [
+        'Бір адам бөлме ашып, раунд санын, салу уақытын және әріп кеңестерін таңдайды; қалғандары кодпен кіреді.',
+        'Ойыншылар кезекпен салады. Суретші үш сөздің бірін таңдайды: оңай, орташа (екі есе) немесе қиын (үш есе).',
+        'Қалғандары болжамдарын чатқа жазады. Қате болжамдарды бәрі көреді; дұрыс болжам сөзді ашпайды, тек ұпай әкеледі.',
+        'Болжам сөздің деңгейіне көбейтілген 40-тан 100-ге дейін ұпай әкеледі: неғұрлым тез болса, соғұрлым көп. Суретші тапқандардың ұпайының орташасын алады.',
+        'Барлығы тапқанда не уақыт біткенде кезек аяқталады. Әр ойыншы әр раундта салып болған соң, ең көп ұпай жинаған жеңеді.'
+      ],
+      tips: [
+        'Әркім сөзді өз тілінде көреді, ал болжам төрт тілдің кез келгенінде, тіпті ş, ё не қ сияқты ерекше әріптерсіз жазылса да есептеледі.',
+        'Әріп кеңестері қосулы болса, уақыттың жартысында бір әріп, төрттен үшінде тағы бір әріп ашылады.',
+        'Тапқаннан кейін хабарламаларыңды тек суретші мен тапқан басқа ойыншылар көреді.',
+        'Салу пернелері: P қалам, F бояу, E өшіргіш, 1–3 қылқалам өлшемі, Ctrl+Z қайтару. Телефонда саусағыңмен сал.'
+      ]
+    }
+  },
   users: {
     EN: {
       icon: 'who',

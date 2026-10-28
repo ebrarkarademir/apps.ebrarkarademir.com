@@ -20,7 +20,7 @@ import { RELAY_BROKERS, connectRelay, relayTopic } from './relay'
 // Real-time games also send "live" data (positions and the like) many times a second. That
 // stays out of the game state: the host keeps each player's latest and passes everyone's on
 // in one small message, ten times a second by default. One-off "events" (a shot fired) are
-// passed on to everyone straight away instead.
+// passed on to everyone straight away instead; the host can also send one to a single player.
 
 const PEER_PREFIX = 'ebrarkarademir-'
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -507,6 +507,18 @@ export function useOnlineRoom (options) {
     else hostLink?.send({ type: 'event', data })
   }
 
+  /** Host: send a one-off event to one player only, e.g. to catch up someone who joined late. */
+  function sendEventTo (playerId, data) {
+    if (role.value !== 'host') return
+    if (playerId === myId) {
+      onEvent?.(data, myId)
+      return
+    }
+    guests.forEach(guest => {
+      if (guest.playerId === playerId) guest.send({ type: 'event', from: myId, data })
+    })
+  }
+
   function fail (key) {
     resetConnection()
     errorKey.value = key
@@ -573,6 +585,6 @@ export function useOnlineRoom (options) {
   return reactive({
     screen, role, isHost, roomCode, errorKey, playerName, joinCode, now, myId,
     view, me, shareLink,
-    createRoom, joinRoom, leave, act, sendLive, sendEvent
+    createRoom, joinRoom, leave, act, sendLive, sendEvent, sendEventTo
   })
 }

@@ -13,7 +13,9 @@ const props = defineProps({
   minPlayers: { type: Number, default: 1 },
   // Extra start condition from the game (e.g. both teams need someone)
   canStart: { type: Boolean, default: true },
-  startHint: { type: String, default: '' }
+  startHint: { type: String, default: '' },
+  // The game's own screens get a wider window (a drawing board); the lobby keeps its width
+  wide: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['go-back', 'start'])
@@ -23,6 +25,7 @@ const copied = ref(false)
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 
 const view = computed(() => props.room.view)
+const widthClass = computed(() => (props.wide && props.room.screen === 'room' && view.value && view.value.phase !== 'lobby' ? 'max-w-6xl' : 'max-w-2xl'))
 const onlineCount = computed(() => view.value?.players.filter(p => p.online).length || 0)
 const enoughPlayers = computed(() => onlineCount.value >= props.minPlayers)
 const startDisabled = computed(() => !enoughPlayers.value || !props.canStart)
@@ -88,7 +91,7 @@ function onCodeInput (event) {
 </script>
 
 <template>
-  <TermWindow class="max-w-2xl" :title="title" :backLabel="room.screen === 'home' ? t.back : t.onlineLeave" @back="onBack">
+  <TermWindow :class="widthClass" :title="title" :backLabel="room.screen === 'home' ? t.back : t.onlineLeave" @back="onBack">
     <template #status>
       <span v-if="room.screen === 'room'" class="term-chip text-term">
         {{ t.onlineRoomLabel }}: <span class="font-mono tracking-[0.25em]">{{ room.roomCode }}</span>
