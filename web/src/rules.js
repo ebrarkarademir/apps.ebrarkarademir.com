@@ -925,6 +925,92 @@ export const rules = {
       ]
     }
   },
+  world: {
+    EN: {
+      icon: '3D',
+      title: 'Sunny Square',
+      players: 'Up to 30 per plaza, one device each',
+      duration: 'As long as you like',
+      goal: 'Make an avatar, hang out with others in a 3D town square, earn coins and decorate a home of your own.',
+      steps: [
+        'Create an account with a name and password, then make your avatar: body, skin, face, eyes, brows, hair and clothes. You can change it any time.',
+        'Walk with W A S D or the arrow keys, or click the ground to walk there. Drag to turn the camera; scroll or pinch to zoom.',
+        'Press Enter or Chat to talk: your words float over your head for a few seconds. Emotes (keys 1–4) wave, dance, sit and laugh.',
+        'You earn coins for every active minute and a bonus on your first visit each day. Spend them in the shop on clothes and furniture.',
+        'Home takes you to your own room. Press Decorate to place, turn, move or put away furniture on the floor grid; it saves by itself.',
+        'Click someone to see their card and add them as a friend. Friends can visit each other’s homes and invite each other over.'
+      ],
+      tips: [
+        'Click a bench, sofa or chair to walk over and sit down.',
+        'The shop fronts on the plaza open the shop too.',
+        'Chat filters rude words and only lets a few messages through at a time.',
+        'Signing in on another tab or device moves you there.'
+      ]
+    },
+    TR: {
+      icon: '3D',
+      title: 'Güneşli Meydan',
+      players: 'Meydan başına 30 kişiye kadar, herkes kendi cihazından',
+      duration: 'İstediğin kadar',
+      goal: 'Bir avatar yap, 3B bir şehir meydanında başkalarıyla takıl, jeton kazan ve kendi evini döşe.',
+      steps: [
+        'Bir ad ve şifreyle hesap aç, sonra avatarını yap: vücut, ten, yüz, gözler, kaşlar, saç ve kıyafetler. İstediğin zaman değiştirebilirsin.',
+        'W A S D ya da ok tuşlarıyla yürü veya gitmek istediğin yere tıkla. Kamerayı çevirmek için sürükle; yakınlaştırmak için tekerleği çevir ya da iki parmakla sıkıştır.',
+        'Konuşmak için Enter’a ya da Sohbet’e bas: yazdıkların birkaç saniye başının üstünde görünür. İfadelerle (1–4 tuşları) el salla, dans et, otur ve gül.',
+        'Aktif geçirdiğin her dakika jeton kazanırsın, her günün ilk girişinde de bonus alırsın. Jetonları mağazada kıyafete ve mobilyaya harca.',
+        'Ev seni kendi odana götürür. Mobilyaları zemin ızgarasına yerleştirmek, döndürmek, taşımak ya da kaldırmak için Dekore et’e bas; kendiliğinden kaydedilir.',
+        'Birinin kartını görmek ve onu arkadaş eklemek için ona tıkla. Arkadaşlar birbirinin evini ziyaret edip birbirini davet edebilir.'
+      ],
+      tips: [
+        'Bir banka, kanepeye ya da sandalyeye tıklarsan oraya yürüyüp oturursun.',
+        'Meydandaki dükkân vitrinleri de mağazayı açar.',
+        'Sohbet kaba sözleri filtreler ve art arda ancak birkaç mesaja izin verir.',
+        'Başka bir sekmede ya da cihazda giriş yaparsan oyun oraya geçer.'
+      ]
+    },
+    RU: {
+      icon: '3D',
+      title: 'Солнечная площадь',
+      players: 'До 30 человек на площади, у каждого своё устройство',
+      duration: 'Сколько захочешь',
+      goal: 'Создай аватара, проводи время с другими на 3D-площади, зарабатывай монеты и обставь собственный дом.',
+      steps: [
+        'Заведи аккаунт с именем и паролем, затем создай аватара: тело, кожа, лицо, глаза, брови, причёска и одежда. Изменить его можно в любой момент.',
+        'Ходи клавишами W A S D или стрелками либо кликни по земле, чтобы пойти туда. Перетаскивай, чтобы повернуть камеру; колесо мыши или щипок приближают.',
+        'Нажми Enter или «Чат», чтобы говорить: твои слова несколько секунд видны над головой. Эмоции (клавиши 1–4): помахать, танцевать, сесть и смеяться.',
+        'Монеты начисляются за каждую активную минуту, а за первый вход каждый день — бонус. Трать их в магазине на одежду и мебель.',
+        '«Дом» ведёт в твою комнату. Нажми «Обустроить», чтобы ставить, поворачивать, переставлять или убирать мебель по сетке на полу; всё сохраняется само.',
+        'Кликни по игроку, чтобы открыть его карточку и добавить в друзья. Друзья могут ходить друг к другу в гости и приглашать к себе.'
+      ],
+      tips: [
+        'Кликни по скамейке, дивану или стулу — дойдёшь и сядешь.',
+        'Витрины магазинов на площади тоже открывают магазин.',
+        'Чат отсеивает грубые слова и пропускает лишь несколько сообщений подряд.',
+        'Если войти в другой вкладке или на другом устройстве, игра переместится туда.'
+      ]
+    },
+    KK: {
+      icon: '3D',
+      title: 'Шуақты алаң',
+      players: 'Бір алаңда 30 адамға дейін, әркімде өз құрылғысы',
+      duration: 'Қалағаныңша',
+      goal: 'Аватар жасап, 3D алаңда басқалармен уақыт өткізіп, тиын тап және өз үйіңді жабдықта.',
+      steps: [
+        'Есім мен құпиясөзбен аккаунт аш, сосын аватарыңды жаса: дене, тері, бет, көз, қас, шаш және киім. Оны кез келген уақытта өзгертуге болады.',
+        'W A S D немесе көрсеткі пернелерімен жүр, не барғың келген жерді шерт. Камераны бұру үшін сүйре; жақындату үшін тінтуір дөңгелегін айналдыр не екі саусақпен қыс.',
+        'Сөйлеу үшін Enter не «Чат» түймесін бас: сөздерің бірнеше секунд басыңның үстінде тұрады. Эмоциялар (1–4 пернелері): қол бұлғау, билеу, отыру және күлу.',
+        'Әр белсенді минутың үшін тиын түседі, ал күн сайынғы алғашқы кіруге бонус беріледі. Тиынды дүкенде киім мен жиһазға жұмса.',
+        '«Үй» сені өз бөлмеңе апарады. Жиһазды еден торына қою, бұру, жылжыту не жинап алу үшін «Безендіру» түймесін бас; бәрі өзі сақталады.',
+        'Ойыншының картасын ашып, оны досыңа қосу үшін оны шерт. Достар бір-бірінің үйіне қонаққа барып, бір-бірін шақыра алады.'
+      ],
+      tips: [
+        'Орындыққа не диванға шертсең, барып отырасың.',
+        'Алаңдағы дүкен витриналары да дүкенді ашады.',
+        'Чат дөрекі сөздерді сүзеді және қатарынан бірнеше хабарламаға ғана рұқсат береді.',
+        'Басқа қойындыда не құрылғыда кірсең, ойын сонда ауысады.'
+      ]
+    }
+  },
   users: {
     EN: {
       icon: 'who',

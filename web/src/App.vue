@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import LanguageMenu from './components/LanguageMenu.vue'
 import TermWindow from './components/TermWindow.vue'
 import GameMenu from './views/GameMenu.vue'
@@ -16,6 +16,12 @@ import FutsalGame from './games/FutsalGame.vue'
 import DoodleGame from './games/DoodleGame.vue'
 import SudokuGame from './games/SudokuGame.vue'
 import { translations } from './translations'
+
+// Sunny Square, the 3D world, loads only when it's opened: three.js is far bigger than the rest
+// of the site. It needs its server, which the dev server starts; a built site only lists the
+// world when VITE_WORLD_URL says where that server runs.
+const WorldGame = defineAsyncComponent(() => import('./world/WorldGame.vue'))
+const worldOn = import.meta.env.DEV || !!import.meta.env.VITE_WORLD_URL
 import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
 import { useUsers } from './online/useUsers'
@@ -42,6 +48,19 @@ const minutes = (n) => t.value.cardMinutes.replace('{n}', n)
 // Menu cards: `players`, `duration` and `mode` fill the info side of each card, and
 // `soon` marks games that still open the Coming Soon screen
 const games = computed(() => [
+  ...(worldOn
+    ? [{
+        id: 'world',
+        category: ['online', 'party'],
+        title: t.value.worldTitle,
+        description: t.value.worldDesc,
+        icon: '[3D]',
+        art: cardArt.world,
+        players: '1–30',
+        duration: t.value.cardUnlimited,
+        mode: t.value.cardModeOnline
+      }]
+    : []),
   {
     id: 'flappy',
     category: ['solo', 'online', 'party'],
@@ -607,6 +626,12 @@ onUnmounted(() => {
         :games="filteredGames"
         :t="t"
         @select-game="openGame"
+      />
+
+      <WorldGame
+        v-else-if="selectedGame === 'world'"
+        :t="t"
+        @go-back="closeGame"
       />
 
       <FlappyGame

@@ -112,6 +112,7 @@ The app can be configured through various environment variables:
 - \`VITE_APP_TITLE\`: Application title
 - \`VITE_API_URL\`: Backend API URL (for future use)
 - \`VITE_FIREBASE_CONFIG\`: Firebase configuration (for multiplayer features)
+- \`VITE_WORLD_URL\`: Where the server of Sunny Square, the 3D world, runs (\`wss://…/world-socket\`). A production build without it leaves the world off the menu; \`npm run dev\` starts that server by itself (see \`backend/README.md\`)
 
 ## 🤝 Contributing
 

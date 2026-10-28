@@ -1,0 +1,14 @@
+{
+  "name": "world-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Server for the 3D social world: accounts, rooms, chat, coins and homes",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node --experimental-sqlite --disable-warning=ExperimentalWarning src/main.js",
+    "test": "node --experimental-sqlite --disable-warning=ExperimentalWarning --test test/*.test.js"
+  }
+}
