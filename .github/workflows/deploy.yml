@@ -42,8 +42,7 @@ jobs:
           VITE_TURN_URLS: ${{ secrets.VITE_TURN_URLS }}
           VITE_TURN_USERNAME: ${{ secrets.VITE_TURN_USERNAME }}
           VITE_TURN_CREDENTIAL: ${{ secrets.VITE_TURN_CREDENTIAL }}
-          # Where Sunny Square's server runs (see backend/README.md); unset keeps the 3D world off the menu
-          VITE_WORLD_URL: ${{ secrets.VITE_WORLD_URL }}
+          # Sunny Square's server address comes from web/.env.production
 
       - name: Deploy
         uses: FirebaseExtended/action-hosting-deploy@v0

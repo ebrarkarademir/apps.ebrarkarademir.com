@@ -6,6 +6,8 @@
 
 const RETRY_MS = [500, 1000, 2000, 4000, 8000]
 const CALL_TIMEOUT_MS = 10000
+// A switched-off server may never answer at all; give up on an attempt after this and say it's off
+const CONNECT_TIMEOUT_MS = 6000
 
 export function worldUrl () {
   const configured = import.meta.env.VITE_WORLD_URL
@@ -30,7 +32,9 @@ export function createConnection (url = worldUrl()) {
     state.status = 'connecting'
     emit('status', state.status)
     ws = new WebSocket(url)
+    const socket = ws
     ws.onopen = () => {
+      clearTimeout(connectTimer)
       attempts = 0
       state.status = 'open'
       emit('status', state.status)
@@ -66,6 +70,15 @@ export function createConnection (url = worldUrl()) {
       emit('status', state.status)
       retryTimer = setTimeout(open, RETRY_MS[Math.min(attempts++, RETRY_MS.length - 1)])
     }
+    // Handled here rather than by waiting for close: not every WebSocket reports one for an
+    // attempt cut short
+    const connectTimer = setTimeout(() => {
+      if (socket.readyState !== WebSocket.CONNECTING) return
+      const lost = socket.onclose
+      socket.onclose = null
+      socket.close()
+      lost()
+    }, CONNECT_TIMEOUT_MS)
   }
 
   return {

@@ -33,15 +33,18 @@ connections and rooms.
 
 ## Hosting
 
-Firebase Hosting only serves files, so the live site needs this server somewhere that runs Node
-and keeps a disk between restarts (for the SQLite file): a small VPS, or Render, Fly.io or
-Railway with a volume. Put it behind HTTPS so browsers can reach it as `wss://`, then:
+Firebase Hosting only serves files, so this server runs on Google Cloud: the VM
+`sunny-square-server` (free-tier e2-micro, us-east1-b) in the project `sunny-square-world`,
+with a fixed IP and Caddy in front for HTTPS at `wss://35-207-58-30.sslip.io/world-socket`.
+Both sites (dev and prod) are built with that address from `web/.env.production`.
 
-1. Start it with `ORIGINS=https://apps-76619.web.app,https://apps-76619-dev.web.app` (plus any
-   custom domain) and `DB_FILE` on the persistent disk.
-2. Add a `VITE_WORLD_URL` secret to the GitHub repository, e.g.
-   `wss://world.example.com/world-socket`. The deploy workflow passes it to the build.
-3. Push to `dev` or `prod`. Builds without `VITE_WORLD_URL` leave Sunny Square off the menu.
+- `deploy/gcp-setup.sh` is the VM's startup script: Node 22, this server as the `world`
+  service (code in `/opt/world`, database in `/var/lib/world/world.db`, `ORIGINS` set to the
+  sites) and Caddy. It restarts by itself after crashes and reboots.
+- Updating the code: copy `src/` to `/opt/world/src` (`gcloud compute scp`) and run
+  `sudo systemctl restart world`.
+- The VM can be stopped and started in the Cloud console; while it's off the world page says
+  the server is off and reconnects by itself when it's back.
 
 ## How the world works
 
