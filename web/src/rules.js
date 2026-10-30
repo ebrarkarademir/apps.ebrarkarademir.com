@@ -583,7 +583,7 @@ export const rules = {
         'Each side starts with 16 stones on its second and third rows. A stone steps one square forward or sideways, never back and never diagonally.',
         'A stone takes by jumping an enemy stone right next to it, forward or sideways, onto the empty square beyond. If it can take again from there, it must, in the same move. Taken stones leave the board at once.',
         'Taking is compulsory, and if there are several ways you must choose one that takes the most stones. A king counts as one stone like any other.',
-        'A stone that reaches the far row becomes a king (a dama), shown as a crowned double stone. A king moves any distance along rows and columns, and takes from any distance, landing on any empty square past the stone it jumps, but may not turn straight back between two jumps.',
+        'A stone that reaches the far row becomes a king (a dama), shown as a stone with a crown. A king moves any distance along rows and columns, and takes from any distance, landing on any empty square past the stone it jumps, but may not turn straight back between two jumps.',
         'You lose when you have no stones or no move left, when you resign or when your clock runs out. A lone king against a lone stone is a draw, and so are 50 moves each with no capture and no stone moving.'
       ],
       tips: [
@@ -604,7 +604,7 @@ export const rules = {
         'Her taraf ikinci ve üçüncü sıralarında 16 taşla başlar. Taş bir kare ileri ya da yana gider; geri ve çapraz gidemez.',
         'Taş, hemen yanındaki rakip taşın üzerinden ileri ya da yana atlayıp arkasındaki boş kareye konarak alır. Oradan bir daha alabiliyorsa aynı hamlede almak zorundadır. Alınan taşlar hemen tahtadan kalkar.',
         'Taş almak zorunludur; birden fazla yol varsa en çok taş alanı seçmelisin. Dama da diğer taşlar gibi bir taş sayılır.',
-        'Karşı sıraya ulaşan taş dama olur ve taçlı çift taş olarak görünür. Dama satır ve sütunlar boyunca istediği kadar gider, uzaktan alır ve atladığı taşın ardındaki herhangi bir boş kareye konar; ama iki alma arasında tam geri dönemez.',
+        'Karşı sıraya ulaşan taş dama olur ve taçlı taş olarak görünür. Dama satır ve sütunlar boyunca istediği kadar gider, uzaktan alır ve atladığı taşın ardındaki herhangi bir boş kareye konar; ama iki alma arasında tam geri dönemez.',
         'Taşın ya da hamlen kalmazsa, terk edersen ya da süren biterse kaybedersin. Tek dama tek taşa karşı berabere biter; taş alınmadan ve taş ilerlemeden 50’şer hamle de beraberliktir.'
       ],
       tips: [
@@ -625,7 +625,7 @@ export const rules = {
         'У каждой стороны 16 шашек на второй и третьей горизонталях. Шашка ходит на одну клетку вперёд или вбок — никогда назад и никогда по диагонали.',
         'Шашка бьёт, перепрыгивая соседнюю шашку соперника вперёд или вбок на пустую клетку за ней. Если оттуда можно бить дальше — нужно бить в тот же ход. Взятые шашки сразу снимаются с доски.',
         'Бить обязательно, и из нескольких вариантов нужно выбрать тот, где берётся больше всего шашек. Дамка считается одной шашкой, как любая другая.',
-        'Шашка, дошедшая до последней горизонтали, становится дамкой — двойной шашкой с короной. Дамка ходит на любое расстояние по горизонталям и вертикалям и бьёт издалека, вставая на любую пустую клетку за побитой шашкой, но не может развернуться назад между двумя взятиями.',
+        'Шашка, дошедшая до последней горизонтали, становится дамкой — шашкой с короной. Дамка ходит на любое расстояние по горизонталям и вертикалям и бьёт издалека, вставая на любую пустую клетку за побитой шашкой, но не может развернуться назад между двумя взятиями.',
         'Ты проигрываешь, если у тебя не осталось шашек или ходов, если сдаёшься или если кончилось время. Одна дамка против одной шашки — ничья; ничья и после 50 ходов с каждой стороны без взятий и ходов простыми.'
       ],
       tips: [
@@ -646,7 +646,7 @@ export const rules = {
         'Әр жақ екінші және үшінші қатарындағы 16 таспен бастайды. Тас бір шаршы алға не жанына жүреді — ешқашан артқа және диагональ бойымен емес.',
         'Тас іргесіндегі қарсылас тасынан алға не жанына секіріп, оның арғы жағындағы бос шаршыға түсу арқылы алады. Ол жерден тағы ала алса, сол жүрісте алуы міндетті. Алынған тастар тақтадан бірден алынады.',
         'Алу міндетті, ал бірнеше жол болса, ең көп тас алатынын таңдау керек. Дамка да кез келген тас сияқты бір тас болып саналады.',
-        'Қарама-қарсы шетке жеткен тас дамка болады — тәжі бар қос тас болып көрінеді. Дамка жолдар мен бағандар бойымен кез келген қашықтыққа жүреді, алыстан алады және секірген тасының арғы жағындағы кез келген бос шаршыға түседі, бірақ екі алудың арасында тура кері бұрыла алмайды.',
+        'Қарама-қарсы шетке жеткен тас дамка болады — тәжі бар тас болып көрінеді. Дамка жолдар мен бағандар бойымен кез келген қашықтыққа жүреді, алыстан алады және секірген тасының арғы жағындағы кез келген бос шаршыға түседі, бірақ екі алудың арасында тура кері бұрыла алмайды.',
         'Тасың не жүрісің қалмаса, берілсең не уақытың бітсе, жеңілесің. Жалғыз дамка жалғыз тасқа қарсы — тепе-тең; екі жақта да тас алынбаған және тас жүрмеген 50 жүріс те тепе-тең.'
       ],
       tips: [

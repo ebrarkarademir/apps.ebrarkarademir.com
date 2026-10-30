@@ -1,22 +1,23 @@
 // The pieces of Dama ASCII, in the same format as the chess pieces (see chess/pieces.js) so
-// the chess board draws them: round stones seen a little from the side, White's white and
-// Black's amber. A king (a dama) is two stones stacked, with a crown on top.
+// the chess board draws them: round stones seen straight from above, White's white and
+// Black's amber, with grooved rings like a real draughts stone. A king (a dama) carries a
+// crown in the middle.
 
-const ellipse = (cx, cy, rx, ry) => `M${cx - rx} ${cy} A${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A${rx} ${ry} 0 1 0 ${cx - rx} ${cy} Z`
+const circle = (cx, cy, r) => `M${cx - r} ${cy} A${r} ${r} 0 1 0 ${cx + r} ${cy} A${r} ${r} 0 1 0 ${cx - r} ${cy} Z`
 
-// A stone whose top face is centered at y = top: its side first, then its face
-const stone = (top, ring = true) => [
-  { d: `M12 ${top} L12 ${top + 14} A38 14 0 0 0 88 ${top + 14} L88 ${top} Z` },
-  { d: ellipse(50, top, 38, 14) },
-  ...(ring ? [{ d: ellipse(50, top, 24, 8.5), line: true }] : [])
+const STONE = [
+  { d: circle(50, 52, 38) },
+  { d: circle(50, 52, 29), line: true }
 ]
 
 export const DAMA_PIECES = {
-  man: stone(64),
+  man: [
+    ...STONE,
+    { d: circle(50, 52, 17), line: true }
+  ],
   king: [
-    ...stone(64, false),
-    ...stone(44, false),
-    { d: 'M36 49 L33 33 L42 40 L50 28 L58 40 L67 33 L64 49 Z', ink: true }
+    ...STONE,
+    { d: 'M33 63 L29 41 L40 50 L50 35 L60 50 L71 41 L67 63 Z', ink: true }
   ]
 }
 
