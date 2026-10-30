@@ -15,6 +15,7 @@ import TankGame from './games/TankGame.vue'
 import FutsalGame from './games/FutsalGame.vue'
 import DoodleGame from './games/DoodleGame.vue'
 import SudokuGame from './games/SudokuGame.vue'
+import ChessGame from './games/ChessGame.vue'
 import { translations } from './translations'
 
 // Sunny Square, the 3D world, loads only when it's opened: three.js is far bigger than the rest
@@ -115,6 +116,17 @@ const games = computed(() => [
     players: '1–4',
     duration: minutes('5–30'),
     mode: t.value.cardModeSoloOnline
+  },
+  {
+    id: 'chess',
+    category: 'online',
+    title: t.value.chessTitle,
+    description: t.value.chessDesc,
+    icon: '[K]',
+    art: cardArt.chess,
+    players: '2',
+    duration: minutes('5–30'),
+    mode: t.value.cardModeOnline
   },
   {
     id: 'quiz-race',
@@ -232,7 +244,7 @@ const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
 
 // An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
 // Older links used /?join=CODE&game=quiz-race.
-const ONLINE_GAMES = ['flappy', 'tanks', 'futsal', 'doodle', 'sudoku', 'quiz-race', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['flappy', 'tanks', 'futsal', 'doodle', 'sudoku', 'chess', 'quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const initialRoute = parsePath(window.location.pathname)
 const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
@@ -671,6 +683,14 @@ onUnmounted(() => {
         :t="t"
         :initialCode="inviteCodeFor('sudoku')"
         :hostRoom="hostRoomFor('sudoku')"
+        @go-back="closeGame"
+      />
+
+      <ChessGame
+        v-else-if="selectedGame === 'chess'"
+        :t="t"
+        :initialCode="inviteCodeFor('chess')"
+        :hostRoom="hostRoomFor('chess')"
         @go-back="closeGame"
       />
 

@@ -399,6 +399,92 @@ export const rules = {
       ]
     }
   },
+  chess: {
+    EN: {
+      icon: '[K]',
+      title: 'Chess ASCII',
+      players: '2 players online, others can watch',
+      duration: '5–30 min',
+      goal: 'Checkmate the other king: put it in check so that no move gets it out.',
+      steps: [
+        'One person creates a room and picks the clock and which side they play; their opponent joins with the code. Anyone else who joins watches.',
+        'The pieces are letters: K king, Q queen, R rook, B bishop, N knight, P pawn. White’s are lit up, Black’s are black with a lit outline. Your side is at the bottom.',
+        'White moves first. Tap or click one of your pieces, then the square it goes to, or drag it there. A dot marks the squares it can move to, and brackets the pieces it can take.',
+        'Every rule of chess counts: castling, en passant, and a pawn reaching the far side becomes a queen, rook, bishop or knight of your choice.',
+        'With a clock, each player has that time for the whole game. Run out and you lose, unless the other side has too little left to mate.',
+        'The game ends in checkmate, or when someone resigns or runs out of time. It’s a draw by stalemate, by agreement, when neither side can mate, after the same position three times, or after 50 moves each without a capture or a pawn move.'
+      ],
+      tips: [
+        'Offer a draw from the button under the board; your opponent can accept, decline, or just play on. One offer per move.',
+        'If your opponent leaves and isn’t back within 30 seconds, you can claim the win.',
+        'A rematch in the same room swaps the sides, and the score between you two carries on.',
+        'Keyboard: the arrow keys move a cursor over the board, Enter or Space picks up and puts down; Q, R, B or N picks a promotion. M turns the sound on or off.'
+      ]
+    },
+    TR: {
+      icon: '[K]',
+      title: 'Satranç ASCII',
+      players: 'Çevrim içi 2 oyuncu, diğerleri izler',
+      duration: '5–30 dk',
+      goal: 'Rakip şahı mat et: şah çek ve hiçbir hamle onu kurtaramasın.',
+      steps: [
+        'Bir kişi oda oluşturup süreyi ve hangi renkle oynayacağını seçer; rakibi kodla katılır. Sonradan katılan herkes izler.',
+        'Taşlar İngilizce baş harfleriyle gösterilir: K şah, Q vezir, R kale, B fil, N at, P piyon. Beyazın taşları parlak, siyahın taşları parlak çerçeveli siyah harflerdir. Senin tarafın altta.',
+        'İlk hamle beyazın. Taşlarından birine dokun ya da tıkla, sonra gideceği kareye; ya da oraya sürükle. Gidebileceği kareler noktayla, alabileceği taşlar köşeli parantezle gösterilir.',
+        'Satrancın bütün kuralları geçerli: rok, geçerken alma ve karşı uca ulaşan piyonun seçtiğin vezir, kale, fil ya da ata terfisi.',
+        'Süreli oyunda seçilen süre her oyuncunun bütün oyun için süresidir. Süren biterse kaybedersin; rakibinin mat edecek taşı kalmadıysa berabere biter.',
+        'Oyun mat ile, biri terk edince ya da süresi bitince sona erer. Pat, anlaşma, iki tarafın da mat edemeyeceği durum, aynı konumun üç kez tekrarı ya da taş alınmadan ve piyon oynanmadan 50’şer hamle beraberliktir.'
+      ],
+      tips: [
+        'Tahtanın altındaki düğmeyle beraberlik teklif edebilirsin; rakibin kabul edebilir, reddedebilir ya da oynamaya devam edebilir. Her hamlede bir teklif.',
+        'Rakibin ayrılır ve 30 saniye içinde dönmezse galibiyeti alabilirsin.',
+        'Aynı odada rövanşta renkler yer değiştirir ve ikiniz arasındaki skor devam eder.',
+        'Klavye: ok tuşları tahtada bir imleci gezdirir, Enter ya da Boşluk taşı alır ve bırakır; terfide Q, R, B ya da N ile seçersin. M sesi açar ya da kapatır.'
+      ]
+    },
+    RU: {
+      icon: '[K]',
+      title: 'Шахматы ASCII',
+      players: '2 игрока онлайн, остальные смотрят',
+      duration: '5–30 мин',
+      goal: 'Поставь мат королю соперника: объяви шах, от которого не спасает ни один ход.',
+      steps: [
+        'Один создаёт комнату и выбирает часы и цвет своих фигур; соперник входит по коду. Все, кто войдёт после, смотрят.',
+        'Фигуры обозначены английскими буквами: K король, Q ферзь, R ладья, B слон, N конь, P пешка. Белые фигуры светятся, чёрные — чёрные буквы со светящимся контуром. Твоя сторона внизу.',
+        'Первыми ходят белые. Нажми на свою фигуру, затем на клетку, куда она пойдёт, или перетащи её. Точки показывают, куда фигура может пойти, а скобки — кого она может взять.',
+        'Действуют все правила шахмат: рокировка, взятие на проходе, а пешка, дошедшая до последней горизонтали, превращается в ферзя, ладью, слона или коня на твой выбор.',
+        'С часами у каждого игрока это время на всю партию. Если время кончилось, ты проигрываешь, — если только у соперника хватает фигур для мата.',
+        'Партия заканчивается матом, сдачей или когда у кого-то кончается время. Ничья: пат, согласие обоих, когда ни у кого нет фигур для мата, трёхкратное повторение позиции или 50 ходов с каждой стороны без взятий и ходов пешкой.'
+      ],
+      tips: [
+        'Предложи ничью кнопкой под доской; соперник может принять, отклонить или просто продолжать игру. Одно предложение за ход.',
+        'Если соперник ушёл и не вернулся за 30 секунд, победу можно забрать.',
+        'В реванше в той же комнате стороны меняются, а счёт между вами сохраняется.',
+        'Клавиатура: стрелки двигают курсор по доске, Enter или пробел берут и ставят фигуру; Q, R, B или N выбирают превращение. M включает и выключает звук.'
+      ]
+    },
+    KK: {
+      icon: '[K]',
+      title: 'Шахмат ASCII',
+      players: 'Онлайн 2 ойыншы, қалғандары көреді',
+      duration: '5–30 мин',
+      goal: 'Қарсыластың патшасына мат қой: ешбір жүріс құтқара алмайтын шах бер.',
+      steps: [
+        'Бір адам бөлме ашып, сағатты және өз фигураларының түсін таңдайды; қарсыласы кодпен кіреді. Кейін кірген барлық адам көреді.',
+        'Фигуралар ағылшын әріптерімен белгіленген: K патша, Q уәзір, R тура, B піл, N ат, P пешка. Ақтардың фигуралары жарқырайды, қаралардікі — жарқыраған жиегі бар қара әріптер. Сенің жағың төменде.',
+        'Алғашқы жүріс ақтардікі. Өз фигураңды бас, сосын ол баратын шаршыны бас немесе оны сүйреп апар. Нүктелер фигура бара алатын шаршыларды, жақшалар ол ала алатын фигураларды көрсетеді.',
+        'Шахматтың барлық ережесі қолданылады: рокировка, өтіп бара жатып алу, ал соңғы қатарға жеткен пешка сен таңдаған уәзірге, тураға, пілге не атқа айналады.',
+        'Сағатпен ойнағанда әр ойыншыға бүкіл ойынға сол уақыт беріледі. Уақытың бітсе, жеңілесің — тек қарсыласыңда мат қоюға фигура жетпесе, тепе-тең болады.',
+        'Ойын матпен, біреу берілгенде не уақыты біткенде аяқталады. Тепе-тең: пат, екеуінің келісімі, ешкім мат қоя алмайтын жағдай, бір позицияның үш рет қайталануы немесе екі жақта да фигура алынбаған және пешка жүрмеген 50 жүріс.'
+      ],
+      tips: [
+        'Тақтаның астындағы түймемен тепе-теңдік ұсына аласың; қарсылас қабылдай, бас тарта не ойынды жалғастыра алады. Әр жүрісте бір ұсыныс.',
+        'Қарсылас кетіп, 30 секундта оралмаса, жеңісті ала аласың.',
+        'Сол бөлмедегі реваншта жақтар ауысады, ал екеуңнің араңдағы есеп сақталады.',
+        'Пернетақта: бағыт пернелері тақтадағы курсорды жылжытады, Enter не Бос орын фигураны алып, қояды; айналуда Q, R, B не N арқылы таңдайсың. M дыбысты қосады не өшіреді.'
+      ]
+    }
+  },
   'number-guess': {
     EN: {
       icon: '[#]',
