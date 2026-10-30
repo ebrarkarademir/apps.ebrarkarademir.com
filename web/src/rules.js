@@ -547,89 +547,109 @@ export const rules = {
       ]
     }
   },
-  wordle: {
+  hack: {
     EN: {
-      icon: '[W]',
-      title: 'Wordle',
+      icon: '[%]',
+      title: 'Password Hack',
       players: '1 player',
-      duration: '2–5 min',
-      goal: 'Guess the hidden word in 6 tries or fewer.',
+      duration: '3–15 min',
+      goal: 'Crack as many layers of passwords as you can before the trace meter reaches 100%.',
       steps: [
-        'Pick a language and a word length (5, 6 or 7 letters).',
-        'Type a word of that length and press Enter.',
-        'After each guess the tiles change to give you hints.'
+        'Pick the passwords’ language. Every password is a real everyday word.',
+        'Type a word with as many letters as the password and press Enter. You can try any letters, not just real words, but every try counts.',
+        'Each letter comes back marked: a lit block is the right letter in the right place, a dashed box is a letter the password has somewhere else, and a faint one isn’t in it. Right-place letters show in the password at the top.',
+        'Every try raises the trace by 8%, and time raises it slowly too. Cracking a layer brings it down by 30%, more if you needed fewer tries.',
+        'Passwords get longer as you go deeper: 4 letters at first, then 5, 6 and 7.',
+        'Scan shows one letter of the password in its place, for 12% more trace. It never gives away the last letter.'
       ],
       legend: [
-        { color: 'green', text: 'Right letter, right spot' },
-        { color: 'yellow', text: 'In the word, wrong spot' },
-        { color: 'gray', text: 'Not in the word' }
+        { color: 'green', text: 'Right letter, right place' },
+        { color: 'yellow', text: 'In the password, somewhere else' },
+        { color: 'gray', text: 'Not in the password' }
       ],
       tips: [
-        'Open with a word that has many different vowels.',
-        'Letters can appear more than once.'
+        'Open with a word full of different common letters, then use every hint you get.',
+        'The keyboard remembers: keys light up as you learn which letters are in the password.',
+        'Practice has no trace: pick a length and take your time.',
+        'Esc pauses a run and stops the trace.'
       ]
     },
     TR: {
-      icon: '[W]',
-      title: 'Kelime Oyunu',
+      icon: '[%]',
+      title: 'Şifre Kırıcı',
       players: '1 oyuncu',
-      duration: '2–5 dk',
-      goal: 'Gizli kelimeyi en fazla 6 denemede tahmin et.',
+      duration: '3–15 dk',
+      goal: 'İz göstergesi %100’e ulaşmadan olabildiğince çok şifre katmanı kır.',
       steps: [
-        'Bir dil ve kelime uzunluğu seç (5, 6 veya 7 harf).',
-        'Bu uzunlukta bir kelime yaz ve Enter’a bas.',
-        'Her tahminden sonra kutular değişerek sana ipucu verir.'
+        'Şifrelerin dilini seç. Her şifre gerçek, gündelik bir kelimedir.',
+        'Şifre kaç harfliyse o kadar harfli bir kelime yaz ve Enter’a bas. Sadece gerçek kelimeleri değil, istediğin harfleri deneyebilirsin; ama her deneme sayılır.',
+        'Her harf işaretlenerek döner: dolu kutu doğru harf doğru yerde, kesik çizgili kutu şifrede başka bir yerde olan harf, soluk kutu şifrede olmayan harf. Doğru yerdeki harfler üstteki şifrede görünür.',
+        'Her deneme izi %8 artırır; zaman da yavaşça artırır. Bir katmanı kırmak izi %30, daha az denemeyle kırdıysan daha çok düşürür.',
+        'Derine indikçe şifreler uzar: önce 4 harf, sonra 5, 6 ve 7.',
+        'Tara, şifrenin bir harfini yerinde gösterir; bedeli %12 iz. Son harfi asla vermez.'
       ],
       legend: [
         { color: 'green', text: 'Doğru harf, doğru yer' },
-        { color: 'yellow', text: 'Kelimede var, yeri yanlış' },
-        { color: 'gray', text: 'Kelimede yok' }
+        { color: 'yellow', text: 'Şifrede var, başka yerde' },
+        { color: 'gray', text: 'Şifrede yok' }
       ],
       tips: [
-        'Farklı ünlü harfler içeren bir kelimeyle başla.',
-        'Bir harf kelimede birden fazla kez geçebilir.'
+        'Farklı ve sık kullanılan harflerle dolu bir kelimeyle başla, sonra her ipucunu kullan.',
+        'Klavye hatırlar: hangi harflerin şifrede olduğunu öğrendikçe tuşlar işaretlenir.',
+        'Alıştırmada iz yoktur: bir uzunluk seç ve acele etme.',
+        'Esc turu duraklatır ve izi durdurur.'
       ]
     },
     RU: {
-      icon: '[W]',
-      title: 'Wordle',
+      icon: '[%]',
+      title: 'Взлом пароля',
       players: '1 игрок',
-      duration: '2–5 мин',
-      goal: 'Угадай загаданное слово не больше чем за 6 попыток.',
+      duration: '3–15 мин',
+      goal: 'Взломай как можно больше слоёв паролей, пока след не дошёл до 100%.',
       steps: [
-        'Выбери язык и длину слова (5, 6 или 7 букв).',
-        'Введи слово такой длины и нажми Enter.',
-        'После каждой попытки плитки меняются и дают подсказки.'
+        'Выбери язык паролей. Каждый пароль — настоящее обычное слово.',
+        'Набери слово из стольких же букв, сколько в пароле, и нажми Enter. Можно пробовать любые буквы, не только настоящие слова, но каждая попытка на счету.',
+        'Каждая буква возвращается с отметкой: светящийся квадрат — нужная буква на своём месте, пунктирный — буква есть в пароле, но в другом месте, тусклый — такой буквы нет. Буквы на своих местах появляются в пароле наверху.',
+        'Каждая попытка поднимает след на 8%, и время понемногу тоже. Взломанный слой снижает его на 30%, а при меньшем числе попыток — сильнее.',
+        'Чем глубже, тем длиннее пароли: сначала 4 буквы, потом 5, 6 и 7.',
+        'Скан показывает одну букву пароля на её месте за +12% следа. Последнюю букву он никогда не выдаёт.'
       ],
       legend: [
-        { color: 'green', text: 'Буква есть и стоит на своём месте' },
-        { color: 'yellow', text: 'Буква есть в слове, но не на этом месте' },
-        { color: 'gray', text: 'Буквы нет в слове' }
+        { color: 'green', text: 'Нужная буква на своём месте' },
+        { color: 'yellow', text: 'Есть в пароле, но в другом месте' },
+        { color: 'gray', text: 'Нет в пароле' }
       ],
       tips: [
-        'Начни со слова, в котором много разных гласных.',
-        'Буквы могут повторяться.'
+        'Начинай со слова из разных частых букв, а потом используй каждую подсказку.',
+        'Клавиатура запоминает: клавиши отмечаются, как только ты узнаёшь, какие буквы есть в пароле.',
+        'В тренировке следа нет: выбери длину и не спеши.',
+        'Esc ставит взлом на паузу и останавливает след.'
       ]
     },
     KK: {
-      icon: '[W]',
-      title: 'Wordle',
+      icon: '[%]',
+      title: 'Құпиясөз бұзу',
       players: '1 ойыншы',
-      duration: '2–5 мин',
-      goal: 'Жасырын сөзді 6 немесе одан аз талпыныста тап.',
+      duration: '3–15 мин',
+      goal: 'Із өлшегіші 100%-ға жеткенше құпиясөздердің мүмкіндігінше көп қабатын бұз.',
       steps: [
-        'Тіл мен сөз ұзындығын таңда (5, 6 немесе 7 әріп).',
-        'Сол ұзындықтағы сөзді жазып, Enter бас.',
-        'Әр болжамнан кейін тақташалар өзгеріп, кеңес береді.'
+        'Құпиясөздердің тілін таңда. Әр құпиясөз — нағыз күнделікті сөз.',
+        'Құпиясөзде қанша әріп болса, сонша әріптен тұратын сөз жазып, Enter бас. Тек нағыз сөздерді емес, кез келген әріптерді көре аласың, бірақ әр әрекет есептеледі.',
+        'Әр әріп белгімен оралады: жарқыраған шаршы — дұрыс әріп өз орнында, үзік сызықты шаршы — әріп құпиясөзде бар, бірақ басқа орында, күңгірт шаршы — ондай әріп жоқ. Өз орнындағы әріптер жоғарыдағы құпиясөзде көрінеді.',
+        'Әр әрекет ізді 8%-ға көтереді, уақыт та баяу көтереді. Қабатты бұзу ізді 30%-ға, аз әрекетпен бұзсаң, одан да көп төмендетеді.',
+        'Тереңдеген сайын құпиясөздер ұзарады: алдымен 4 әріп, сосын 5, 6 және 7.',
+        'Сканер құпиясөздің бір әрпін өз орнында көрсетеді, бағасы — 12% із. Соңғы әріпті ешқашан ашпайды.'
       ],
       legend: [
-        { color: 'green', text: 'Әріп дұрыс, орны да дұрыс' },
-        { color: 'yellow', text: 'Әріп сөзде бар, бірақ орны басқа' },
-        { color: 'gray', text: 'Әріп сөзде жоқ' }
+        { color: 'green', text: 'Дұрыс әріп, өз орнында' },
+        { color: 'yellow', text: 'Құпиясөзде бар, басқа орында' },
+        { color: 'gray', text: 'Құпиясөзде жоқ' }
       ],
       tips: [
-        'Әртүрлі дауысты дыбыстары көп сөзден баста.',
-        'Әріптер қайталануы мүмкін.'
+        'Әртүрлі жиі кездесетін әріптерге толы сөзден баста, сосын әр кеңесті пайдалан.',
+        'Пернетақта есте сақтайды: құпиясөзде қандай әріптер барын білген сайын пернелер белгіленеді.',
+        'Жаттығуда із жоқ: ұзындықты таңдап, асықпа.',
+        'Esc бұзуды кідіртіп, ізді тоқтатады.'
       ]
     }
   },

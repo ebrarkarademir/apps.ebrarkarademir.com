@@ -4,7 +4,6 @@ import LanguageMenu from './components/LanguageMenu.vue'
 import TermWindow from './components/TermWindow.vue'
 import GameMenu from './views/GameMenu.vue'
 import UsersView from './views/UsersView.vue'
-// import WordleGame from './games/WordleGame.vue' // under development
 import NumberGuessingGame from './games/NumberGuessingGame.vue'
 import BottleSpinGame from './games/BottleSpinGame.vue'
 import CasusKimGame from './games/CasusKimGame.vue'
@@ -16,6 +15,7 @@ import FutsalGame from './games/FutsalGame.vue'
 import DoodleGame from './games/DoodleGame.vue'
 import SudokuGame from './games/SudokuGame.vue'
 import ChessGame from './games/ChessGame.vue'
+import HackGame from './games/HackGame.vue'
 import { translations } from './translations'
 
 // Sunny Square, the 3D world, loads only when it's opened: three.js is far bigger than the rest
@@ -130,6 +130,17 @@ const games = computed(() => [
     mode: t.value.cardModeOnline
   },
   {
+    id: 'hack',
+    category: 'solo',
+    title: t.value.hackTitle,
+    description: t.value.hackDesc,
+    icon: '[%]',
+    art: cardArt.hack,
+    players: '1',
+    duration: minutes('3–15'),
+    mode: t.value.cardModeSolo
+  },
+  {
     id: 'quiz-race',
     category: ['online', 'party'],
     title: t.value.quizTitle,
@@ -150,18 +161,6 @@ const games = computed(() => [
     players: '1',
     duration: minutes('1–3'),
     mode: t.value.cardModeSolo
-  },
-  {
-    id: 'wordle',
-    category: 'solo',
-    title: t.value.wordleTitle,
-    description: t.value.wordleDesc,
-    icon: '[W]',
-    art: cardArt.wordle,
-    players: '1',
-    duration: minutes('2–5'),
-    mode: t.value.cardModeSolo,
-    soon: true
   },
   {
     id: 'bottle-spin',
@@ -509,7 +508,7 @@ const currentRules = computed(() => {
 })
 const rulesText = computed(() => rulesLabels[currentLang.value] || rulesLabels.EN)
 
-// Same tile styles as Wordle: inverted = right spot, dashed = wrong spot, faint = not in word
+// Same tile styles as Password Hack: inverted = right spot, dashed = wrong spot, faint = not in word
 const legendStyles = {
   green: 'term-inverse',
   yellow: 'border border-dashed border-term',
@@ -713,13 +712,11 @@ onUnmounted(() => {
         @go-back="closeGame"
       />
 
-      <!-- Wordle is under development: re-enable this block to restore the game
-      <WordleGame
-        v-else-if="selectedGame === 'wordle'"
+      <HackGame
+        v-else-if="selectedGame === 'hack'"
         :t="t"
         @go-back="closeGame"
       />
-      -->
 
       <BottleSpinGame
         v-else-if="selectedGame === 'bottle-spin'"

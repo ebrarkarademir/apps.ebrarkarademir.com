@@ -8,10 +8,12 @@ import { haptics } from './haptics'
 // over the play area in the default slot. While it's open the page behind it doesn't scroll,
 // and M switches the sound.
 
-defineProps({
+const props = defineProps({
   t: { type: Object, required: true },
   title: { type: String, required: true },
-  exitLabel: { type: String, required: true }
+  exitLabel: { type: String, required: true },
+  // Off for games where M is something you type
+  soundKey: { type: Boolean, default: true }
 })
 
 const emit = defineEmits(['exit'])
@@ -39,7 +41,7 @@ function onSwitch (event, toggle) {
 }
 
 function onKey (event) {
-  if (event.code === 'KeyM' && !event.repeat && !event.ctrlKey && !event.metaKey && !event.altKey) toggleSound()
+  if (props.soundKey && event.code === 'KeyM' && !event.repeat && !event.ctrlKey && !event.metaKey && !event.altKey) toggleSound()
 }
 
 onMounted(() => {

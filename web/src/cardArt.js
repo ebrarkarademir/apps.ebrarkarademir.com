@@ -73,10 +73,12 @@ export const cardArt = {
     '+---------+',
     ' [^] ? [v]'
   ],
-  wordle: [
-    '[W][O][R][D]',
-    '[ ][ ][ ][ ]',
-    '[ ][ ][ ][ ]'
+  hack: [
+    'login: root',
+    'pass: ****',
+    '[C][_][D][E]',
+    'TRACE [###.]',
+    '> ACCESS?_'
   ],
   'bottle-spin': [
     '   [_]',
