@@ -485,6 +485,92 @@ export const rules = {
       ]
     }
   },
+  crater: {
+    EN: {
+      icon: '[~]',
+      title: 'Crater Duel',
+      players: '2 players online, others can watch',
+      duration: '3–8 min',
+      goal: 'Knock out all the other player’s units before they knock out yours.',
+      steps: [
+        'One person creates a room and picks the units each side gets and the time to aim; the other joins with the code. Every match is on a new map.',
+        'Each turn you both aim at the same time. Pick one of your units (tap it, or Tab), walk it a little if you like, choose a weapon and drag anywhere on the field to aim: pull back like a slingshot, further for more power. Then press Fire.',
+        'When both have fired, or the time is up, both shots fly together. Gravity pulls them down and the wind (shown at the top) pushes them sideways.',
+        'Shell bursts where it lands. Grenade bounces and goes off after a few seconds. Cluster bursts into five small bombs.',
+        'Every burst blasts a crater out of the ground, hurts units nearby and throws them. Units fall into holes, a hard landing hurts, and the sea takes anyone who falls in.',
+        'From turn 8 the sea rises every turn, so every battle ends. The last side with units standing wins; if both go down together it’s a draw.'
+      ],
+      tips: [
+        'The dotted line shows only the start of the flight, without the wind: the rest is up to you.',
+        'Blast the ground under an enemy and let the fall and the sea do the rest.',
+        'Shots that meet in the air both go off.',
+        'On a narrow screen, the strip at the top shows the whole map: tap it to look around.'
+      ]
+    },
+    TR: {
+      icon: '[~]',
+      title: 'Krater Düellosu',
+      players: 'Çevrim içi 2 oyuncu, diğerleri izler',
+      duration: '3–8 dk',
+      goal: 'Rakibin bütün birliklerini, o seninkileri devirmeden önce devir.',
+      steps: [
+        'Bir kişi oda oluşturur, taraf başına birlik sayısını ve nişan süresini seçer; diğeri kodla katılır. Her maç yeni bir haritada oynanır.',
+        'Her turda ikiniz aynı anda nişan alırsınız. Birliklerinden birini seç (ona dokun ya da Tab), istersen biraz yürüt, bir silah seç ve nişan için sahada herhangi bir yerden sürükle: sapan gibi geri çek, ne kadar çekersen o kadar güçlü. Sonra Ateş’e bas.',
+        'İkiniz de ateş edince ya da süre bitince iki atış birlikte uçar. Yerçekimi aşağı çeker, rüzgâr (üstte gösterilir) yana iter.',
+        'Mermi düştüğü yerde patlar. Bomba seker ve birkaç saniye sonra patlar. Parça bombası beş küçük bombaya ayrılır.',
+        'Her patlama yerde bir krater açar, yakındaki birliklere hasar verir ve onları fırlatır. Birlikler çukurlara düşer, sert iniş canı yakar ve denize düşen gider.',
+        '8. turdan sonra deniz her tur yükselir, böylece her savaş biter. Ayakta birliği kalan son taraf kazanır; ikisi birlikte düşerse berabere.'
+      ],
+      tips: [
+        'Noktalı çizgi rüzgâr olmadan uçuşun sadece başını gösterir: gerisi sana kalmış.',
+        'Düşmanın altındaki toprağı patlat, düşüş ve deniz gerisini halletsin.',
+        'Havada karşılaşan atışlar birlikte patlar.',
+        'Dar ekranda üstteki şerit bütün haritayı gösterir: etrafa bakmak için ona dokun.'
+      ]
+    },
+    RU: {
+      icon: '[~]',
+      title: 'Дуэль кратеров',
+      players: '2 игрока онлайн, остальные смотрят',
+      duration: '3–8 мин',
+      goal: 'Выбей всех бойцов соперника раньше, чем он выбьет твоих.',
+      steps: [
+        'Один создаёт комнату и выбирает число бойцов у каждой стороны и время на прицел; второй входит по коду. Каждый матч — на новой карте.',
+        'Каждый ход вы оба целитесь одновременно. Выбери бойца (нажми на него или Tab), при желании пройди немного, выбери оружие и целься, перетаскивая по полю: оттяни назад, как рогатку, — чем дальше, тем сильнее. Затем нажми «Огонь».',
+        'Когда оба выстрелили или время вышло, оба выстрела летят вместе. Гравитация тянет вниз, а ветер (показан сверху) сносит вбок.',
+        'Снаряд взрывается там, где упал. Граната отскакивает и взрывается через несколько секунд. Кассета разлетается на пять маленьких бомб.',
+        'Каждый взрыв выбивает в земле кратер, ранит бойцов рядом и отбрасывает их. Бойцы падают в ямы, жёсткое приземление ранит, а упавшего в море уже не спасти.',
+        'С 8-го хода море поднимается каждый ход, так что любой бой заканчивается. Побеждает сторона, у которой последней остались бойцы; если обе выбыли одновременно — ничья.'
+      ],
+      tips: [
+        'Пунктир показывает только начало полёта и без ветра: остальное — на тебе.',
+        'Взорви землю под врагом, а падение и море сделают остальное.',
+        'Выстрелы, встретившиеся в воздухе, взрываются оба.',
+        'На узком экране полоса сверху показывает всю карту: нажми на неё, чтобы осмотреться.'
+      ]
+    },
+    KK: {
+      icon: '[~]',
+      title: 'Кратер жекпе-жегі',
+      players: 'Онлайн 2 ойыншы, қалғандары көреді',
+      duration: '3–8 мин',
+      goal: 'Қарсыластың барлық жауынгерін ол сенікін құлатқанша құлат.',
+      steps: [
+        'Бір адам бөлме ашып, әр жақтағы жауынгер санын және көздеу уақытын таңдайды; екіншісі кодпен кіреді. Әр матч жаңа картада өтеді.',
+        'Әр жүрісте екеуің бір мезетте көздейсің. Жауынгеріңді таңда (оны бас не Tab), қаласаң сәл жүргіз, қару таңда да алаңның кез келген жерінен сүйреп көзде: салбырауық сияқты артқа тарт, неғұрлым алыс тартсаң, соғұрлым күшті. Сосын «Ату» бас.',
+        'Екеуің де атқанда не уақыт біткенде екі оқ бірге ұшады. Ауырлық күші төмен тартады, ал жел (жоғарыда көрсетілген) жанына итереді.',
+        'Снаряд түскен жерінде жарылады. Граната секіріп, бірнеше секундтан кейін жарылады. Кассета бес кішкене бомбаға бөлінеді.',
+        'Әр жарылыс жерде кратер ашады, жақын жауынгерлерді жаралап, лақтырып жібереді. Жауынгерлер шұңқырға құлайды, қатты қону жаралайды, ал теңізге түскен жоғалады.',
+        '8-жүрістен бастап теңіз әр жүріс сайын көтеріледі, сондықтан кез келген шайқас аяқталады. Жауынгері соңғы болып қалған жақ жеңеді; екеуі бірге құласа — тепе-тең.'
+      ],
+      tips: [
+        'Нүктелі сызық ұшудың тек басын, жел жоқ кездегідей көрсетеді: қалғаны өзіңе байланысты.',
+        'Жаудың астындағы жерді жарып жібер, құлау мен теңіз қалғанын бітіреді.',
+        'Ауада кездескен оқтардың екеуі де жарылады.',
+        'Тар экранда жоғарғы жолақ бүкіл картаны көрсетеді: айналаға қарау үшін оны бас.'
+      ]
+    }
+  },
   'number-guess': {
     EN: {
       icon: '[#]',
