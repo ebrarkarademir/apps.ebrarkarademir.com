@@ -4,7 +4,7 @@ import confetti from 'canvas-confetti'
 import { useOnlineRoom } from '../online/useOnlineRoom'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import DoodleBoard from './doodle/DoodleBoard.vue'
-import { createSketch, SHADES, ERASER, SIZES } from './doodle/sketch'
+import { createSketch, COLORS, START_COLOR, ERASER, SIZES } from './doodle/sketch'
 import { WORDS, LANGS, shownWord, isRightGuess, isCloseGuess, hintFor, pickChoices } from './doodle/words'
 import { sound } from './ascii/sound'
 import { haptics } from './ascii/haptics'
@@ -34,6 +34,11 @@ const TOOLS = [
   { id: 'pen', icon: '[/]', key: 'P', label: 'doodlePen' },
   { id: 'fill', icon: '[%]', key: 'F', label: 'doodleFill' },
   { id: 'eraser', icon: '[x]', key: 'E', label: 'doodleEraser' }
+]
+// The palette's color names, in the order of COLORS
+const COLOR_NAMES = [
+  'doodleWhite', 'doodleRed', 'doodleOrange', 'doodleYellow', 'doodleGreen', 'doodleBlue',
+  'doodleGray', 'doodleBrown', 'doodlePink', 'doodlePurple', 'doodleLightBlue', 'doodleDarkGreen'
 ]
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
@@ -354,7 +359,7 @@ watch(() => [view.value?.turn, phase.value], ([turn, stage]) => {
 // ---------- Drawing (the drawer) ----------
 
 const tool = ref('pen')
-const shade = ref(0)
+const color = ref(START_COLOR)
 const size = ref(1)
 
 const amDrawer = computed(() => !!view.value && view.value.drawer === room.myId)
@@ -377,7 +382,7 @@ function flushPoints () {
 function startStroke (x, y) {
   if (!canDraw.value) return
   flushPoints()
-  const op = { id: newId(), t: 'line', c: tool.value === 'eraser' ? ERASER : SHADES[shade.value], w: SIZES[size.value], p: [x, y] }
+  const op = { id: newId(), t: 'line', c: tool.value === 'eraser' ? ERASER : COLORS[color.value], w: SIZES[size.value], p: [x, y] }
   if (!sketch.add(op)) return
   current = op.id
   send({ k: 'line', id: op.id, c: op.c, w: op.w, p: op.p })
@@ -396,7 +401,7 @@ function endStroke () {
 
 function fillAt (x, y) {
   if (!canDraw.value) return
-  const op = { id: newId(), t: 'fill', c: SHADES[shade.value], x, y }
+  const op = { id: newId(), t: 'fill', c: COLORS[color.value], x, y }
   if (sketch.add(op)) send({ k: 'fill', id: op.id, c: op.c, x, y })
 }
 
@@ -413,8 +418,8 @@ function clearBoard () {
   if (sketch.add({ id, t: 'clear' })) send({ k: 'clear', id })
 }
 
-function pickShade (index) {
-  shade.value = index
+function pickColor (index) {
+  color.value = index
   if (tool.value === 'eraser') tool.value = 'pen'
 }
 
@@ -492,6 +497,20 @@ const turnResults = computed(() =>
     .map(([id, n]) => ({ id, n, name: nameOf(id), drew: id === view.value.drawer }))
     .sort((a, b) => b.n - a.n)
 )
+
+// On a phone the turn (word, clock, board and tools) is taller than what's left under the menu
+// bar, so each new turn brings its top up to just under the bar, with the whole board in view.
+// Not while someone is typing: the keyboard has the screen then.
+const turnEl = ref(null)
+watch(() => view.value?.turn, async (turn, before) => {
+  if (!turn || before === undefined || window.innerWidth >= 1024 || document.activeElement?.matches('input, textarea')) return
+  await nextTick()
+  const top = turnEl.value?.getBoundingClientRect().top
+  if (top === undefined) return
+  const bar = document.querySelector('nav')?.getBoundingClientRect().bottom || 0
+  const offset = top - bar - 8
+  if (Math.abs(offset) > 4) window.scrollTo({ top: window.scrollY + offset, behavior: 'smooth' })
+})
 
 // ---------- Chat ----------
 
@@ -654,7 +673,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
     </div>
 
     <!-- A turn: picking a word, drawing it, seeing it -->
-    <div v-else class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start" @pointerdown="sound.unlock()">
+    <div v-else ref="turnEl" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start" @pointerdown="sound.unlock()">
       <div class="min-w-0 space-y-2">
         <!-- Round and drawer, the word or its hint, the clock -->
         <div class="flex items-center gap-3 min-h-12">
@@ -688,7 +707,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
         </div>
         <p class="text-xs whitespace-pre overflow-hidden term-muted" aria-hidden="true">[{{ timerBar }}]</p>
 
-        <div class="mx-auto w-full" :style="{ maxWidth: 'max(20rem, calc((100dvh - 17rem) * 4 / 3))' }">
+        <div class="board-wrap mx-auto w-full" :style="{ maxWidth: 'max(20rem, calc((100dvh - 17rem) * 4 / 3))' }">
           <DoodleBoard
             :sketch="sketch"
             :canDraw="canDraw"
@@ -746,7 +765,8 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
            first, right under the drawing -->
       <div class="min-w-0 flex flex-col gap-3">
         <div v-if="amDrawer && phase === 'draw'" class="order-first space-y-2">
-          <div class="grid grid-cols-3 gap-1" role="group" :aria-label="t.doodleTools">
+          <!-- Pen, fill and eraser, then the three brush sizes -->
+          <div class="grid grid-cols-[repeat(3,minmax(0,1fr))_repeat(3,2.25rem)] gap-1">
             <button
               v-for="item in TOOLS"
               :key="item.id"
@@ -756,38 +776,36 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
               :class="toolClass(tool === item.id)"
               @click="tool = item.id"
             >
-              <span class="max-[379px]:hidden" aria-hidden="true">{{ item.icon }}</span>
-              <span>{{ t[item.label] }}</span>
+              <span class="max-[459px]:hidden" aria-hidden="true">{{ item.icon }}</span>
+              <span class="truncate">{{ t[item.label] }}</span>
+            </button>
+            <button
+              v-for="(width, index) in SIZES"
+              :key="width"
+              type="button"
+              :aria-label="fmt(t.doodleSize, { n: index + 1 })"
+              :aria-pressed="size === index"
+              :title="`${fmt(t.doodleSize, { n: index + 1 })} (${index + 1})`"
+              :class="['size term-option min-h-10 px-0', { 'is-active': size === index }]"
+              @click="size = index"
+            >
+              <span class="dot" :style="{ width: `${4 + index * 5}px`, height: `${4 + index * 5}px` }" aria-hidden="true"></span>
             </button>
           </div>
 
-          <div class="grid grid-cols-[4fr_3fr] gap-3">
-            <div class="grid grid-cols-4 gap-1" role="group" :aria-label="t.doodleShades">
-              <button
-                v-for="(color, index) in SHADES"
-                :key="color"
-                type="button"
-                :aria-label="fmt(t.doodleShade, { n: index + 1 })"
-                :aria-pressed="shade === index && tool !== 'eraser'"
-                :class="['swatch', { 'is-active': shade === index && tool !== 'eraser' }]"
-                :style="{ background: color }"
-                @click="pickShade(index)"
-              ></button>
-            </div>
-            <div class="grid grid-cols-3 gap-1" role="group" :aria-label="t.doodleSizes">
-              <button
-                v-for="(width, index) in SIZES"
-                :key="width"
-                type="button"
-                :aria-label="fmt(t.doodleSize, { n: index + 1 })"
-                :aria-pressed="size === index"
-                :title="`${fmt(t.doodleSize, { n: index + 1 })} (${index + 1})`"
-                :class="['size term-option aspect-square w-full min-h-0 px-0', { 'is-active': size === index }]"
-                @click="size = index"
-              >
-                <span class="dot" :style="{ width: `${4 + index * 5}px`, height: `${4 + index * 5}px` }" aria-hidden="true"></span>
-              </button>
-            </div>
+          <!-- The colors, two rows of six -->
+          <div class="grid grid-cols-6 gap-1" role="group" :aria-label="t.doodleColors">
+            <button
+              v-for="(hex, index) in COLORS"
+              :key="hex"
+              type="button"
+              :aria-label="t[COLOR_NAMES[index]]"
+              :title="t[COLOR_NAMES[index]]"
+              :aria-pressed="color === index && tool !== 'eraser'"
+              :class="['swatch', { 'is-active': color === index && tool !== 'eraser' }]"
+              :style="{ background: hex }"
+              @click="pickColor(index)"
+            ></button>
           </div>
 
           <div class="grid grid-cols-3 gap-1">
@@ -874,7 +892,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
 
 .swatch {
   width: 100%;
-  aspect-ratio: 1;
+  height: 2.25rem;
   border: 1px solid var(--color-term-low);
   box-shadow: inset 0 0 0 3px var(--color-black);
 }
@@ -882,6 +900,20 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
   border-color: var(--color-term);
   outline: 1px solid var(--color-term);
   outline-offset: 2px;
+}
+
+/* On a phone the drawing goes edge to edge, out through the page's and the window's side
+   padding (1rem each) and the window's 1px frame, for the biggest board the screen allows */
+@media (max-width: 639px) {
+  .board-wrap {
+    width: calc(100% + 4rem + 2px);
+    max-width: none !important;
+    margin-left: calc(-2rem - 1px);
+  }
+  .board-wrap :deep(.board) {
+    border-left-width: 0;
+    border-right-width: 0;
+  }
 }
 
 .size .dot {

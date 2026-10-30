@@ -10,15 +10,22 @@
 
 export const WIDTH = 800
 export const HEIGHT = 600
-// The site's phosphor greens, brightest first, and black to erase with
-export const SHADES = ['#00ff00', '#00b300', '#007a00', '#002600']
+// The basic colors, as the palette lays them out in two rows of six, and black to erase with.
+// The site's phosphor green is the one a turn starts with.
+export const COLORS = [
+  '#ffffff', '#ff3b30', '#ff9500', '#ffe100', '#00ff00', '#2f6bff',
+  '#9e9e9e', '#8b5a2b', '#ff5fc8', '#a24bff', '#00d5ff', '#007a00'
+]
+export const START_COLOR = COLORS.indexOf('#00ff00')
 export const ERASER = '#000000'
+// The greens the palette used to have, so a drawing from a page that hasn't updated yet still shows
+const OLD_COLORS = ['#00b300', '#002600']
 export const SIZES = [4, 10, 24]
 // Points per drawing, so one runaway turn can't flood the network, and a whole drawing still
 // fits in one message for someone who joins late
 export const MAX_POINTS = 20000
 // How far (summed over r, g, b) a pixel may be off the clicked color and still get filled.
-// Below the darkest green's 38, so that green can fill an empty board too.
+// Below the darkest color's distance from the black board, so every color can fill an empty board.
 const FILL_TOLERANCE = 24
 
 const rgb = (hex) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16))
@@ -189,7 +196,7 @@ function coords (list) {
   return out
 }
 
-const allowed = new Set([...SHADES, ERASER])
+const allowed = new Set([...COLORS, ...OLD_COLORS, ERASER])
 
 // Operations arrive from other devices, so only well-formed ones get painted
 function cleanOp (op) {
