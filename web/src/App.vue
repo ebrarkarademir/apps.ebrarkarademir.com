@@ -16,6 +16,7 @@ import FutsalGame from './games/FutsalGame.vue'
 import DoodleGame from './games/DoodleGame.vue'
 import SudokuGame from './games/SudokuGame.vue'
 import ChessGame from './games/ChessGame.vue'
+import DamaGame from './games/DamaGame.vue'
 import HackGame from './games/HackGame.vue'
 import { translations } from './translations'
 
@@ -142,6 +143,17 @@ const games = computed(() => [
     mode: t.value.cardModeOnline
   },
   {
+    id: 'dama',
+    category: 'online',
+    title: t.value.damaTitle,
+    description: t.value.damaDesc,
+    icon: '[O]',
+    art: cardArt.dama,
+    players: '2',
+    duration: minutes('10–30'),
+    mode: t.value.cardModeOnline
+  },
+  {
     id: 'hack',
     category: 'solo',
     title: t.value.hackTitle,
@@ -256,7 +268,7 @@ const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
 
 // An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
 // Older links used /?join=CODE&game=quiz-race.
-const ONLINE_GAMES = ['flappy', 'tanks', 'crater', 'futsal', 'doodle', 'sudoku', 'chess', 'quiz-race', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['flappy', 'tanks', 'crater', 'futsal', 'doodle', 'sudoku', 'chess', 'dama', 'quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const initialRoute = parsePath(window.location.pathname)
 const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
@@ -715,6 +727,14 @@ onUnmounted(() => {
         :t="t"
         :initialCode="inviteCodeFor('chess')"
         :hostRoom="hostRoomFor('chess')"
+        @go-back="closeGame"
+      />
+
+      <DamaGame
+        v-else-if="selectedGame === 'dama'"
+        :t="t"
+        :initialCode="inviteCodeFor('dama')"
+        :hostRoom="hostRoomFor('dama')"
         @go-back="closeGame"
       />
 

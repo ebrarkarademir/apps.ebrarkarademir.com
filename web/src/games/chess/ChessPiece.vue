@@ -5,7 +5,9 @@ import { PIECES, SIDES, LINE_WIDTH } from './pieces'
 // One chess piece on the page, drawn the same as on the board: the players' bars, the pieces
 // taken, the promotion choice and the result. It's as big as its font size unless styled.
 const props = defineProps({
-  type: { type: String, required: true }, // p n b r q k
+  type: { type: String, required: true }, // p n b r q k, or a key of `set`
+  // Another game's pieces, in the format of pieces.js
+  set: { type: Object, default: () => PIECES },
   color: { type: String, required: true } // w | b
 })
 
@@ -20,7 +22,7 @@ const side = computed(() => SIDES[props.color] || SIDES.w)
     :style="{ filter: `drop-shadow(0 0 0.12em ${side.glow})` }"
   >
     <path
-      v-for="(part, index) in PIECES[type]"
+      v-for="(part, index) in set[type]"
       :key="index"
       :d="part.d"
       :fill="part.line ? 'none' : part.ink ? side.line : side.fill"

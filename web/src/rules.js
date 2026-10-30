@@ -571,6 +571,92 @@ export const rules = {
       ]
     }
   },
+  dama: {
+    EN: {
+      icon: '[O]',
+      title: 'Dama ASCII',
+      players: '2 players online, others can watch',
+      duration: '10–30 min',
+      goal: 'Take all of the other player’s stones, or leave them without a move.',
+      steps: [
+        'One person creates a room and picks the clock and which side they play; the other joins with the code. Anyone else who joins watches. White moves first.',
+        'Each side starts with 16 stones on its second and third rows. A stone steps one square forward or sideways, never back and never diagonally.',
+        'A stone takes by jumping an enemy stone right next to it, forward or sideways, onto the empty square beyond. If it can take again from there, it must, in the same move. Taken stones leave the board at once.',
+        'Taking is compulsory, and if there are several ways you must choose one that takes the most stones. A king counts as one stone like any other.',
+        'A stone that reaches the far row becomes a king (a dama), shown as a crowned double stone. A king moves any distance along rows and columns, and takes from any distance, landing on any empty square past the stone it jumps, but may not turn straight back between two jumps.',
+        'You lose when you have no stones or no move left, when you resign or when your clock runs out. A lone king against a lone stone is a draw, and so are 50 moves each with no capture and no stone moving.'
+      ],
+      tips: [
+        'Tap a stone that can’t move while a capture is waiting and the stones that must take light up.',
+        'On a long capture, tap each square the stone lands on in turn; as soon as only one way is left, the move is made.',
+        'A stone that reaches the far row in the middle of a capture finishes it as a stone and is crowned at the end.',
+        'Keep your stones together: a lone stone is easy to take, and a wall of stones is hard to get through.'
+      ]
+    },
+    TR: {
+      icon: '[O]',
+      title: 'Dama ASCII',
+      players: 'Çevrim içi 2 oyuncu, diğerleri izler',
+      duration: '10–30 dk',
+      goal: 'Rakibin bütün taşlarını al ya da onu hamlesiz bırak.',
+      steps: [
+        'Bir kişi oda oluşturup süreyi ve hangi renkle oynayacağını seçer; diğeri kodla katılır. Sonradan katılan herkes izler. İlk hamle beyazın.',
+        'Her taraf ikinci ve üçüncü sıralarında 16 taşla başlar. Taş bir kare ileri ya da yana gider; geri ve çapraz gidemez.',
+        'Taş, hemen yanındaki rakip taşın üzerinden ileri ya da yana atlayıp arkasındaki boş kareye konarak alır. Oradan bir daha alabiliyorsa aynı hamlede almak zorundadır. Alınan taşlar hemen tahtadan kalkar.',
+        'Taş almak zorunludur; birden fazla yol varsa en çok taş alanı seçmelisin. Dama da diğer taşlar gibi bir taş sayılır.',
+        'Karşı sıraya ulaşan taş dama olur ve taçlı çift taş olarak görünür. Dama satır ve sütunlar boyunca istediği kadar gider, uzaktan alır ve atladığı taşın ardındaki herhangi bir boş kareye konar; ama iki alma arasında tam geri dönemez.',
+        'Taşın ya da hamlen kalmazsa, terk edersen ya da süren biterse kaybedersin. Tek dama tek taşa karşı berabere biter; taş alınmadan ve taş ilerlemeden 50’şer hamle de beraberliktir.'
+      ],
+      tips: [
+        'Bir alma beklerken gidemeyen bir taşa dokunursan, almak zorunda olan taşlar parlar.',
+        'Uzun bir almada taşın indiği her kareye sırayla dokun; tek bir yol kaldığı anda hamle yapılır.',
+        'Alma sırasında karşı sıraya ulaşan taş, almayı taş olarak bitirir ve hamlenin sonunda dama olur.',
+        'Taşlarını bir arada tut: yalnız taş kolay alınır, taşlardan bir duvarı aşmak zordur.'
+      ]
+    },
+    RU: {
+      icon: '[O]',
+      title: 'Дама ASCII',
+      players: '2 игрока онлайн, остальные смотрят',
+      duration: '10–30 мин',
+      goal: 'Возьми все шашки соперника или оставь его без ходов.',
+      steps: [
+        'Один создаёт комнату и выбирает часы и цвет своих шашек; второй входит по коду. Все, кто войдёт после, смотрят. Первыми ходят белые.',
+        'У каждой стороны 16 шашек на второй и третьей горизонталях. Шашка ходит на одну клетку вперёд или вбок — никогда назад и никогда по диагонали.',
+        'Шашка бьёт, перепрыгивая соседнюю шашку соперника вперёд или вбок на пустую клетку за ней. Если оттуда можно бить дальше — нужно бить в тот же ход. Взятые шашки сразу снимаются с доски.',
+        'Бить обязательно, и из нескольких вариантов нужно выбрать тот, где берётся больше всего шашек. Дамка считается одной шашкой, как любая другая.',
+        'Шашка, дошедшая до последней горизонтали, становится дамкой — двойной шашкой с короной. Дамка ходит на любое расстояние по горизонталям и вертикалям и бьёт издалека, вставая на любую пустую клетку за побитой шашкой, но не может развернуться назад между двумя взятиями.',
+        'Ты проигрываешь, если у тебя не осталось шашек или ходов, если сдаёшься или если кончилось время. Одна дамка против одной шашки — ничья; ничья и после 50 ходов с каждой стороны без взятий и ходов простыми.'
+      ],
+      tips: [
+        'Если нажать на шашку, которая не может ходить, когда нужно бить, подсветятся шашки, которые обязаны бить.',
+        'При длинном взятии нажимай по очереди каждую клетку, куда встаёт шашка; как только остаётся один вариант, ход делается сам.',
+        'Шашка, дошедшая до последней горизонтали посреди взятия, заканчивает его простой и становится дамкой в конце хода.',
+        'Держи шашки вместе: одиночную легко взять, а через стену из шашек трудно пройти.'
+      ]
+    },
+    KK: {
+      icon: '[O]',
+      title: 'Дама ASCII',
+      players: 'Онлайн 2 ойыншы, қалғандары көреді',
+      duration: '10–30 мин',
+      goal: 'Қарсыластың барлық тасын ал немесе оны жүріссіз қалдыр.',
+      steps: [
+        'Бір адам бөлме ашып, сағатты және өз тасының түсін таңдайды; екіншісі кодпен кіреді. Кейін кірген барлық адам көреді. Алғашқы жүріс ақтардікі.',
+        'Әр жақ екінші және үшінші қатарындағы 16 таспен бастайды. Тас бір шаршы алға не жанына жүреді — ешқашан артқа және диагональ бойымен емес.',
+        'Тас іргесіндегі қарсылас тасынан алға не жанына секіріп, оның арғы жағындағы бос шаршыға түсу арқылы алады. Ол жерден тағы ала алса, сол жүрісте алуы міндетті. Алынған тастар тақтадан бірден алынады.',
+        'Алу міндетті, ал бірнеше жол болса, ең көп тас алатынын таңдау керек. Дамка да кез келген тас сияқты бір тас болып саналады.',
+        'Қарама-қарсы шетке жеткен тас дамка болады — тәжі бар қос тас болып көрінеді. Дамка жолдар мен бағандар бойымен кез келген қашықтыққа жүреді, алыстан алады және секірген тасының арғы жағындағы кез келген бос шаршыға түседі, бірақ екі алудың арасында тура кері бұрыла алмайды.',
+        'Тасың не жүрісің қалмаса, берілсең не уақытың бітсе, жеңілесің. Жалғыз дамка жалғыз тасқа қарсы — тепе-тең; екі жақта да тас алынбаған және тас жүрмеген 50 жүріс те тепе-тең.'
+      ],
+      tips: [
+        'Алу күтіп тұрғанда жүре алмайтын тасты бассаң, алуға міндетті тастар жанады.',
+        'Ұзақ алуда тас түсетін әр шаршыны кезекпен бас; жалғыз жол қалған бойда жүріс өзі жасалады.',
+        'Алу кезінде қарама-қарсы шетке жеткен тас алуды қарапайым тас ретінде аяқтап, жүрістің соңында дамка болады.',
+        'Тастарыңды бірге ұста: жалғыз тасты алу оңай, ал тастардан тұрған қабырғадан өту қиын.'
+      ]
+    }
+  },
   'number-guess': {
     EN: {
       icon: '[#]',

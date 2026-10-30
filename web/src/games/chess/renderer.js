@@ -11,13 +11,18 @@ import { drawBolt } from '../ascii/fx'
 //
 // The pieces look like a real set (see pieces.js): White's glow white, Black's amber.
 
-const LETTERS = 'PNBRQKpnbrqk'
+// The chess set; another game can bring its own (see createRenderer)
+const CHESS = { letters: 'PNBRQKpnbrqk', colorOf, typeOf, pieces: PIECES }
 const PIECE_SIZE = 0.9 // of a square
 const DARK = 'rgba(0, 255, 0, 0.13)'
 const LAST_WASH = 'rgba(0, 255, 0, 0.2)'
-const paths = Object.fromEntries(Object.entries(PIECES).map(([type, parts]) => [type, parts.map(part => ({ ...part, path: new Path2D(part.d) }))]))
 
-export function createRenderer (canvas) {
+/**
+ * `set` is the pieces to draw: { letters (every piece character), colorOf(ch) -> 'w' | 'b',
+ * typeOf(ch) -> a key of `pieces`, pieces (shapes in the format of pieces.js) }.
+ */
+export function createRenderer (canvas, set = CHESS) {
+  const paths = Object.fromEntries(Object.entries(set.pieces).map(([type, parts]) => [type, parts.map(part => ({ ...part, path: new Path2D(part.d) }))]))
   const ctx = canvas.getContext('2d')
   let width = 0
   let height = 0
@@ -31,8 +36,8 @@ export function createRenderer (canvas) {
   // One piece, as big as a square: a glow in its side's color behind it, then each part
   // shaded from the light side and outlined
   function piece (ch) {
-    const side = SIDES[colorOf(ch)]
-    const parts = paths[typeOf(ch)]
+    const side = SIDES[set.colorOf(ch)]
+    const parts = paths[set.typeOf(ch)]
     const size = Math.ceil(cell * dpr)
     const glow = Math.max(2, cell * 0.1) * dpr
     const pad = Math.ceil(glow * 2) + 2
@@ -71,7 +76,7 @@ export function createRenderer (canvas) {
     const cw = cell * dpr
     const glyph = (ch, color, px, lit = true) => paint([ch], () => color, { cw, rh: px * dpr, glow: lit ? Math.max(1.5, cell * 0.08) * dpr : 0, weight: 700 })
     sprites = {
-      piece: Object.fromEntries([...LETTERS].map(ch => [ch, piece(ch)])),
+      piece: Object.fromEntries([...set.letters].map(ch => [ch, piece(ch)])),
       // Where the selected piece can go: a dot on an empty square, brackets round a capture
       dot: glyph('•', DIM, cell * 0.5, false),
       open: glyph('[', GREEN, cell * 0.8),

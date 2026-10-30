@@ -468,6 +468,18 @@ export const translations = {
     chessRematchHint: 'The sides swap',
     chessShowBoard: 'Show the board',
 
+    // Dama ASCII
+    damaTitle: 'Dama ASCII',
+    damaDesc: 'Turkish draughts, one on one — straight moves, flying kings and forced captures, online',
+    damaLobbyHint: 'The host and the first player to join play each other; anyone else watches. Each player gets the time on the clock for the whole game. A rematch swaps the sides.',
+    damaControls: 'Tap or click a stone, then where it lands; on a long capture, tap each landing square in turn · Keyboard: arrow keys and Enter',
+    damaMustTake: 'Must capture!',
+    damaCrowned: 'Dama!',
+    damaAllTaken: 'All taken',
+    damaBlocked: 'Blocked',
+    damaDrawMaterial: 'A lone king can’t beat a lone stone',
+    damaDrawQuiet: '50 moves each without a capture or a stone moving',
+
     // Futsal
     futsalTitle: 'Futsal',
     futsalDesc: 'Five-a-side indoor football — take on bots alone, or play friends online in two teams',
@@ -1334,6 +1346,18 @@ export const translations = {
     chessRematch: 'Rövanş',
     chessRematchHint: 'Renkler yer değiştirir',
     chessShowBoard: 'Tahtayı göster',
+
+    // Dama ASCII
+    damaTitle: 'Dama ASCII',
+    damaDesc: 'Türk daması, bire bir — düz hamleler, uçan dama ve zorunlu taş alma, çevrim içi',
+    damaLobbyHint: 'Sunucu ile ilk katılan oyuncu karşılaşır; diğerleri izler. Seçilen süre her oyuncunun bütün oyun için süresidir. Rövanşta renkler yer değiştirir.',
+    damaControls: 'Bir taşa dokun ya da tıkla, sonra gideceği kareye; uzun bir almada her iniş karesine sırayla dokun · Klavye: ok tuşları ve Enter',
+    damaMustTake: 'Almak zorunlu!',
+    damaCrowned: 'Dama!',
+    damaAllTaken: 'Taş kalmadı',
+    damaBlocked: 'Hamle yok',
+    damaDrawMaterial: 'Tek dama, tek taşı yenemez',
+    damaDrawQuiet: 'Taş alınmadan ve taş ilerlemeden 50’şer hamle',
 
     // Futsal
     futsalTitle: 'Futsal',
@@ -2202,6 +2226,18 @@ export const translations = {
     chessRematchHint: 'Стороны меняются',
     chessShowBoard: 'Показать доску',
 
+    // Dama ASCII
+    damaTitle: 'Дама ASCII',
+    damaDesc: 'Турецкие шашки один на один — прямые ходы, дальнобойные дамки и обязательное взятие, онлайн',
+    damaLobbyHint: 'Играют ведущий и первый вошедший в комнату; остальные смотрят. Время на часах даётся каждому игроку на всю партию. В реванше стороны меняются.',
+    damaControls: 'Нажми на шашку, затем на клетку, куда она встанет; при длинном взятии нажимай клетки по очереди · Клавиатура: стрелки и Enter',
+    damaMustTake: 'Бить обязательно!',
+    damaCrowned: 'Дамка!',
+    damaAllTaken: 'Шашек не осталось',
+    damaBlocked: 'Ходов нет',
+    damaDrawMaterial: 'Одна дамка не выигрывает против одной шашки',
+    damaDrawQuiet: '50 ходов с каждой стороны без взятий и ходов простыми',
+
     // Futsal
     futsalTitle: 'Футзал',
     futsalDesc: 'Мини-футбол пять на пять — играй против ботов или с друзьями онлайн в двух командах',
@@ -3068,6 +3104,18 @@ export const translations = {
     chessRematch: 'Реванш',
     chessRematchHint: 'Жақтар ауысады',
     chessShowBoard: 'Тақтаны көрсету',
+
+    // Dama ASCII
+    damaTitle: 'Дама ASCII',
+    damaDesc: 'Түрік дойбысы, бетпе-бет — тура жүріс, алыстан ұратын дамка және міндетті алу, онлайн',
+    damaLobbyHint: 'Жүргізуші мен бөлмеге бірінші кірген ойыншы ойнайды; қалғандары көреді. Сағаттағы уақыт әр ойыншыға бүкіл ойынға беріледі. Реваншта жақтар ауысады.',
+    damaControls: 'Тасты бас, сосын ол түсетін шаршыны бас; ұзақ алуда түсетін шаршыларды кезекпен бас · Пернетақта: бағыт пернелері және Enter',
+    damaMustTake: 'Алу міндетті!',
+    damaCrowned: 'Дамка!',
+    damaAllTaken: 'Тас қалмады',
+    damaBlocked: 'Жүріс жоқ',
+    damaDrawMaterial: 'Жалғыз дамка жалғыз тасты ұта алмайды',
+    damaDrawQuiet: 'Екі жақта да тас алынбаған және тас жүрмеген 50 жүріс',
 
     // Futsal
     futsalTitle: 'Футзал',
