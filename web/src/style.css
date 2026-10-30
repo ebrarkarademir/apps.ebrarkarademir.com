@@ -33,6 +33,12 @@
     scroll-behavior: smooth;
   }
 
+  /* While a game is open (see zoomLock.js): the page still scrolls, but a double tap or a pinch
+     doesn't zoom it */
+  html.zoom-locked {
+    touch-action: pan-x pan-y;
+  }
+
   body {
     background: var(--color-black);
     color: var(--color-term);

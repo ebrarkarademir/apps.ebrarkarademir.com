@@ -27,6 +27,7 @@ import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
 import { useUsers } from './online/useUsers'
 import { currentRoom } from './online/useOnlineRoom'
+import { lockZoom } from './zoomLock'
 
 // The language menu lists every language in translations.js, each by its own name
 const languages = Object.entries(translations).map(([code, text]) => ({ code, name: text.languageName }))
@@ -254,6 +255,10 @@ if (legacyInviteGame) initialRoute.game = legacyInviteGame
 
 const selectedGame = ref(initialRoute.game)
 const page = ref(initialRoute.page || null)
+
+// A phone can't zoom the page while a game is open: fast taps and two-thumb play would zoom it
+// by accident, with no way back out of a full-screen game
+watch(selectedGame, (game) => lockZoom(!!game), { immediate: true })
 // An online game can open with a room in mind: { game, code } to join one (an invite link or a
 // chat invite), or { game, host: true } to open one for a chat invite. It only applies to that
 // game, until the visitor leaves it.
