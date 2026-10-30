@@ -3,6 +3,7 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom } from '../online/useOnlineRoom'
 import ChessStage from './chess/ChessStage.vue'
+import ChessPiece from './chess/ChessPiece.vue'
 import { START_FEN, parseFen, toFen, findMove, toSan, applyMove, positionKey, gameOver, canMate, other } from './chess/engine'
 
 const props = defineProps({
@@ -269,8 +270,7 @@ const result = computed(() => {
     title: props.t[TITLE_KEYS[reason] || 'chessDraw'],
     line: winner
       ? fmt(reason === 'resign' ? props.t.chessWinsResign : reason === 'abandon' ? props.t.chessWinsAbandon : props.t.chessWins, { name: names.value[winner], loser: names.value[loser] })
-      : props.t[DRAW_KEYS[reason]],
-    mine: !myColor.value ? '' : !winner ? 'draw' : winner === myColor.value ? 'won' : 'lost'
+      : props.t[DRAW_KEYS[reason]]
   }
 })
 
@@ -279,29 +279,27 @@ const fmtScore = (points) => {
   return points - whole >= 0.5 ? `${whole || ''}½` : String(whole)
 }
 
-// A king in glory, a king going under, two kings sharing the point, two kings at the board
-const RESULT_ART = {
-  won: [' \\ | /', '-- K --', ' / | \\'].join('\n'),
-  lost: ['   K', '~~~~~~~'].join('\n'),
-  draw: 'K ½ K',
-  watch: 'K · K'
-}
-const TITLE_ART = [
-  '  r n b q k b n r',
-  '  p p p p p p p p',
-  '  . : . : . : . :',
-  '  : . : . : . : .',
-  '  P P P P P P P P',
-  '  R N B Q K B N R'
-].join('\n')
+// On the result: the winner's king standing (yours if you won), yours tipped over if you lost,
+// both kings for a draw
+const resultKings = computed(() => {
+  const winner = view.value?.outcome?.winner
+  if (!winner) return [{ color: 'w' }, { color: 'b' }]
+  if (myColor.value && winner !== myColor.value) return [{ color: myColor.value, fallen: true }]
+  return [{ color: winner }]
+})
+
+// Both sides' back ranks, in the lobby
+const BACK_RANK = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r']
 </script>
 
 <template>
   <OnlineRoom :room="room" :t="t" :title="t.chessTitle" :minPlayers="2" @go-back="emit('go-back')" @start="room.act('start')">
     <template #lobby="{ view: lobby, isHost }">
       <div class="space-y-4">
-        <div class="overflow-hidden text-center" aria-hidden="true">
-          <span class="inline-block whitespace-pre text-left text-xs sm:text-sm leading-tight term-muted">{{ TITLE_ART }}</span>
+        <div class="flex flex-col items-center gap-1 text-2xl sm:text-3xl" aria-hidden="true">
+          <div v-for="color in ['b', 'w']" :key="color" class="flex gap-1">
+            <ChessPiece v-for="(type, index) in BACK_RANK" :key="index" :type="type" :color="color" />
+          </div>
         </div>
         <div class="flex flex-wrap items-center gap-2 text-sm">
           <span class="term-label mr-1">&gt; {{ t.chessClock }}</span>
@@ -365,7 +363,9 @@ const TITLE_ART = [
       <template #overlay>
         <div v-if="result && resultShown && !resultHidden" class="absolute inset-0 z-20 flex items-center justify-center p-3 bg-black/50">
           <div class="term-window w-full max-w-xs p-5 text-center" role="dialog" aria-modal="false" :aria-label="result.title">
-            <span class="inline-block whitespace-pre text-left text-sm leading-tight" aria-hidden="true">{{ RESULT_ART[result.mine || 'watch'] }}</span>
+            <div class="flex justify-center items-end gap-3 text-5xl" aria-hidden="true">
+              <ChessPiece v-for="king in resultKings" :key="king.color" type="k" :color="king.color" :class="{ 'rotate-90 translate-y-1': king.fallen }" />
+            </div>
             <h2 class="mt-2 font-display text-5xl leading-none uppercase">{{ result.title }}</h2>
             <p class="mt-2 text-sm term-muted">&gt; {{ result.line }}</p>
 

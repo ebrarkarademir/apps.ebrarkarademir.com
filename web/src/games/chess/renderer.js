@@ -1,4 +1,5 @@
-import { colorOf } from './engine'
+import { colorOf, typeOf } from './engine'
+import { PIECES, SIDES, LINE_WIDTH } from './pieces'
 import { GREEN, DIM, LOW, GLOW, MONO, paint, drawSprite, drawText, drawGlyph } from '../ascii/paint'
 import { drawBolt } from '../ascii/fx'
 
@@ -8,12 +9,13 @@ import { drawBolt } from '../ascii/fx'
 // board's top-left corner, whichever way round it is; effects off the board are just numbers
 // outside 0-8.
 //
-// The pieces are their letters: White's lit up, Black's black with a lit outline.
+// The pieces look like a real set (see pieces.js): White's glow white, Black's amber.
 
-const PIECES = 'PNBRQKpnbrqk'
-const INK = '#000'
+const LETTERS = 'PNBRQKpnbrqk'
+const PIECE_SIZE = 0.9 // of a square
 const DARK = 'rgba(0, 255, 0, 0.13)'
 const LAST_WASH = 'rgba(0, 255, 0, 0.2)'
+const paths = Object.fromEntries(Object.entries(PIECES).map(([type, parts]) => [type, parts.map(part => ({ ...part, path: new Path2D(part.d) }))]))
 
 export function createRenderer (canvas) {
   const ctx = canvas.getContext('2d')
@@ -26,38 +28,40 @@ export function createRenderer (canvas) {
   let cell = 0
   let sprites = null
 
-  // One piece letter: White's filled, Black's an outline round black. `ink` is for the
-  // selected square, a lit block: White's letter black, Black's outline black.
-  function piece (ch, { ink = false } = {}) {
-    const px = cell * 0.74
-    const white = colorOf(ch) === 'w'
-    const glow = ink ? 0 : Math.max(1.5, cell * 0.08) * dpr
+  // One piece, as big as a square: a glow in its side's color behind it, then each part
+  // shaded from the light side and outlined
+  function piece (ch) {
+    const side = SIDES[colorOf(ch)]
+    const parts = paths[typeOf(ch)]
+    const size = Math.ceil(cell * dpr)
+    const glow = Math.max(2, cell * 0.1) * dpr
     const pad = Math.ceil(glow * 2) + 2
-    const side = Math.ceil(cell * dpr)
     const image = document.createElement('canvas')
-    image.width = image.height = side + pad * 2
+    image.width = image.height = size + pad * 2
     const g = image.getContext('2d')
-    g.font = `700 ${px * dpr}px ${MONO}`
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
+    const scale = (size * PIECE_SIZE) / 100
+    g.translate(pad + (size - 100 * scale) / 2, pad + (size - 100 * scale) / 2)
+    g.scale(scale, scale)
     g.lineJoin = 'round'
-    const x = image.width / 2
-    const y = image.height / 2 + px * dpr * 0.04
-    const letter = ch.toUpperCase()
-    if (glow) {
-      g.shadowColor = GLOW
-      g.shadowBlur = glow
-    }
-    if (white) {
-      g.fillStyle = ink ? INK : GREEN
-      g.fillText(letter, x, y)
-    } else {
-      g.lineWidth = Math.max(1.5, px * 0.075) * dpr
-      g.strokeStyle = ink ? INK : GREEN
-      g.strokeText(letter, x, y)
-      g.shadowBlur = 0
-      g.fillStyle = ink ? GREEN : INK
-      g.fillText(letter, x, y)
+    g.lineCap = 'round'
+    g.lineWidth = LINE_WIDTH
+    g.save()
+    g.shadowColor = side.glow
+    g.shadowBlur = glow
+    g.fillStyle = side.fill
+    for (const part of parts) if (!part.line) g.fill(part.path)
+    g.restore()
+    const shading = g.createLinearGradient(20, 0, 82, 0)
+    shading.addColorStop(0, side.fill)
+    shading.addColorStop(0.45, side.fill)
+    shading.addColorStop(1, side.shade)
+    g.strokeStyle = side.line
+    for (const part of parts) {
+      if (!part.line) {
+        g.fillStyle = part.ink ? side.line : shading
+        g.fill(part.path)
+      }
+      g.stroke(part.path)
     }
     return { canvas: image, cx: image.width / 2, cy: image.height / 2 }
   }
@@ -67,8 +71,7 @@ export function createRenderer (canvas) {
     const cw = cell * dpr
     const glyph = (ch, color, px, lit = true) => paint([ch], () => color, { cw, rh: px * dpr, glow: lit ? Math.max(1.5, cell * 0.08) * dpr : 0, weight: 700 })
     sprites = {
-      piece: Object.fromEntries([...PIECES].map(ch => [ch, piece(ch)])),
-      ink: Object.fromEntries([...PIECES].map(ch => [ch, piece(ch, { ink: true })])),
+      piece: Object.fromEntries([...LETTERS].map(ch => [ch, piece(ch)])),
       // Where the selected piece can go: a dot on an empty square, brackets round a capture
       dot: glyph('•', DIM, cell * 0.5, false),
       open: glyph('[', GREEN, cell * 0.8),
@@ -145,19 +148,19 @@ export function createRenderer (canvas) {
         if (!ch || scene.hidden.has(sq) || scene.reveal[sq] > 0) continue
         const cx = X(x + 0.5)
         const cy = Y(y + 0.5)
+        // Flickering in (a new game, a promotion): other pieces of its side flash past first
         if (scene.decode[sq] > 0) {
-          drawGlyph(ctx, scene.glitches[sq] || ch.toUpperCase(), cx, cy, { px: cell * 0.74, weight: 700, color: GREEN })
+          drawSprite(ctx, sprites.piece[scene.glitches[sq] || ch], cx, cy, { alpha: 0.35 + Math.random() * 0.65, dpr })
           continue
         }
         const isSelected = selected && selected.x === x && selected.y === y
-        const set = isSelected ? sprites.ink : sprites.piece
         const scale = scene.pops[sq] || 1
         const alpha = scene.ghost === sq ? 0.3 : 1
-        drawSprite(ctx, set[ch], cx, cy, { scale, alpha, dpr })
+        drawSprite(ctx, sprites.piece[ch], cx, cy, { scale, alpha, dpr })
         if (!isSelected && scene.glow[sq] > 0) {
           ctx.save()
           ctx.globalCompositeOperation = 'lighter'
-          drawSprite(ctx, set[ch], cx, cy, { scale, alpha: scene.glow[sq] * alpha, dpr })
+          drawSprite(ctx, sprites.piece[ch], cx, cy, { scale, alpha: scene.glow[sq] * alpha * 0.6, dpr })
           ctx.restore()
         }
       }

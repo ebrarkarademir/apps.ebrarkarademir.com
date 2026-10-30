@@ -408,7 +408,7 @@ export const rules = {
       goal: 'Checkmate the other king: put it in check so that no move gets it out.',
       steps: [
         'One person creates a room and picks the clock and which side they play; their opponent joins with the code. Anyone else who joins watches.',
-        'The pieces are letters: K king, Q queen, R rook, B bishop, N knight, P pawn. White’s are lit up, Black’s are black with a lit outline. Your side is at the bottom.',
+        'White’s pieces glow white and Black’s glow amber. Your side is at the bottom. In the list of moves the pieces are letters: K king, Q queen, R rook, B bishop, N knight, and none for a pawn.',
         'White moves first. Tap or click one of your pieces, then the square it goes to, or drag it there. A dot marks the squares it can move to, and brackets the pieces it can take.',
         'Every rule of chess counts: castling, en passant, and a pawn reaching the far side becomes a queen, rook, bishop or knight of your choice.',
         'With a clock, each player has that time for the whole game. Run out and you lose, unless the other side has too little left to mate.',
@@ -429,7 +429,7 @@ export const rules = {
       goal: 'Rakip şahı mat et: şah çek ve hiçbir hamle onu kurtaramasın.',
       steps: [
         'Bir kişi oda oluşturup süreyi ve hangi renkle oynayacağını seçer; rakibi kodla katılır. Sonradan katılan herkes izler.',
-        'Taşlar İngilizce baş harfleriyle gösterilir: K şah, Q vezir, R kale, B fil, N at, P piyon. Beyazın taşları parlak, siyahın taşları parlak çerçeveli siyah harflerdir. Senin tarafın altta.',
+        'Beyazın taşları beyaz, siyahın taşları kehribar rengi parlar. Senin tarafın altta. Hamle listesinde taşlar İngilizce baş harfleriyle yazılır: K şah, Q vezir, R kale, B fil, N at; piyon için harf yazılmaz.',
         'İlk hamle beyazın. Taşlarından birine dokun ya da tıkla, sonra gideceği kareye; ya da oraya sürükle. Gidebileceği kareler noktayla, alabileceği taşlar köşeli parantezle gösterilir.',
         'Satrancın bütün kuralları geçerli: rok, geçerken alma ve karşı uca ulaşan piyonun seçtiğin vezir, kale, fil ya da ata terfisi.',
         'Süreli oyunda seçilen süre her oyuncunun bütün oyun için süresidir. Süren biterse kaybedersin; rakibinin mat edecek taşı kalmadıysa berabere biter.',
@@ -450,7 +450,7 @@ export const rules = {
       goal: 'Поставь мат королю соперника: объяви шах, от которого не спасает ни один ход.',
       steps: [
         'Один создаёт комнату и выбирает часы и цвет своих фигур; соперник входит по коду. Все, кто войдёт после, смотрят.',
-        'Фигуры обозначены английскими буквами: K король, Q ферзь, R ладья, B слон, N конь, P пешка. Белые фигуры светятся, чёрные — чёрные буквы со светящимся контуром. Твоя сторона внизу.',
+        'Белые фигуры светятся белым, чёрные — янтарным. Твоя сторона внизу. В списке ходов фигуры обозначены английскими буквами: K король, Q ферзь, R ладья, B слон, N конь, а у пешки буквы нет.',
         'Первыми ходят белые. Нажми на свою фигуру, затем на клетку, куда она пойдёт, или перетащи её. Точки показывают, куда фигура может пойти, а скобки — кого она может взять.',
         'Действуют все правила шахмат: рокировка, взятие на проходе, а пешка, дошедшая до последней горизонтали, превращается в ферзя, ладью, слона или коня на твой выбор.',
         'С часами у каждого игрока это время на всю партию. Если время кончилось, ты проигрываешь, — если только у соперника хватает фигур для мата.',
@@ -471,7 +471,7 @@ export const rules = {
       goal: 'Қарсыластың патшасына мат қой: ешбір жүріс құтқара алмайтын шах бер.',
       steps: [
         'Бір адам бөлме ашып, сағатты және өз фигураларының түсін таңдайды; қарсыласы кодпен кіреді. Кейін кірген барлық адам көреді.',
-        'Фигуралар ағылшын әріптерімен белгіленген: K патша, Q уәзір, R тура, B піл, N ат, P пешка. Ақтардың фигуралары жарқырайды, қаралардікі — жарқыраған жиегі бар қара әріптер. Сенің жағың төменде.',
+        'Ақтардың фигуралары ақ түспен, қаралардікі кәріптас түсімен жарқырайды. Сенің жағың төменде. Жүрістер тізімінде фигуралар ағылшын әріптерімен жазылады: K патша, Q уәзір, R тура, B піл, N ат, ал пешкаға әріп жазылмайды.',
         'Алғашқы жүріс ақтардікі. Өз фигураңды бас, сосын ол баратын шаршыны бас немесе оны сүйреп апар. Нүктелер фигура бара алатын шаршыларды, жақшалар ол ала алатын фигураларды көрсетеді.',
         'Шахматтың барлық ережесі қолданылады: рокировка, өтіп бара жатып алу, ал соңғы қатарға жеткен пешка сен таңдаған уәзірге, тураға, пілге не атқа айналады.',
         'Сағатпен ойнағанда әр ойыншыға бүкіл ойынға сол уақыт беріледі. Уақытың бітсе, жеңілесің — тек қарсыласыңда мат қоюға фигура жетпесе, тепе-тең болады.',

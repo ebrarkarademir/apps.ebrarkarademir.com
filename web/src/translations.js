@@ -331,7 +331,7 @@ export const translations = {
 
     // Chess ASCII
     chessTitle: 'Chess ASCII',
-    chessDesc: 'Classic chess, one on one — play a friend online on a glowing board of letters',
+    chessDesc: 'Classic chess, one on one — play a friend online on a glowing retro board',
     chessClock: 'Clock',
     chessNoClock: 'No clock',
     chessHostPlays: 'Host plays',
@@ -346,7 +346,7 @@ export const translations = {
     chessCheck: 'Check!',
     chessResign: 'Resign',
     chessResignSure: 'Sure? Resign',
-    chessOfferDraw: 'Offer a draw',
+    chessOfferDraw: 'Offer draw',
     chessDrawOffered: 'Draw offered',
     chessDrawOffer: '{name} offers a draw',
     chessAccept: 'Accept',
@@ -1101,7 +1101,7 @@ export const translations = {
 
     // Chess ASCII
     chessTitle: 'Satranç ASCII',
-    chessDesc: 'Klasik satranç, bire bir — harflerden parlayan bir tahtada arkadaşınla çevrim içi oyna',
+    chessDesc: 'Klasik satranç, bire bir — parlayan retro bir tahtada arkadaşınla çevrim içi oyna',
     chessClock: 'Süre',
     chessNoClock: 'Süresiz',
     chessHostPlays: 'Sunucunun rengi',
@@ -1871,7 +1871,7 @@ export const translations = {
 
     // Chess ASCII
     chessTitle: 'Шахматы ASCII',
-    chessDesc: 'Классические шахматы один на один — играй с другом онлайн на светящейся доске из букв',
+    chessDesc: 'Классические шахматы один на один — играй с другом онлайн на светящейся ретро-доске',
     chessClock: 'Часы',
     chessNoClock: 'Без часов',
     chessHostPlays: 'Ведущий играет',
@@ -2641,7 +2641,7 @@ export const translations = {
 
     // Chess ASCII
     chessTitle: 'Шахмат ASCII',
-    chessDesc: 'Классикалық шахмат, бетпе-бет — досыңмен әріптерден жасалған жарқыраған тақтада онлайн ойна',
+    chessDesc: 'Классикалық шахмат, бетпе-бет — досыңмен жарқыраған ретро тақтада онлайн ойна',
     chessClock: 'Сағат',
     chessNoClock: 'Сағатсыз',
     chessHostPlays: 'Жүргізуші ойнайды',

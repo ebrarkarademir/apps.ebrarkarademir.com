@@ -5,6 +5,7 @@ import {
   material, colorOf, rowOf, colOf, other, FILES
 } from './engine'
 import { createRenderer } from './renderer'
+import ChessPiece from './ChessPiece.vue'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
 import { DIM, GREEN, watchFonts } from '../ascii/paint'
 import { startLoop } from '../ascii/loop'
@@ -58,7 +59,7 @@ const GO_SECONDS = 0.8
 const LOW_MS = 10000
 const ARMED_SECONDS = 3 // how long Resign waits to be pressed again
 const BOLT_SECONDS = 0.6
-const SHUFFLE = 'PNBRQK'
+const SHUFFLE = 'pnbrqk'
 
 const area = ref(null)
 const canvas = ref(null)
@@ -555,7 +556,11 @@ function after (dt) {
   glitchClock += dt
   if (glitchClock >= 0.05) {
     glitchClock = 0
-    for (let i = 0; i < 64; i++) if (decode[i] > 0) glitches[i] = SHUFFLE[Math.floor(Math.random() * SHUFFLE.length)]
+    for (let i = 0; i < 64; i++) {
+      if (decode[i] <= 0) continue
+      const type = SHUFFLE[Math.floor(Math.random() * SHUFFLE.length)]
+      glitches[i] = colorOf(pos.board[i]) === 'w' ? type.toUpperCase() : type
+    }
   }
   for (const b of bolts) {
     b.age += dt
@@ -655,7 +660,8 @@ const bars = computed(() => [other(bottomColor.value), bottomColor.value].map((c
   online: props.online[color],
   me: color === props.myColor,
   score: anyScore.value ? fmtScore(props.scores[color]) : '',
-  taken: ui.material[color].taken.map(type => type.toUpperCase()).join(''),
+  // The other side's pieces this player has taken, best first
+  taken: ui.material[color].taken,
   lead: ui.material[color].lead,
   time: ui.clocks[color],
   running: ui.running === color,
@@ -703,7 +709,6 @@ function press (event, run) {
 }
 
 const PROMOTION_KEYS = [['q', 'chessQueen'], ['r', 'chessRook'], ['b', 'chessBishop'], ['n', 'chessKnight']]
-const promoLetter = (type) => (props.myColor === 'b' ? type : type.toUpperCase())
 
 // ---------- Layout and input ----------
 
@@ -893,11 +898,14 @@ onUnmounted(() => {
           :key="bar.slot"
           :class="['bar', bar.slot, { 'is-turn': bar.turn, 'is-me': bar.me }]"
         >
-          <span :class="['side-mark', bar.color === 'w' ? 'is-white' : 'is-black']" :aria-label="bar.color === 'w' ? t.chessWhite : t.chessBlack">K</span>
+          <span class="side-mark" :title="bar.color === 'w' ? t.chessWhite : t.chessBlack"><ChessPiece type="k" :color="bar.color" /></span>
           <span :class="['term-dot shrink-0', { 'is-off': !bar.online }]"></span>
           <span class="name truncate">{{ bar.name }}</span>
           <span v-if="bar.score" class="score tabular-nums" :aria-label="`${t.chessScore}: ${bar.score}`">[{{ bar.score }}]</span>
-          <span class="taken truncate" aria-hidden="true">{{ bar.taken }}<span v-if="bar.lead" class="lead"> +{{ bar.lead }}</span></span>
+          <span class="taken" aria-hidden="true">
+            <ChessPiece v-for="(type, index) in bar.taken" :key="index" :type="type" :color="bar.color === 'w' ? 'b' : 'w'" />
+            <span v-if="bar.lead" class="lead">+{{ bar.lead }}</span>
+          </span>
           <span v-if="clock" :class="['clock font-display tabular-nums', { 'is-running': bar.running, 'is-low': bar.low }]">{{ bar.time }}</span>
         </div>
 
@@ -969,7 +977,7 @@ onUnmounted(() => {
                 :aria-label="t[key]"
                 @click="press($event, () => promote(type))"
               >
-                <span :class="['promo-piece', myColor === 'b' ? 'is-black' : 'is-white']">{{ promoLetter(type).toUpperCase() }}</span>
+                <ChessPiece class="promo-piece" :type="type" :color="myColor || 'w'" />
                 <span class="promo-name">{{ t[key] }}</span>
               </button>
             </div>
@@ -1054,14 +1062,21 @@ onUnmounted(() => {
   flex-shrink: 0;
   font-size: 0.75rem;
 }
+/* Taken pieces overlap a little, like a row of them set down beside the board */
 .bar .taken {
   flex: 1 1 0;
   min-width: 0;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  color: var(--color-term-dim);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  font-size: 1.1rem;
+}
+.bar .taken .chess-piece + .chess-piece {
+  margin-left: -0.35em;
 }
 .bar .lead {
+  margin-left: 0.3rem;
+  font-size: 0.75rem;
   color: var(--color-term);
   font-weight: 600;
 }
@@ -1087,22 +1102,11 @@ onUnmounted(() => {
   animation: low 1s steps(2, jump-none) infinite;
 }
 
-/* The side a player has: White's king lit, Black's an outline */
+/* The side a player has: a king in that side's color */
 .side-mark {
+  display: flex;
   flex-shrink: 0;
-  font-weight: 700;
-  font-size: 1.05rem;
-  line-height: 1;
-}
-.side-mark.is-white,
-.promo-piece.is-white {
-  color: var(--color-term);
-  text-shadow: 0 0 6px rgb(0 255 0 / 0.45);
-}
-.side-mark.is-black,
-.promo-piece.is-black {
-  color: var(--color-black);
-  -webkit-text-stroke: 1.5px var(--color-term);
+  font-size: 1.5rem;
 }
 
 .actions {
@@ -1191,9 +1195,7 @@ onUnmounted(() => {
   padding: 0;
 }
 .promo-piece {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1;
+  font-size: 2.4rem;
 }
 .promo-name {
   font-size: 0.6rem;
