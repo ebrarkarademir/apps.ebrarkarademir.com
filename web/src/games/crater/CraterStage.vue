@@ -8,7 +8,7 @@ import { sparks } from '../ascii/fx'
 import { sound } from '../ascii/sound'
 import { haptics } from '../ascii/haptics'
 import { createTerrain, W } from './terrain'
-import { STEP, SAMPLE, MAX_WALK, WALK_SPEED, WEAPON_IDS, launch, previewArc } from './physics'
+import { STEP, SAMPLE, MAX_WALK, WALK_SPEED, WEAPON_IDS, WEAPONS, KINDS, launch, previewArc } from './physics'
 import { createRenderer, SIDE_COLORS } from './renderer'
 
 // The full-screen match. In the aiming part of a turn this player picks a unit, walks it,
@@ -23,6 +23,7 @@ const props = defineProps({
   phase: { type: String, required: true }, // aim | resolve | over
   turn: { type: Number, required: true },
   seed: { type: Number, required: true },
+  level: { type: String, required: true }, // the kind of map; with the seed it makes the ground
   craters: { type: Array, required: true }, // [x, y, r] in the order they happened
   units: { type: Array, required: true }, // [{ side, x, y, hp, alive }]
   mySide: { type: Number, default: -1 }, // 0 or 1, or -1 watching
@@ -33,7 +34,8 @@ const props = defineProps({
   deadline: { type: Number, default: 0 },
   locked: { type: Array, default: () => [false, false] }, // by side: has fired this turn
   replay: { type: Object, default: null }, // { turn, before, frames, events, duration }
-  live: { type: Object, required: true } // { samples: { side: { turn, u, x, y } } }, the other player walking
+  live: { type: Object, required: true }, // { samples: { side: { turn, u, x, y } } }, the other player walking
+  ammo: { type: Array, default: () => [{}, {}] } // by side: what's left of each limited weapon
 })
 
 const emit = defineEmits(['exit', 'fire', 'walk'])
@@ -43,8 +45,11 @@ const LIVE_EVERY = 0.1
 
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
-const WEAPON_KEYS = { shell: 'craterShell', grenade: 'craterGrenade', cluster: 'craterCluster' }
-const WEAPON_ICONS = { shell: 'o', grenade: '@', cluster: '*' }
+const WEAPON_KEYS = { shell: 'craterShell', grenade: 'craterGrenade', cluster: 'craterCluster', molotov: 'craterMolotov', dynamite: 'craterDynamite' }
+const WEAPON_ICONS = { shell: 'o', grenade: '@', cluster: '*', molotov: '!', dynamite: '|' }
+const LEVEL_KEYS = { hills: 'craterHills', mountain: 'craterMountain', valley: 'craterValley', islands: 'craterIslands', plateaus: 'craterPlateaus', canyon: 'craterCanyon', caverns: 'craterCaverns', sky: 'craterSky', city: 'craterCity', cheese: 'craterCheese' }
+const FIRE_COLORS = ['#ffe680', '#ffb000', '#ff6a2a']
+const SMOKE = '#7f8f7f'
 
 const arena = ref(null)
 const canvas = ref(null)
@@ -71,7 +76,7 @@ let display = null
 let applied = 0
 
 function rebuild (count) {
-  display = createTerrain(props.seed)
+  display = createTerrain(props.seed, props.level)
   applied = 0
   applyCraters(count)
 }
@@ -136,11 +141,13 @@ function stepWalk (dt) {
   if (y === null) return
   walk.x = nx
   walk.y = y
+  walkingUntil = clock + 0.12
   ui.walked = Math.abs(walk.x - walk.startX)
 }
 
 function fire () {
   if (!canAct() || ui.selected < 0) return
+  if (left(ui.weapon) <= 0) ui.weapon = 'shell'
   ui.fired = true
   walk.dir = 0
   sound.play('fire')
@@ -148,7 +155,11 @@ function fire () {
   emit('fire', { unit: ui.selected, x: Math.round(walk.x * 100) / 100, y: walk.y, angle: ui.angle, power: ui.power, weapon: ui.weapon, turn: props.turn })
 }
 
+// What's left of a weapon for this player: Infinity for the shell
+const left = (id) => (WEAPONS[id].ammo ? props.ammo[props.mySide]?.[id] ?? 0 : Infinity)
+
 function pickWeapon (id) {
+  if (left(id) <= 0) return
   ui.weapon = id
   sound.play('tock')
 }
@@ -163,6 +174,8 @@ let flash = 0
 let shake = 0
 let clock = 0
 let cam = { x: 0, manualUntil: 0 }
+const flashUntil = {} // unit -> clock time its hit flash ends
+let walkingUntil = 0
 
 function startReplay (replay) {
   // The ground as it was when the turn began
@@ -220,9 +233,18 @@ function happen (event, frame) {
     sound.play('boom')
     haptics.buzz('boom')
     if (reduceMotion) return
-    flash = Math.max(flash, 0.6 + event.r * 0.05)
-    shake = Math.max(shake, 0.25 + event.r * 0.06)
+    flash = Math.max(flash, 0.5 + event.r * 0.06)
+    shake = Math.max(shake, 0.2 + event.r * 0.07)
     sparks(particles, event.x, event.y, { count: 10 + event.r * 2, speed: 18, life: 0.5 })
+    // A fireball, then smoke rising from it
+    for (let k = 0; k < 8 + event.r * 3; k++) {
+      const a = Math.random() * Math.PI * 2
+      const v = Math.random() * event.r * 3.5
+      particles.push({ ch: ['@', '#', '*', 'O'][k % 4], x: event.x, y: event.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, drag: 3, life: 0.35 + Math.random() * 0.35, ttl: 0.7, color: FIRE_COLORS[k % 3], size: 1.4 + event.r * 0.12 })
+    }
+    for (let k = 0; k < 4 + event.r; k++) {
+      particles.push({ ch: ['o', 'O', '(', ')'][k % 4], x: event.x + (Math.random() * 2 - 1) * event.r * 0.6, y: event.y - Math.random() * event.r * 0.5, vx: (Math.random() * 2 - 1) * 2, vy: -3 - Math.random() * 3, life: 1.2 + Math.random() * 0.8, ttl: 2, color: SMOKE, size: 1.3 + Math.random(), alpha: 0.6 })
+    }
     // The ground it blew away flies out as its own characters
     const chars = ['#', '%', ':', '"', '.']
     for (let i = 0; i < removed.length && i < 70; i += 2 * Math.max(1, Math.floor(removed.length / 70))) {
@@ -239,6 +261,7 @@ function happen (event, frame) {
     }
   } else if (event.k === 'dmg') {
     const u = unitAt(frame, event.u)
+    flashUntil[event.u] = clock + 0.25
     sound.play('hit')
     rise(`-${event.n}`, u.x, u.y - 4, SIDE_COLORS[props.units[event.u]?.side ?? 0])
   } else if (event.k === 'die') {
@@ -265,7 +288,14 @@ function stepReplay (dt) {
   while (play.next < events.length && events[play.next].t <= tick) happen(events[play.next++], frame)
   shotsShown = frame.shots
   if (!reduceMotion && Math.floor(clock * 30) !== Math.floor((clock - dt) * 30)) {
-    for (const s of frame.shots) particles.push({ ch: '.', x: s.x, y: s.y, vx: 0, vy: 0, life: 0.4, ttl: 0.4, color: SIDE_COLORS[s.side] || GREEN, size: 1.2 })
+    for (const s of frame.shots) {
+      if (KINDS[s.kind] === 'flame') {
+        if (Math.random() < 0.25) particles.push({ ch: '.', x: s.x + (Math.random() - 0.5), y: s.y - 1, vx: 0, vy: -4, life: 0.6, ttl: 0.6, color: SMOKE, size: 1, alpha: 0.6 })
+        continue
+      }
+      const ember = KINDS[s.kind] === 'molotov'
+      particles.push({ ch: ember ? '*' : '.', x: s.x, y: s.y, vx: 0, vy: ember ? -1 : -0.5, life: 0.6, ttl: 0.6, color: ember ? FIRE_COLORS[Math.floor(Math.random() * 3)] : SMOKE, size: 1.2, alpha: 0.8 })
+    }
   }
   if (play.time >= play.replay.duration + 0.3 && play.next >= events.length) {
     endReplay()
@@ -344,7 +374,21 @@ function render () {
     }
     // A unit the replay kills stays up until the replay gets there
     const alive = frame ? u.alive || diedBy(i) : u.alive
-    return { x, y, side: u.side, alive, hp: frame ? hpAt(i) : u.hp, selected: i === ui.selected && props.phase === 'aim' && playing.value && !ui.fired, blink: Math.floor(clock * 3) % 2 === 0 }
+    const aiming = i === ui.selected && props.phase === 'aim' && playing.value
+    const facing = aiming ? (Math.cos(ui.angle) < 0 ? 1 : 0) : u.side
+    return {
+      x,
+      y,
+      side: u.side,
+      alive,
+      hp: frame ? hpAt(i) : u.hp,
+      facing,
+      angle: aiming ? ui.angle : facing ? Math.PI - 0.35 : 0.35,
+      walking: aiming && clock < walkingUntil,
+      selected: aiming && !ui.fired,
+      blink: Math.floor(clock * 3) % 2 === 0,
+      flash: (flashUntil[i] || 0) - clock
+    }
   })
   // The camera: on the unit being aimed with, then after the shots, unless the strip was used
   let target = cam.x + renderer.visible / 2
@@ -360,8 +404,8 @@ function render () {
 
   let aim = null
   if (canAct() && ui.selected >= 0) {
-    const shot = launch(walk.x, walk.y, ui.angle, ui.power)
-    aim = { points: previewArc(walk.x, walk.y, ui.angle, ui.power), tip: { x: shot.x + Math.cos(ui.angle) * 2.5, y: shot.y - Math.sin(ui.angle) * 2.5 }, side: props.mySide }
+    const shot = launch(walk.x, walk.y, ui.angle, ui.power, ui.weapon)
+    aim = { points: previewArc(walk.x, walk.y, ui.angle, ui.power, ui.weapon), tip: { x: shot.x + Math.cos(ui.angle) * 2.5, y: shot.y - Math.sin(ui.angle) * 2.5 }, side: props.mySide }
   }
   renderer.draw({
     terrain: display,
@@ -395,8 +439,13 @@ function diedBy (i) {
 function banners () {
   const list = []
   const middle = cam.x + (renderer?.visible || W) / 2
-  if (props.phase === 'aim' && props.turn === 1 && clock - turnStartedAt < 2.2) {
-    list.push({ text: upperT(props.t.craterFight), x: middle, y: 14, size: 3.2, color: GREEN, display: true, min: 24, alpha: Math.min(1, (2.2 - (clock - turnStartedAt)) / 0.5) })
+  const since = clock - turnStartedAt
+  if (props.phase === 'aim' && since < 1.8) {
+    const alpha = Math.min(1, (1.8 - since) / 0.5)
+    const first = props.turn === 1
+    list.push({ text: upperT(first ? props.t.craterFight : fmt(props.t.craterTurn, { n: props.turn })), x: middle, y: 13, size: 3, color: GREEN, display: true, min: 24, alpha })
+    if (first) list.push({ text: upperT(props.t[LEVEL_KEYS[props.level]] || ''), x: middle, y: 18, size: 1.6, color: GREEN, display: true, min: 14, alpha: alpha * 0.8 })
+    else if (props.sudden) list.push({ text: upperT(props.t.craterSeaRising), x: middle, y: 18, size: 1.5, color: '#3fd0ff', display: true, min: 13, alpha })
   }
   return list
 }
@@ -509,15 +558,18 @@ function press (event, run) {
 const teams = computed(() => [0, 1].map(side => {
   const list = props.units.filter(u => u.side === side)
   const hp = list.reduce((sum, u) => sum + (u.alive ? u.hp : 0), 0)
-  const max = list.length * 100 || 1
-  const cells = 10
-  const filled = Math.ceil((hp / max) * cells)
-  return { side, name: props.names[side] || '?', hp, bar: '#'.repeat(filled) + '.'.repeat(cells - filled), me: side === props.mySide, fired: props.locked[side] }
+  return { side, name: props.names[side] || '?', hp, units: list.map(u => (u.alive ? u.hp : 0)), me: side === props.mySide, fired: props.locked[side] }
 }))
-const windText = computed(() => {
+// The wind as a gauge out from the middle, five marks at full strength
+const windGauge = computed(() => {
   const n = Math.round(Math.abs(props.wind) * 5)
-  if (!n) return '·'
-  return props.wind < 0 ? '<'.repeat(n) : '>'.repeat(n)
+  const toLeft = props.wind < 0 ? ' '.repeat(5 - n) + '<'.repeat(n) : '     '
+  const toRight = props.wind > 0 ? '>'.repeat(n) + ' '.repeat(5 - n) : '     '
+  return toLeft + '|' + toRight
+})
+const powerBar = computed(() => {
+  const filled = Math.round(ui.power * 10)
+  return '#'.repeat(filled) + '.'.repeat(10 - filled)
 })
 const degrees = computed(() => {
   const elevation = Math.cos(ui.angle) >= 0 ? ui.angle : Math.PI - ui.angle
@@ -556,7 +608,9 @@ watch(() => [props.turn, props.phase], ([turn, phase], before) => {
       haptics.buzz('tap')
     }
   }
-  if (phase === 'aim' && !play) applyCraters(props.craters.length)
+  // A slow screen still playing the last turn jumps to its end, so the ground matches the host's
+  if (phase === 'aim' && play) endReplay()
+  if (phase === 'aim') applyCraters(props.craters.length)
 })
 watch(() => props.units.map(u => u.alive).join(), () => {
   if (!mine.value.includes(ui.selected)) ui.selected = mine.value[0] ?? -1
@@ -611,12 +665,15 @@ onUnmounted(() => {
       <div class="hud">
         <div v-for="team in teams" :key="team.side" :class="['team', team.side ? 'side-1 text-right items-end' : 'side-0 items-start', { 'is-me': team.me }]" :style="{ color: SIDE_COLORS[team.side] }">
           <span class="name truncate">{{ team.name }}<span v-if="team.fired && phase === 'aim'" class="ok"> [ok]</span></span>
-          <span class="bar tabular-nums" aria-hidden="true">[{{ team.bar }}] {{ team.hp }}</span>
+          <span class="pips" aria-hidden="true">
+            <span v-for="(hp, k) in team.units" :key="k" :class="['pip', { 'is-down': !hp }]"><span :style="{ width: hp + '%', background: SIDE_COLORS[team.side] }"></span></span>
+          </span>
+          <span class="sr-only">{{ team.hp }}</span>
         </div>
         <div class="center">
-          <span v-if="phase === 'aim'" :class="['font-display text-3xl leading-none tabular-nums', { 'term-blink': ui.seconds <= 5 }]">{{ ui.seconds }}</span>
-          <span class="text-[10px] uppercase tracking-widest term-muted">{{ t.craterWind }} <span class="text-term tracking-normal">{{ windText }}</span></span>
-          <span v-if="sudden" class="text-[10px] uppercase tracking-widest">{{ t.craterSeaRising }}</span>
+          <span class="text-[10px] uppercase tracking-widest term-muted">{{ fmt(t.craterTurn, { n: turn }) }}</span>
+          <span :class="['font-display text-3xl leading-none tabular-nums', { 'term-blink': phase === 'aim' && ui.seconds <= 5 }]">{{ phase === 'aim' ? ui.seconds : '--' }}</span>
+          <span class="wind" :title="t.craterWind"><span class="term-muted">{{ t.craterWind }}</span> <span class="gauge">[{{ windGauge }}]</span></span>
         </div>
       </div>
 
@@ -647,16 +704,19 @@ onUnmounted(() => {
             type="button"
             :class="['weapon term-option', { 'is-active': ui.weapon === id }]"
             :aria-pressed="ui.weapon === id"
+            :disabled="left(id) <= 0"
             :title="`${t[WEAPON_KEYS[id]]} (${index + 1})`"
+            :aria-label="`${t[WEAPON_KEYS[id]]}: ${left(id) === Infinity ? '∞' : left(id)}`"
             @click="press($event, () => pickWeapon(id))"
           >
-            <span class="font-bold">{{ WEAPON_ICONS[id] }}</span>
+            <span :class="['icon', `is-${id}`]">{{ WEAPON_ICONS[id] }}</span>
             <span class="label">{{ t[WEAPON_KEYS[id]] }}</span>
+            <span class="count tabular-nums">{{ left(id) === Infinity ? '∞' : left(id) }}</span>
           </button>
         </div>
         <div class="readout tabular-nums" aria-live="off">
           <span>{{ degrees }}°</span>
-          <span>{{ Math.round(ui.power * 100) }}%</span>
+          <span class="power" :aria-label="`${Math.round(ui.power * 100)}%`">[{{ powerBar }}]</span>
         </div>
         <button type="button" class="term-btn term-btn-primary fire" @click="press($event, fire)">{{ t.craterFire }}</button>
       </div>
@@ -714,9 +774,40 @@ onUnmounted(() => {
 .hud .ok {
   font-weight: 400;
 }
-.hud .bar {
-  font-size: 0.7rem;
+.pips {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+}
+.side-1 .pips {
+  flex-direction: row-reverse;
+}
+.pip {
+  position: relative;
+  width: 2.4rem;
+  height: 0.45rem;
+  border: 1px solid currentColor;
+  overflow: hidden;
+}
+.pip > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  box-shadow: 0 0 6px currentColor;
+  transition: width 0.4s ease-out;
+}
+.pip.is-down {
+  opacity: 0.35;
+}
+.wind {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   white-space: nowrap;
+}
+.wind .gauge {
+  white-space: pre;
+  letter-spacing: 0;
+  color: var(--color-term);
 }
 
 .status {
@@ -759,6 +850,7 @@ onUnmounted(() => {
   touch-action: none;
 }
 .weapon {
+  position: relative;
   flex: 1 1 0;
   min-width: 0;
   min-height: 2.6rem;
@@ -766,6 +858,27 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 0;
   line-height: 1.1;
+}
+.weapon .icon {
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+}
+.weapon .icon.is-molotov {
+  color: #ffb000;
+}
+.weapon .icon.is-dynamite {
+  color: #ff4a3d;
+}
+.weapon .count {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+.weapon:disabled {
+  opacity: 0.35;
 }
 .weapon .label {
   font-size: 0.6rem;
@@ -781,8 +894,17 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: flex-end;
   font-size: 0.75rem;
-  line-height: 1.2;
+  line-height: 1.25;
   min-width: 2.6rem;
+}
+.readout .power {
+  font-size: 0.6rem;
+  letter-spacing: 0;
+}
+@media (max-width: 520px) {
+  .weapon .label {
+    display: none;
+  }
 }
 .fire {
   min-height: 2.6rem;

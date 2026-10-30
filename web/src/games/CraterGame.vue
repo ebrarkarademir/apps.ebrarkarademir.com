@@ -4,8 +4,8 @@ import confetti from 'canvas-confetti'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom } from '../online/useOnlineRoom'
 import CraterStage from './crater/CraterStage.vue'
-import { createTerrain, spawnUnits, WATER_START } from './crater/terrain'
-import { simulate, MAX_WALK, WEAPON_IDS } from './crater/physics'
+import { createTerrain, spawnUnits, WATER_START, LEVEL_IDS } from './crater/terrain'
+import { simulate, startAmmo, MAX_WALK, WEAPON_IDS, WEAPONS } from './crater/physics'
 import { SIDE_COLORS } from './crater/renderer'
 
 const props = defineProps({
@@ -20,6 +20,8 @@ const emit = defineEmits(['go-back'])
 
 const UNIT_OPTIONS = [1, 2, 3]
 const TIME_OPTIONS = [15, 20, 30]
+const LEVEL_OPTIONS = ['random', ...LEVEL_IDS]
+const LEVEL_KEYS = { random: 'craterRandom', hills: 'craterHills', mountain: 'craterMountain', valley: 'craterValley', islands: 'craterIslands', plateaus: 'craterPlateaus', canyon: 'craterCanyon', caverns: 'craterCaverns', sky: 'craterSky', city: 'craterCity', cheese: 'craterCheese' }
 const SUDDEN_TURN = 8 // from this turn on the sea rises
 const WATER_RISE = 3 // cells a turn
 const AWAY_TURNS = 2 // turns a player can be gone before losing
@@ -123,6 +125,7 @@ function onAction (s, playerId, action) {
       if (!isHost || s.phase !== 'lobby') return
       if (UNIT_OPTIONS.includes(action.perSide)) s.perSide = action.perSide
       if (TIME_OPTIONS.includes(action.aimSeconds)) s.aimSeconds = action.aimSeconds
+      if (LEVEL_OPTIONS.includes(action.level)) s.level = action.level
       break
     case 'start': {
       if (!isHost || (s.phase !== 'lobby' && s.phase !== 'over')) return
@@ -134,7 +137,9 @@ function onAction (s, playerId, action) {
       // The same two again swap ends
       s.sides = same ? [s.sides[1], s.sides[0]] : pair
       s.seed = Math.floor(Math.random() * 2 ** 31)
-      ground = createTerrain(s.seed)
+      s.mapLevel = s.level === 'random' ? LEVEL_IDS[Math.floor(Math.random() * LEVEL_IDS.length)] : s.level
+      ground = createTerrain(s.seed, s.mapLevel)
+      s.ammo = [startAmmo(), startAmmo()]
       s.units = spawnUnits(ground, s.perSide, Math.random)
       s.craters = []
       s.round++
@@ -154,7 +159,13 @@ function onAction (s, playerId, action) {
       const angle = Number(action.angle)
       const power = Number(action.power)
       if (!Number.isFinite(angle) || !Number.isFinite(power)) return
-      shots[side] = { unit: action.unit, x: Number(action.x), y: Number(action.y), angle, power: Math.max(0.05, Math.min(1, power)), weapon: action.weapon }
+      // A limited weapon with none left fires a shell instead
+      let weapon = action.weapon
+      if (WEAPONS[weapon].ammo) {
+        if ((s.ammo[side][weapon] || 0) > 0) s.ammo[side][weapon]--
+        else weapon = 'shell'
+      }
+      shots[side] = { unit: action.unit, x: Number(action.x), y: Number(action.y), angle, power: Math.max(0.05, Math.min(1, power)), weapon }
       s.locked[side] = true
       // Both in (or the other side has nothing left to fire with): the turn plays out now
       if ([0, 1].every(other => s.locked[other] || !aliveOn(s, other))) resolve(s)
@@ -190,6 +201,9 @@ const room = useOnlineRoom({
   initialState: () => ({
     perSide: 2,
     aimSeconds: 20,
+    level: 'random', // the host's pick
+    mapLevel: 'hills', // this match's map
+    ammo: [{}, {}],
     round: 0,
     turn: 0,
     seed: 0,
@@ -296,8 +310,20 @@ const UNIT_ART = [' o      o ', '/|\\ ~~ /|\\', '/ \\    / \\'].join('\n')
             @click="room.act('settings', { aimSeconds: n })"
           >{{ fmt(t.craterSeconds, { n }) }}</button>
         </div>
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="term-label w-full sm:w-44">&gt; {{ t.craterMap }}</span>
+          <button
+            v-for="id in LEVEL_OPTIONS"
+            :key="id"
+            type="button"
+            :disabled="!isHost"
+            :class="['term-option min-h-8 px-3 text-sm font-semibold', { 'is-active': lobby.level === id }]"
+            @click="room.act('settings', { level: id })"
+          >{{ t[LEVEL_KEYS[id]] }}</button>
+        </div>
         <div class="space-y-2 text-sm leading-relaxed">
           <p class="term-muted">&gt; {{ t.craterLobbyHint }}</p>
+          <p class="term-muted">&gt; {{ t.craterAmmoHint }}</p>
           <p class="term-muted">&gt; {{ t.craterControls }}</p>
         </div>
       </div>
@@ -311,6 +337,8 @@ const UNIT_ART = [' o      o ', '/|\\ ~~ /|\\', '/ \\    / \\'].join('\n')
       :phase="view.phase"
       :turn="view.turn"
       :seed="view.seed"
+      :level="view.mapLevel"
+      :ammo="view.ammo"
       :craters="view.craters"
       :units="view.units"
       :mySide="mySide"

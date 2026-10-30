@@ -2,9 +2,10 @@ import { W, H } from './terrain'
 
 // A turn of Crater Duel, played out. Both players' shots fly at once under gravity and the
 // turn's wind: a shell bursts where it lands, a grenade bounces until its fuse runs out, a
-// cluster bomb bursts into bomblets. Each burst carves a crater, hurts the units near it and
-// throws them; units fall into holes (hard landings hurt), and the sea takes anything that
-// reaches it.
+// cluster bomb bursts into bomblets, a molotov spills flames that burn whoever stands in them,
+// and dynamite, only ever thrown a little way, goes off big once its long fuse is done. Each
+// burst carves a crater, hurts the units near it and throws them; units fall into holes (hard
+// landings hurt), and the sea takes anything that reaches it.
 //
 // Only the host plays a turn out. Everyone else gets the recording: where every shot and unit
 // was, every few steps, and what happened when (bursts, hits, losses), and plays it back.
@@ -23,22 +24,30 @@ const SETTLE_STEPS = 20
 
 export const WEAPONS = {
   shell: { radius: 5, damage: 45 },
-  grenade: { radius: 6, damage: 50, fuse: 2.5, bounce: 0.45 },
-  cluster: { radius: 3, damage: 20, bomblets: 5, bombletRadius: 2.5, bombletDamage: 16 }
+  grenade: { radius: 6, damage: 50, fuse: 2.5, bounce: 0.45, ammo: 3 },
+  cluster: { radius: 3, damage: 20, bomblets: 5, bombletRadius: 2.5, bombletDamage: 16, ammo: 2 },
+  molotov: { radius: 1.5, damage: 8, flames: 10, burn: 7, flameLife: 3.6, ammo: 2 },
+  dynamite: { radius: 10, damage: 75, fuse: 3.5, bounce: 0.2, reach: 0.38, ammo: 1 }
 }
 export const WEAPON_IDS = Object.keys(WEAPONS)
+// The kinds of thing in flight, as the recording numbers them
+export const KINDS = ['shell', 'grenade', 'cluster', 'bomblet', 'molotov', 'dynamite', 'flame']
+const FLAME_REACH = 1.4 // how close to a unit's feet a flame burns it
+
+/** A side's stock at the start of a match: every weapon but the shell is limited. */
+export const startAmmo = () => Object.fromEntries(WEAPON_IDS.filter(id => WEAPONS[id].ammo).map(id => [id, WEAPONS[id].ammo]))
 
 /** Where a shot leaves a unit at (x, y), and its velocity, for an angle (radians, up from the right) and power 0-1. */
-export function launch (x, y, angle, power) {
+export function launch (x, y, angle, power, weapon = 'shell') {
   const cos = Math.cos(angle)
   const sin = Math.sin(angle)
-  const speed = MAX_SPEED * Math.max(0.08, Math.min(1, power))
+  const speed = MAX_SPEED * (WEAPONS[weapon]?.reach || 1) * Math.max(0.08, Math.min(1, power))
   return { x: x + cos * 1.6, y: y - 1.5 - sin * 1.6, vx: cos * speed, vy: -sin * speed }
 }
 
 /** The first stretch of a shot's flight, without wind, for the aim preview: [x, y, ...]. */
-export function previewArc (x, y, angle, power, seconds = 0.45) {
-  const shot = launch(x, y, angle, power)
+export function previewArc (x, y, angle, power, weapon = 'shell', seconds = 0.45) {
+  const shot = launch(x, y, angle, power, weapon)
   const points = []
   let { x: px, y: py, vx, vy } = shot
   const dt = 0.03
@@ -71,7 +80,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
   for (const shot of shots) {
     const u = units[shot.unit]
     if (!u?.alive || !WEAPONS[shot.weapon]) continue
-    const fired = launch(u.x, u.y, shot.angle, shot.power)
+    const fired = launch(u.x, u.y, shot.angle, shot.power, shot.weapon)
     projectiles.push({ id: nextId++, kind: shot.weapon, side: u.side, owner: shot.unit, ...fired, age: 0, rest: false, fuse: WEAPONS[shot.weapon].fuse || 0 })
     events.push({ t: 0, k: 'fire', u: shot.unit, w: shot.weapon })
   }
@@ -134,7 +143,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
   function moveProjectile (p) {
     const weapon = WEAPONS[p.kind]
     p.age += STEP
-    if (p.kind === 'grenade') {
+    if (p.kind === 'grenade' || p.kind === 'dynamite') {
       p.fuse -= STEP
       if (p.fuse <= 0) {
         burst(p.x, p.y, weapon.radius, weapon.damage, p.side)
@@ -145,7 +154,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
         else return true
       }
     }
-    p.vx += wind * WIND_MAX * STEP * (p.kind === 'grenade' ? 0.6 : 1)
+    p.vx += wind * WIND_MAX * STEP * (p.kind === 'grenade' || p.kind === 'dynamite' ? 0.6 : 1)
     p.vy += GRAVITY * STEP
     // Two half steps, so a fast shot can't pass through a thin wall
     for (let half = 0; half < 2; half++) {
@@ -161,7 +170,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
       const struck = units.findIndex((u, index) => u.alive && !(index === p.owner && p.age < 0.25) && Math.hypot(u.x - p.x, u.y - 1 - p.y) < UNIT_HIT)
       const ground = terrain.solid(p.x, p.y)
       if (struck < 0 && !ground) continue
-      if (p.kind === 'grenade' && struck < 0) {
+      if ((p.kind === 'grenade' || p.kind === 'dynamite') && struck < 0) {
         const n = normalAt(p.x, p.y)
         p.x = px
         p.y = py
@@ -177,6 +186,12 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
         return true
       }
       burst(p.x, p.y, weapon.radius, weapon.damage, p.side)
+      if (p.kind === 'molotov') {
+        // The bottle breaks and its fire spills out and down
+        for (let k = 0; k < weapon.flames; k++) {
+          projectiles.push({ id: nextId++, kind: 'flame', side: p.side, owner: -1, x: px, y: py - 0.5, vx: (random() * 2 - 1) * 9 + p.vx * 0.15, vy: -6 - random() * 8, age: 0, rest: false, fuse: weapon.flameLife * (0.7 + random() * 0.3) })
+        }
+      }
       if (p.kind === 'cluster') {
         for (let k = 0; k < weapon.bomblets; k++) {
           projectiles.push({ id: nextId++, kind: 'bomblet', side: p.side, owner: -1, x: px, y: py - 1, vx: (k - (weapon.bomblets - 1) / 2) * 9 + (random() * 2 - 1) * 3, vy: -22 - random() * 10, age: 0, rest: false, fuse: 0 })
@@ -202,6 +217,51 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
     if (!hit) return true
     burst(p.x, p.y, WEAPONS.cluster.bombletRadius, WEAPONS.cluster.bombletDamage, p.side)
     return false
+  }
+
+  const burning = new Map() // unit -> burn damage not yet reported
+
+  function moveFlame (p) {
+    p.fuse -= STEP
+    if (p.fuse <= 0) return false
+    if (!p.rest) {
+      p.vy += GRAVITY * STEP
+      p.vx *= 0.98
+      const nx = p.x + p.vx * STEP
+      const ny = p.y + p.vy * STEP
+      if (ny >= water) return false
+      if (nx < 0 || nx >= W) return false
+      if (terrain.solid(nx, ny)) {
+        if (terrain.solid(nx, ny - 1)) {
+          p.vx = 0
+        } else {
+          p.x = nx
+          p.y = Math.floor(ny) - 0.01
+          p.rest = true
+          p.vx = p.vy = 0
+        }
+      } else {
+        p.x = nx
+        p.y = ny
+      }
+    } else if (!terrain.solid(p.x, p.y + 0.5)) {
+      p.rest = false
+    }
+    units.forEach((u, index) => {
+      if (!u.alive || Math.abs(u.x - p.x) > FLAME_REACH || p.y < u.y - 3 || p.y > u.y + 0.8) return
+      burning.set(index, (burning.get(index) || 0) + WEAPONS.molotov.burn * STEP)
+    })
+    return true
+  }
+
+  // Burns are told a little at a time, in whole points
+  function reportBurns () {
+    for (const [index, amount] of burning) {
+      if (amount < 1) continue
+      const whole = Math.floor(amount)
+      burning.set(index, amount - whole)
+      hurt(units[index], index, whole)
+    }
   }
 
   function moveUnit (u, index) {
@@ -246,7 +306,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
   function record () {
     frames.push({
       u: units.flatMap(u => [round1(u.x), round1(u.y)]),
-      p: projectiles.flatMap(p => [p.id, round1(p.x), round1(p.y), p.kind === 'bomblet' ? 3 : WEAPON_IDS.indexOf(p.kind), p.side])
+      p: projectiles.flatMap(p => [p.id, round1(p.x), round1(p.y), KINDS.indexOf(p.kind), p.side])
     })
   }
 
@@ -255,7 +315,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
     tick++
     for (let i = projectiles.length - 1; i >= 0; i--) {
       const p = projectiles[i]
-      const alive = p.kind === 'bomblet' ? moveBomblet(p) : moveProjectile(p)
+      const alive = p.kind === 'bomblet' ? moveBomblet(p) : p.kind === 'flame' ? moveFlame(p) : moveProjectile(p)
       if (!alive) projectiles.splice(projectiles.indexOf(p), 1)
     }
     // Two shots that meet in the air both go off
@@ -263,18 +323,20 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
       for (let j = i + 1; j < projectiles.length; j++) {
         const a = projectiles[i]
         const b = projectiles[j]
-        if (a.side === b.side || Math.hypot(a.x - b.x, a.y - b.y) > 1.2) continue
+        if (a.side === b.side || a.kind === 'flame' || b.kind === 'flame' || Math.hypot(a.x - b.x, a.y - b.y) > 1.2) continue
         burst((a.x + b.x) / 2, (a.y + b.y) / 2, 4, 25, -1)
         a.dead = b.dead = true
       }
     }
     for (let i = projectiles.length - 1; i >= 0; i--) if (projectiles[i].dead) projectiles.splice(i, 1)
     units.forEach(moveUnit)
+    if (tick % 15 === 0) reportBurns()
     if (tick % SAMPLE === 0) record()
     const moving = projectiles.length || units.some(u => u.alive && u.air)
     quiet = moving ? 0 : quiet + 1
     if (quiet >= SETTLE_STEPS && tick > 30) break
   }
+  reportBurns()
   if (tick % SAMPLE !== 0) record()
 
   // Whatever is still in the air when time is up comes down where it is
