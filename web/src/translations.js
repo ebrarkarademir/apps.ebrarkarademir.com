@@ -303,8 +303,8 @@ export const translations = {
     tabuYourTeam: 'your team',
     finalScore: 'Final Score',
 
-    // Flappy ASCII
-    flappyTitle: 'Flappy ASCII',
+    // Flappy
+    flappyTitle: 'Flappy',
     flappyDesc: 'Flap through the pipes — play solo or race friends online',
     flappySolo: 'Solo',
     flappySoloDesc: 'Fly as far as you can and beat your best score.',
@@ -353,8 +353,8 @@ export const translations = {
     flappyInsane: 'Insane',
     flappyInsaneDesc: 'Full speed, narrow gaps, and most pipes on the move. Good luck.',
 
-    // Tank ASCII
-    tankTitle: 'Tank ASCII',
+    // Tank
+    tankTitle: 'Tank',
     tankDesc: 'One-button tank battle with friends online — the last tank standing wins',
     tankLobbyHint: 'Every tank has 3 hearts. Shells bounce off a wall once. The last tank standing wins the round.',
     tankControls: 'One button: hold it (touch, click or Space) to drive forward and fire, let go to stop and turn. Every press flips the way it turns.',
@@ -373,8 +373,8 @@ export const translations = {
     tankHits: 'Hits',
     tankWins: 'Wins',
 
-    // Sudoku ASCII
-    sudokuTitle: 'Sudoku ASCII',
+    // Sudoku
+    sudokuTitle: 'Sudoku',
     sudokuDesc: 'Classic number puzzle in four levels — solve it alone, or race friends online on one shared board',
     sudokuContinue: 'Continue',
     sudokuChooseLevel: 'Choose a level',
@@ -425,8 +425,8 @@ export const translations = {
     sudokuWins: 'Wins',
     sudokuPoints: 'Points',
 
-    // Chess ASCII
-    chessTitle: 'Chess ASCII',
+    // Chess
+    chessTitle: 'Chess',
     chessDesc: 'Classic chess, one on one — play a friend online on a glowing retro board',
     chessClock: 'Clock',
     chessNoClock: 'No clock',
@@ -478,8 +478,8 @@ export const translations = {
     chessRematchHint: 'The sides swap',
     chessShowBoard: 'Show the board',
 
-    // Dama ASCII
-    damaTitle: 'Dama ASCII',
+    // Dama
+    damaTitle: 'Dama',
     damaDesc: 'Turkish draughts, one on one — straight moves, flying kings and forced captures, online',
     damaLobbyHint: 'The host and the first player to join play each other; anyone else watches. Each player gets the time on the clock for the whole game. A rematch swaps the sides.',
     damaControls: 'Tap or click a stone, then where it lands; on a long capture, tap each landing square in turn · Keyboard: arrow keys and Enter',
@@ -1190,8 +1190,8 @@ export const translations = {
     tabuYourTeam: 'takımın',
     finalScore: 'Son Skor',
 
-    // Flappy ASCII
-    flappyTitle: 'Flappy ASCII',
+    // Flappy
+    flappyTitle: 'Flappy',
     flappyDesc: 'Boruların arasından uç — tek başına oyna ya da arkadaşlarınla çevrim içi yarış',
     flappySolo: 'Tek kişilik',
     flappySoloDesc: 'Olabildiğince uzağa uç ve en iyi skorunu geç.',
@@ -1240,8 +1240,8 @@ export const translations = {
     flappyInsane: 'Çılgın',
     flappyInsaneDesc: 'Tam hız, dar boşluklar ve çoğu boru hareket hâlinde. Bol şans.',
 
-    // Tank ASCII
-    tankTitle: 'Tank ASCII',
+    // Tank
+    tankTitle: 'Tank',
     tankDesc: 'Arkadaşlarınla çevrim içi tek tuşlu tank savaşı — ayakta kalan son tank kazanır',
     tankLobbyHint: 'Her tankın 3 canı var. Mermiler duvardan bir kez seker. Ayakta kalan son tank turu kazanır.',
     tankControls: 'Tek tuş: basılı tut (dokun, tıkla ya da Boşluk) ileri sür ve ateş et; bırakınca durur ve döner. Her basış dönüş yönünü değiştirir.',
@@ -1260,8 +1260,8 @@ export const translations = {
     tankHits: 'İsabet',
     tankWins: 'Galibiyet',
 
-    // Sudoku ASCII
-    sudokuTitle: 'Sudoku ASCII',
+    // Sudoku
+    sudokuTitle: 'Sudoku',
     sudokuDesc: 'Dört seviyeli klasik sayı bulmacası — tek başına çöz ya da arkadaşlarınla tek bir ortak tahtada çevrim içi yarış',
     sudokuContinue: 'Devam et',
     sudokuChooseLevel: 'Bir seviye seç',
@@ -1312,8 +1312,8 @@ export const translations = {
     sudokuWins: 'Galibiyet',
     sudokuPoints: 'Puan',
 
-    // Chess ASCII
-    chessTitle: 'Satranç ASCII',
+    // Chess
+    chessTitle: 'Satranç',
     chessDesc: 'Klasik satranç, bire bir — parlayan retro bir tahtada arkadaşınla çevrim içi oyna',
     chessClock: 'Süre',
     chessNoClock: 'Süresiz',
@@ -1365,8 +1365,8 @@ export const translations = {
     chessRematchHint: 'Renkler yer değiştirir',
     chessShowBoard: 'Tahtayı göster',
 
-    // Dama ASCII
-    damaTitle: 'Dama ASCII',
+    // Dama
+    damaTitle: 'Dama',
     damaDesc: 'Türk daması, bire bir — düz hamleler, uçan dama ve zorunlu taş alma, çevrim içi',
     damaLobbyHint: 'Sunucu ile ilk katılan oyuncu karşılaşır; diğerleri izler. Seçilen süre her oyuncunun bütün oyun için süresidir. Rövanşta renkler yer değiştirir.',
     damaControls: 'Bir taşa dokun ya da tıkla, sonra gideceği kareye; uzun bir almada her iniş karesine sırayla dokun · Klavye: ok tuşları ve Enter',
@@ -2077,8 +2077,8 @@ export const translations = {
     tabuYourTeam: 'твоя команда',
     finalScore: 'Итоговый счёт',
 
-    // Flappy ASCII
-    flappyTitle: 'Flappy ASCII',
+    // Flappy
+    flappyTitle: 'Flappy',
     flappyDesc: 'Пролетай между трубами — играй соло или устрой онлайн-гонку с друзьями',
     flappySolo: 'Соло',
     flappySoloDesc: 'Улети как можно дальше и побей свой рекорд.',
@@ -2127,8 +2127,8 @@ export const translations = {
     flappyInsane: 'Безумный',
     flappyInsaneDesc: 'Полная скорость, узкие просветы, и почти все трубы движутся. Удачи.',
 
-    // Tank ASCII
-    tankTitle: 'Tank ASCII',
+    // Tank
+    tankTitle: 'Tank',
     tankDesc: 'Танковый бой на одной кнопке с друзьями онлайн — побеждает последний уцелевший танк',
     tankLobbyHint: 'У каждого танка 3 жизни. Снаряды один раз отскакивают от стены. Раунд выигрывает последний уцелевший танк.',
     tankControls: 'Одна кнопка: держи её (касание, клик или пробел), чтобы ехать вперёд и стрелять; отпусти — танк остановится и начнёт поворачиваться. Каждое нажатие меняет направление поворота.',
@@ -2147,8 +2147,8 @@ export const translations = {
     tankHits: 'Попадания',
     tankWins: 'Победы',
 
-    // Sudoku ASCII
-    sudokuTitle: 'Sudoku ASCII',
+    // Sudoku
+    sudokuTitle: 'Sudoku',
     sudokuDesc: 'Классическая числовая головоломка с четырьмя уровнями — решай соло или соревнуйся с друзьями онлайн на общем поле',
     sudokuContinue: 'Продолжить',
     sudokuChooseLevel: 'Выбери уровень',
@@ -2199,8 +2199,8 @@ export const translations = {
     sudokuWins: 'Победы',
     sudokuPoints: 'Очки',
 
-    // Chess ASCII
-    chessTitle: 'Шахматы ASCII',
+    // Chess
+    chessTitle: 'Шахматы',
     chessDesc: 'Классические шахматы один на один — играй с другом онлайн на светящейся ретро-доске',
     chessClock: 'Часы',
     chessNoClock: 'Без часов',
@@ -2252,8 +2252,8 @@ export const translations = {
     chessRematchHint: 'Стороны меняются',
     chessShowBoard: 'Показать доску',
 
-    // Dama ASCII
-    damaTitle: 'Дама ASCII',
+    // Dama
+    damaTitle: 'Дама',
     damaDesc: 'Турецкие шашки один на один — прямые ходы, дальнобойные дамки и обязательное взятие, онлайн',
     damaLobbyHint: 'Играют ведущий и первый вошедший в комнату; остальные смотрят. Время на часах даётся каждому игроку на всю партию. В реванше стороны меняются.',
     damaControls: 'Нажми на шашку, затем на клетку, куда она встанет; при длинном взятии нажимай клетки по очереди · Клавиатура: стрелки и Enter',
@@ -2964,8 +2964,8 @@ export const translations = {
     tabuYourTeam: 'сенің командаң',
     finalScore: 'Қорытынды есеп',
 
-    // Flappy ASCII
-    flappyTitle: 'Flappy ASCII',
+    // Flappy
+    flappyTitle: 'Flappy',
     flappyDesc: 'Құбырлардың арасымен ұш — жалғыз ойна немесе достарыңмен онлайн жарыс',
     flappySolo: 'Жеке',
     flappySoloDesc: 'Барынша алысқа ұшып, өз рекордыңды жаңарт.',
@@ -3014,8 +3014,8 @@ export const translations = {
     flappyInsane: 'Ессіз',
     flappyInsaneDesc: 'Толық жылдамдық, тар саңылаулар, құбырлардың көбі қозғалып тұрады. Сәттілік!',
 
-    // Tank ASCII
-    tankTitle: 'Tank ASCII',
+    // Tank
+    tankTitle: 'Tank',
     tankDesc: 'Достарыңмен онлайн бір түймелі танк шайқасы — соңғы қалған танк жеңеді',
     tankLobbyHint: 'Әр танктің 3 жүрегі бар. Снарядтар қабырғадан бір рет серпіледі. Раундты соңғы қалған танк жеңеді.',
     tankControls: 'Бір түйме: алға жүріп, ату үшін басып тұр (түрту, шерту не Бос орын); жіберсең, танк тоқтап, бұрыла бастайды. Әр басқан сайын бұрылу бағыты ауысады.',
@@ -3034,8 +3034,8 @@ export const translations = {
     tankHits: 'Тигізу',
     tankWins: 'Жеңіс',
 
-    // Sudoku ASCII
-    sudokuTitle: 'Sudoku ASCII',
+    // Sudoku
+    sudokuTitle: 'Sudoku',
     sudokuDesc: 'Төрт деңгейлі классикалық сан жұмбағы — жалғыз шеш немесе достарыңмен бір ортақ тақтада онлайн жарыс',
     sudokuContinue: 'Жалғастыру',
     sudokuChooseLevel: 'Деңгей таңда',
@@ -3086,8 +3086,8 @@ export const translations = {
     sudokuWins: 'Жеңіс',
     sudokuPoints: 'Ұпай',
 
-    // Chess ASCII
-    chessTitle: 'Шахмат ASCII',
+    // Chess
+    chessTitle: 'Шахмат',
     chessDesc: 'Классикалық шахмат, бетпе-бет — досыңмен жарқыраған ретро тақтада онлайн ойна',
     chessClock: 'Сағат',
     chessNoClock: 'Сағатсыз',
@@ -3139,8 +3139,8 @@ export const translations = {
     chessRematchHint: 'Жақтар ауысады',
     chessShowBoard: 'Тақтаны көрсету',
 
-    // Dama ASCII
-    damaTitle: 'Дама ASCII',
+    // Dama
+    damaTitle: 'Дама',
     damaDesc: 'Түрік дойбысы, бетпе-бет — тура жүріс, алыстан ұратын дамка және міндетті алу, онлайн',
     damaLobbyHint: 'Жүргізуші мен бөлмеге бірінші кірген ойыншы ойнайды; қалғандары көреді. Сағаттағы уақыт әр ойыншыға бүкіл ойынға беріледі. Реваншта жақтар ауысады.',
     damaControls: 'Тасты бас, сосын ол түсетін шаршыны бас; ұзақ алуда түсетін шаршыларды кезекпен бас · Пернетақта: бағыт пернелері және Enter',

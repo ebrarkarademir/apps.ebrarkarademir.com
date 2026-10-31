@@ -1,4 +1,4 @@
-// Tank ASCII simulation: tanks, shells and walls, kept free of drawing and networking. Each
+// Tank simulation: tanks, shells and walls, kept free of drawing and networking. Each
 // device moves its own tank, and every device flies every shell: a shell's path depends only
 // on where and which way it was fired, so it bounces the same way on every screen.
 //

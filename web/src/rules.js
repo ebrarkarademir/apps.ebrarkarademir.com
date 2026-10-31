@@ -66,7 +66,7 @@ export const rules = {
   flappy: {
     EN: {
       icon: '[^]',
-      title: 'Flappy ASCII',
+      title: 'Flappy',
       players: '1 player solo, or a race on any devices',
       duration: '1–5 min',
       goal: 'Keep the bird in the air and fly through as many gaps between the pipes as you can.',
@@ -86,7 +86,7 @@ export const rules = {
     },
     TR: {
       icon: '[^]',
-      title: 'Flappy ASCII',
+      title: 'Flappy',
       players: 'Tek kişilik ya da her cihazdan yarış',
       duration: '1–5 dk',
       goal: 'Kuşu havada tut ve boruların arasındaki boşluklardan olabildiğince çok geç.',
@@ -106,7 +106,7 @@ export const rules = {
     },
     RU: {
       icon: '[^]',
-      title: 'Flappy ASCII',
+      title: 'Flappy',
       players: 'Соло или гонка на любых устройствах',
       duration: '1–5 мин',
       goal: 'Держи птицу в воздухе и пролети через как можно больше просветов между трубами.',
@@ -126,7 +126,7 @@ export const rules = {
     },
     KK: {
       icon: '[^]',
-      title: 'Flappy ASCII',
+      title: 'Flappy',
       players: 'Жеке немесе кез келген құрылғыда жарыс',
       duration: '1–5 мин',
       goal: 'Құсты ауада ұстап, құбырлар арасындағы саңылаулардан барынша көп өт.',
@@ -148,7 +148,7 @@ export const rules = {
   tanks: {
     EN: {
       icon: '[T]',
-      title: 'Tank ASCII',
+      title: 'Tank',
       players: '2–8 players, one device each',
       duration: '2½ min rounds',
       goal: 'Hit the other tanks with your shells and be the last tank standing.',
@@ -168,7 +168,7 @@ export const rules = {
     },
     TR: {
       icon: '[T]',
-      title: 'Tank ASCII',
+      title: 'Tank',
       players: '2–8 oyuncu, herkes kendi cihazından',
       duration: '2,5 dakikalık turlar',
       goal: 'Diğer tankları mermilerinle vur ve ayakta kalan son tank ol.',
@@ -188,7 +188,7 @@ export const rules = {
     },
     RU: {
       icon: '[T]',
-      title: 'Tank ASCII',
+      title: 'Tank',
       players: '2–8 игроков, у каждого своё устройство',
       duration: 'Раунды по 2½ мин',
       goal: 'Попадай снарядами в другие танки и останься последним уцелевшим.',
@@ -208,7 +208,7 @@ export const rules = {
     },
     KK: {
       icon: '[T]',
-      title: 'Tank ASCII',
+      title: 'Tank',
       players: '2–8 ойыншы, әркімде өз құрылғысы',
       duration: '2½ минуттық раундтар',
       goal: 'Снарядтарыңмен басқа танктерге тигізіп, соңғы қалған танк бол.',
@@ -320,7 +320,7 @@ export const rules = {
   sudoku: {
     EN: {
       icon: '[9]',
-      title: 'Sudoku ASCII',
+      title: 'Sudoku',
       players: '1 player solo, or 2–4 racing online',
       duration: '5–30 min',
       goal: 'Fill the board so every row, every column and every 3×3 box holds each digit from 1 to 9 exactly once.',
@@ -341,7 +341,7 @@ export const rules = {
     },
     TR: {
       icon: '[9]',
-      title: 'Sudoku ASCII',
+      title: 'Sudoku',
       players: 'Tek kişilik ya da çevrim içi 2–4 kişilik yarış',
       duration: '5–30 dk',
       goal: 'Tahtayı her satırda, her sütunda ve her 3×3 kutuda 1’den 9’a kadar her rakam tam bir kez olacak şekilde doldur.',
@@ -362,7 +362,7 @@ export const rules = {
     },
     RU: {
       icon: '[9]',
-      title: 'Sudoku ASCII',
+      title: 'Sudoku',
       players: 'Соло или онлайн-гонка на 2–4 игроков',
       duration: '5–30 мин',
       goal: 'Заполни поле так, чтобы в каждой строке, каждом столбце и каждом квадрате 3×3 каждая цифра от 1 до 9 встречалась ровно один раз.',
@@ -383,7 +383,7 @@ export const rules = {
     },
     KK: {
       icon: '[9]',
-      title: 'Sudoku ASCII',
+      title: 'Sudoku',
       players: 'Жеке немесе 2–4 ойыншының онлайн жарысы',
       duration: '5–30 мин',
       goal: 'Тақтаны әр жолда, әр бағанда және әр 3×3 шаршыда 1-ден 9-ға дейінгі әр сан дәл бір рет кездесетіндей етіп толтыр.',
@@ -406,7 +406,7 @@ export const rules = {
   chess: {
     EN: {
       icon: '[K]',
-      title: 'Chess ASCII',
+      title: 'Chess',
       players: '2 players online, others can watch',
       duration: '5–30 min',
       goal: 'Checkmate the other king: put it in check so that no move gets it out.',
@@ -427,7 +427,7 @@ export const rules = {
     },
     TR: {
       icon: '[K]',
-      title: 'Satranç ASCII',
+      title: 'Satranç',
       players: 'Çevrim içi 2 oyuncu, diğerleri izler',
       duration: '5–30 dk',
       goal: 'Rakip şahı mat et: şah çek ve hiçbir hamle onu kurtaramasın.',
@@ -448,7 +448,7 @@ export const rules = {
     },
     RU: {
       icon: '[K]',
-      title: 'Шахматы ASCII',
+      title: 'Шахматы',
       players: '2 игрока онлайн, остальные смотрят',
       duration: '5–30 мин',
       goal: 'Поставь мат королю соперника: объяви шах, от которого не спасает ни один ход.',
@@ -469,7 +469,7 @@ export const rules = {
     },
     KK: {
       icon: '[K]',
-      title: 'Шахмат ASCII',
+      title: 'Шахмат',
       players: 'Онлайн 2 ойыншы, қалғандары көреді',
       duration: '5–30 мин',
       goal: 'Қарсыластың патшасына мат қой: ешбір жүріс құтқара алмайтын шах бер.',
@@ -578,7 +578,7 @@ export const rules = {
   dama: {
     EN: {
       icon: '[O]',
-      title: 'Dama ASCII',
+      title: 'Dama',
       players: '2 players online, others can watch',
       duration: '10–30 min',
       goal: 'Take all of the other player’s stones, or leave them without a move.',
@@ -599,7 +599,7 @@ export const rules = {
     },
     TR: {
       icon: '[O]',
-      title: 'Dama ASCII',
+      title: 'Dama',
       players: 'Çevrim içi 2 oyuncu, diğerleri izler',
       duration: '10–30 dk',
       goal: 'Rakibin bütün taşlarını al ya da onu hamlesiz bırak.',
@@ -620,7 +620,7 @@ export const rules = {
     },
     RU: {
       icon: '[O]',
-      title: 'Дама ASCII',
+      title: 'Дама',
       players: '2 игрока онлайн, остальные смотрят',
       duration: '10–30 мин',
       goal: 'Возьми все шашки соперника или оставь его без ходов.',
@@ -641,7 +641,7 @@ export const rules = {
     },
     KK: {
       icon: '[O]',
-      title: 'Дама ASCII',
+      title: 'Дама',
       players: 'Онлайн 2 ойыншы, қалғандары көреді',
       duration: '10–30 мин',
       goal: 'Қарсыластың барлық тасын ал немесе оны жүріссіз қалдыр.',

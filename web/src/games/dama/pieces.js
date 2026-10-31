@@ -1,4 +1,4 @@
-// The pieces of Dama ASCII, in the same format as the chess pieces (see chess/pieces.js) so
+// The pieces of Dama, in the same format as the chess pieces (see chess/pieces.js) so
 // the chess board draws them: round stones seen straight from above, White's white and
 // Black's amber, with grooved rings like a real draughts stone. A king (a dama) carries a
 // crown in the middle.

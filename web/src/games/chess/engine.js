@@ -1,4 +1,4 @@
-// The rules of chess for Chess ASCII: positions, every legal move (castling, en passant and
+// The rules of chess for Chess: positions, every legal move (castling, en passant and
 // promotion included), check, mate and the draws, and moves written the usual short way
 // (SAN: e4, Nxf7+, O-O, e8=Q#). Positions travel between devices as FEN text.
 //

@@ -1,4 +1,4 @@
-// The rules of Turkish draughts (Dama) for Dama ASCII.
+// The rules of Turkish draughts (Dama) for Dama.
 //
 // An 8×8 board where every square is used. Each side starts with 16 men on its second and
 // third rows; White moves first. A man steps one square forward or sideways, never back or

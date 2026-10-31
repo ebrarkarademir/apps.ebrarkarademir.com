@@ -3,7 +3,7 @@ import { GREEN, DIM, LOW, GLOW, MONO, DISPLAY, JP, JP_PRINT, paint, drawSprite, 
 import { drawBolt } from '../ascii/fx'
 import { mulberry32 } from '../ascii/random'
 
-// Draws Sudoku ASCII on a canvas that covers the whole play area, so lightning can come down
+// Draws Sudoku on a canvas that covers the whole play area, so lightning can come down
 // from the top of the screen and fireworks can go up anywhere. The board sits wherever the
 // page lays out its slot (setBoard). Positions in a scene are in cells from the board's
 // top-left corner; effects off the board are just numbers outside 0-9.

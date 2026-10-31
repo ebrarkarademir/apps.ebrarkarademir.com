@@ -1,6 +1,6 @@
 import { mulberry32 } from '../ascii/random'
 
-// Flappy ASCII simulation, kept free of drawing and timing so it plays the same everywhere.
+// Flappy simulation, kept free of drawing and timing so it plays the same everywhere.
 // A seed fixes the whole course, which is how every player in an online race flies through
 // the same pipes on their own device.
 //

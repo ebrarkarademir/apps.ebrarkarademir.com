@@ -2,7 +2,7 @@ import { COLS, ROWS, SIZE, TANK_R, mapCells } from './engine'
 import { GREEN, DIM, LOW, MONO, paint, drawSprite, drawText, truncate } from '../ascii/paint'
 import { mulberry32 } from '../ascii/random'
 
-// Draws Tank ASCII on a canvas: the arena is painted once per map and size, tanks and shells
+// Draws Tank on a canvas: the arena is painted once per map and size, tanks and shells
 // are pre-painted sprites turned and moved freely on top.
 
 // Tanks face right: treads above and below, the hull with its turret, then the barrel. The

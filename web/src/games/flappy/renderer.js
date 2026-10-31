@@ -2,7 +2,7 @@ import { COLS, ROWS, GROUND_Y, CAP_OVER, CAP_H, pipesInView, gapAt } from './eng
 import { GREEN, DIM, LOW, MONO, tileOut, truncate, paint, drawSprite, drawText } from '../ascii/paint'
 import { mulberry32 } from '../ascii/random'
 
-// Draws Flappy ASCII on a canvas, from sprites painted with the shared ASCII look.
+// Draws Flappy on a canvas, from sprites painted with the shared ASCII look.
 
 // Wing up, level and down, then the crashed bird
 const BIRD_FRAMES = [

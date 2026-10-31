@@ -1,6 +1,6 @@
 import { mulberry32, shuffle } from '../ascii/random'
 
-// Sudoku ASCII rules: making puzzles, grading them, and the moves of a game in play, kept free
+// Sudoku rules: making puzzles, grading them, and the moves of a game in play, kept free
 // of drawing and timing. A board is 81 cells, row by row from the top left, with 0 for an empty
 // cell. Where a set of digits is needed it is a bit mask: bit d stands for digit d.
 

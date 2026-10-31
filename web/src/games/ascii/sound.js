@@ -3,7 +3,7 @@
 // on every input.
 
 const MUTE_KEY = 'arcadeMuted'
-const OLD_MUTE_KEY = 'flappyMuted' // where Flappy ASCII kept the setting before
+const OLD_MUTE_KEY = 'flappyMuted' // where Flappy kept the setting before
 
 // Hirajōshi, the scale a koto is often tuned to: D E F A B♭, from D4 up past two octaves
 const KOTO = [293.66, 329.63, 349.23, 440, 466.16, 587.33, 659.26, 698.46, 880, 932.33, 1174.66, 1318.51, 1396.91, 1760]

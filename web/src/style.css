@@ -33,17 +33,17 @@
     scroll-behavior: smooth;
   }
 
-  /* While a game is open (see zoomLock.js): the page still scrolls, but a double tap or a pinch
-     doesn't zoom it */
-  html.zoom-locked {
+  /* No page zooms on a phone (see zoomLock.js): pages still scroll, but a double tap or a pinch
+     doesn't zoom them */
+  html {
     touch-action: pan-x pan-y;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
 
   /* Safari doesn't always pass touch-action down from the page, so every element gets it too.
-     :where() keeps it weaker than a game's own touch-action (touch-none and the like). */
-  html.zoom-locked :where(*) {
+     :where() keeps it weaker than a page's own touch-action (touch-none and the like). */
+  :where(*) {
     touch-action: pan-x pan-y;
   }
 

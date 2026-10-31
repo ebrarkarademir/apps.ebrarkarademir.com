@@ -3,7 +3,7 @@ import { PIECES, SIDES, LINE_WIDTH } from './pieces'
 import { GREEN, DIM, LOW, GLOW, MONO, paint, drawSprite, drawText, drawGlyph } from '../ascii/paint'
 import { drawBolt } from '../ascii/fx'
 
-// Draws Chess ASCII on a canvas that covers the whole play area, so lightning can come down
+// Draws Chess on a canvas that covers the whole play area, so lightning can come down
 // from the top of the screen and fireworks can go up anywhere. The board sits wherever the
 // page lays out its slot (setBoard). Positions in a scene are in squares on screen, from the
 // board's top-left corner, whichever way round it is; effects off the board are just numbers

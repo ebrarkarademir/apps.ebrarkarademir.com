@@ -27,7 +27,7 @@ const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? ''
 
 // ---------- Host-side rules ----------
 //
-// Turkish draughts, run the same way as Chess ASCII: one game at a time between the host and
+// Turkish draughts, run the same way as Chess: one game at a time between the host and
 // whoever joined first; anyone else watches. The host checks every move, runs both clocks and
 // decides how the game ends. Each new game in the same room swaps the sides.
 
