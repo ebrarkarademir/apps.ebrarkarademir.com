@@ -1,4 +1,4 @@
-import { COLS, ROWS, GROUND_Y, CAP_OVER, CAP_H, pipesInView } from './engine'
+import { COLS, ROWS, GROUND_Y, CAP_OVER, CAP_H, pipesInView, gapAt } from './engine'
 import { GREEN, DIM, LOW, MONO, tileOut, truncate, paint, drawSprite, drawText } from '../ascii/paint'
 import { mulberry32 } from '../ascii/random'
 
@@ -126,8 +126,9 @@ export function createRenderer (canvas) {
   function pipe (p, camera) {
     const x = (p.x - camera) * col
     const capX = x - CAP_OVER * col
-    const topCap = p.top - CAP_H + 0.5
-    const bottomCap = p.bottom - 0.5
+    const gap = gapAt(p, camera)
+    const topCap = gap.top - CAP_H + 0.5
+    const bottomCap = gap.bottom - 0.5
     pipeBody(x, -2, topCap, false)
     blit(sprites.cap, capX, topCap * row)
     blit(sprites.cap, capX, bottomCap * row)

@@ -73,13 +73,14 @@ export const rules = {
       steps: [
         'Tap, click, or press Space, ↑ or W to flap. Stop flapping and the bird falls.',
         'Every pair of pipes you pass is a point. Touching a pipe or the ground ends your flight.',
+        'Pick a level first: Easy, Normal, Hard or Insane. Each level keeps its own best score.',
         'Solo: beat your best score and earn a medal at 10, 20, 30 and 40 points.',
         'Online race: one person creates a room and the others join with the code. Everyone flies the same pipes at the same time.',
         'Other players show up as faint birds. Crash and you watch the rest — the last bird flying wins the round.'
       ],
       tips: [
         'Short, steady taps work better than big panicked ones.',
-        'The gaps get a little narrower the further you fly.',
+        'The gaps get a little narrower the further you fly. On Hard and Insane some pipes slide up and down: watch where the gap will be, not where it is.',
         'P or Esc pauses a solo game, and M turns the sound on or off.'
       ]
     },
@@ -92,13 +93,14 @@ export const rules = {
       steps: [
         'Kanat çırpmak için dokun, tıkla ya da Boşluk, ↑ veya W tuşuna bas. Durursan kuş düşer.',
         'Geçtiğin her boru çifti bir puan. Boruya ya da yere değersen uçuşun biter.',
+        'Önce bir seviye seç: Kolay, Normal, Zor ya da Çılgın. Her seviyenin kendi rekoru vardır.',
         'Tek kişilik: en iyi skorunu geç; 10, 20, 30 ve 40 puanda madalya kazan.',
         'Çevrim içi yarış: bir kişi oda oluşturur, diğerleri kodla katılır. Herkes aynı anda aynı borulardan geçer.',
         'Diğer oyuncular soluk kuşlar olarak görünür. Düşersen diğerlerini izlersin — son uçan kuş turu kazanır.'
       ],
       tips: [
         'Kısa ve düzenli dokunuşlar, panikle yapılan büyük dokunuşlardan daha iyi işler.',
-        'İlerledikçe boşluklar biraz daralır.',
+        'İlerledikçe boşluklar biraz daralır. Zor ve Çılgın seviyelerde bazı borular aşağı yukarı kayar: boşluğun şu an nerede olduğuna değil, nereye geleceğine bak.',
         'P veya Esc tek kişilik oyunu duraklatır, M sesi açıp kapatır.'
       ]
     },
@@ -111,13 +113,14 @@ export const rules = {
       steps: [
         'Чтобы взмахнуть крыльями, коснись экрана, кликни или нажми пробел, ↑ или W. Перестанешь — и птица начнёт падать.',
         'Каждая пройденная пара труб — очко. Касание трубы или земли заканчивает полёт.',
+        'Сначала выбери уровень: лёгкий, обычный, сложный или безумный. У каждого уровня свой рекорд.',
         'Соло: побей свой рекорд и получи медаль за 10, 20, 30 и 40 очков.',
         'Онлайн-гонка: один создаёт комнату, остальные входят по коду. Все летят через одни и те же трубы одновременно.',
         'Других игроков видно как бледных птиц. Кто разобьётся, смотрит за остальными — раунд выигрывает последняя птица в воздухе.'
       ],
       tips: [
         'Короткие ровные нажатия работают лучше, чем частые панические.',
-        'Чем дальше летишь, тем чуть уже становятся просветы.',
+        'Чем дальше летишь, тем чуть уже становятся просветы. На сложном и безумном уровнях некоторые трубы ездят вверх и вниз: смотри, где просвет будет, а не где он сейчас.',
         'P или Esc ставит соло-игру на паузу, а M включает и выключает звук.'
       ]
     },
@@ -130,13 +133,14 @@ export const rules = {
       steps: [
         'Қанат қағу үшін экранды түрт, шерт немесе Бос орын, ↑ не W пернесін бас. Қағуды тоқтатсаң, құс құлайды.',
         'Өткен әр жұп құбыр — бір ұпай. Құбырға не жерге тисең, ұшу аяқталады.',
+        'Алдымен деңгей таңда: оңай, қалыпты, қиын немесе ессіз. Әр деңгейдің өз рекорды бар.',
         'Жеке: рекордыңды жаңартып, 10, 20, 30 және 40 ұпай үшін медаль ал.',
         'Онлайн жарыс: бір адам бөлме ашады, қалғандары кодпен кіреді. Барлығы бір уақытта бірдей құбырлардың арасымен ұшады.',
         'Басқа ойыншылар бозғылт құс болып көрінеді. Құлаған ойыншы қалғандарды бақылайды — раундты соңғы ұшып жүрген құс жеңеді.'
       ],
       tips: [
         'Қысқа әрі бірқалыпты түрту абыржып жиі басқаннан жақсырақ.',
-        'Неғұрлым алыс ұшсаң, саңылаулар соғұрлым тарыла түседі.',
+        'Неғұрлым алыс ұшсаң, саңылаулар соғұрлым тарыла түседі. Қиын және ессіз деңгейлерде кейбір құбырлар жоғары-төмен жылжиды: саңылаудың қазір қайда екеніне емес, қайда болатынына қара.',
         'P не Esc жеке ойынды кідіртеді, ал M дыбысты қосады не өшіреді.'
       ]
     }

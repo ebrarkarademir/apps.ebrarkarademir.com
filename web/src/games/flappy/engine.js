@@ -17,18 +17,13 @@ export const STEP = 1 / 120
 export const GRAVITY = 118 // rows/s²
 export const FLAP_VY = -37 // rows/s
 export const MAX_FALL = 58 // rows/s
-export const SPEED = 24 // columns/s
 
 export const PIPE_W = 10
 export const CAP_OVER = 1 // the cap sticks out this far on each side of the pipe
 export const CAP_H = 3
 export const SPACING = 34 // from one pipe to the next
 export const FIRST_PIPE = COLS + 6 // the first pipe starts just past the right edge
-const GAP_START = 16
-const GAP_END = 12.5
-const SHIFT_START = 12 // how far one gap can move from the last one
-const SHIFT_END = 20
-const RAMP_PIPES = 45 // pipes until the course is at its hardest
+const SWING_RATE = 0.08 // radians per column flown: a sliding gap goes up and down every ~79 columns
 const TOP_LIMIT = 8 // gaps stay between these two rows
 const BOTTOM_LIMIT = GROUND_Y - 5
 
@@ -41,28 +36,62 @@ const EDGE = 0.5
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
+// The courses, from slow with wide gaps to fast with gaps that slide up and down. Each value
+// pair goes from the first pipe to the `ramp`th, where the course is at its hardest.
+// speed: columns/s · gap: height of the gaps · shift: how far one gap can move from the last
+// one · moving: the share of pipes whose gap slides · swing: how far a sliding gap goes each way
+export const LEVELS = {
+  easy: { speed: 20, gap: [19, 15.5], shift: [9, 15], ramp: 60, moving: [0, 0], swing: 0 },
+  normal: { speed: 24, gap: [16, 12.5], shift: [12, 20], ramp: 45, moving: [0, 0], swing: 0 },
+  hard: { speed: 27, gap: [15, 12], shift: [12, 18], ramp: 40, moving: [0.1, 0.45], swing: 3 },
+  insane: { speed: 31, gap: [13.5, 11.5], shift: [13, 18], ramp: 30, moving: [0.35, 0.8], swing: 3.5 }
+}
+export const LEVEL_NAMES = Object.keys(LEVELS)
+export const levelOf = (name) => LEVELS[name] || LEVELS.normal
+const lerp = ([from, to], ramp) => from + (to - from) * ramp
+
 /**
- * The pipes for one seed, made on demand: pipe(i) -> { x, top, bottom }, where x is the left
- * edge of the pipe and top/bottom are the edges of its gap.
+ * The pipes for one seed and level, made on demand: pipe(i) -> { x, top, bottom, swing, phase },
+ * where x is the left edge of the pipe and top/bottom are the edges of its gap at rest.
  */
-export function createCourse (seed) {
+export function createCourse (seed, level = 'normal') {
+  const settings = levelOf(level)
   const random = mulberry32(seed)
   const pipes = []
   let center = READY_Y
   return (i) => {
     while (pipes.length <= i) {
       const n = pipes.length
-      const ramp = Math.min(1, n / RAMP_PIPES)
-      const gap = GAP_START + (GAP_END - GAP_START) * ramp
-      const shift = SHIFT_START + (SHIFT_END - SHIFT_START) * ramp
-      const lo = TOP_LIMIT + gap / 2
-      const hi = BOTTOM_LIMIT - gap / 2
+      const ramp = Math.min(1, n / settings.ramp)
+      const gap = lerp(settings.gap, ramp)
+      const shift = lerp(settings.shift, ramp)
+      // Levels without sliding gaps draw no extra numbers, so a seed gives the same pipes as before
+      const swing = settings.swing && random() < lerp(settings.moving, ramp) ? settings.swing : 0
+      const phase = swing ? random() * Math.PI * 2 : 0
+      const x = FIRST_PIPE + n * SPACING
+      // `center` is where the gap is as the bird flies through it. A sliding gap keeps a little
+      // closer to the last one, since it can still be moving away while the bird is inside.
+      const reach = shift - swing
+      const offset = swing * Math.sin(phase + (x + PIPE_W / 2 - BIRD_X) * SWING_RATE)
+      const lo = TOP_LIMIT + gap / 2 + swing
+      const hi = BOTTOM_LIMIT - gap / 2 - swing
       const target = lo + random() * (hi - lo)
-      center = clamp(clamp(target, center - shift, center + shift), lo, hi)
-      pipes.push({ x: FIRST_PIPE + n * SPACING, top: center - gap / 2, bottom: center + gap / 2 })
+      const rest = clamp(clamp(target + offset, center - reach, center + reach) - offset, lo, hi)
+      center = rest + offset
+      pipes.push({ x, top: rest - gap / 2, bottom: rest + gap / 2, swing, phase })
     }
     return pipes[i]
   }
+}
+
+/**
+ * The edges of a pipe's gap once the view has scrolled to `dist`. A sliding gap moves with the
+ * distance flown rather than the clock, so it is in the same place for everyone who gets there.
+ */
+export function gapAt (p, dist) {
+  if (!p.swing) return p
+  const offset = p.swing * Math.sin(p.phase + dist * SWING_RATE)
+  return { top: p.top + offset, bottom: p.bottom + offset }
 }
 
 /** Pipes that are at least partly on screen when the view starts at `camera`. */
@@ -88,12 +117,13 @@ function hitsPipe (course, dist, y) {
   const first = Math.max(0, Math.floor((left - PIPE_W - CAP_OVER - FIRST_PIPE) / SPACING))
   for (let i = first; i <= first + 1; i++) {
     const p = course(i)
+    const gap = gapAt(p, dist)
     const inBody = right > p.x + EDGE && left < p.x + PIPE_W - EDGE
-    if (inBody && (top < p.top || bottom > p.bottom)) return true
+    if (inBody && (top < gap.top || bottom > gap.bottom)) return true
     // The caps are wider than the pipes and two rows deep
     const inCap = right > p.x - CAP_OVER + EDGE && left < p.x + PIPE_W + CAP_OVER - EDGE
     const capDepth = CAP_H - 1
-    if (inCap && ((top < p.top && bottom > p.top - capDepth) || (bottom > p.bottom && top < p.bottom + capDepth))) return true
+    if (inCap && ((top < gap.top && bottom > gap.top - capDepth) || (bottom > gap.bottom && top < gap.bottom + capDepth))) return true
   }
   return false
 }
@@ -105,8 +135,9 @@ export const tiltFor = (vy, down = false) => (down ? 85 : vy < 8 ? -20 : Math.mi
  * One flight. phase: ready (hovering until the first flap) -> play -> dead (hit a pipe and
  * falling) -> over (lying on the ground).
  */
-export const createRun = (course) => ({
+export const createRun = (course, speed = LEVELS.normal.speed) => ({
   course,
+  speed,
   phase: 'ready',
   time: 0,
   y: READY_Y,
@@ -144,7 +175,7 @@ export function stepRun (run, dt) {
     run.vy = Math.min(MAX_FALL, run.vy + GRAVITY * dt)
     run.y += run.vy * dt
     if (run.phase === 'play') {
-      run.dist += SPEED * dt
+      run.dist += run.speed * dt
       if (run.y < HALF_H) {
         run.y = HALF_H
         run.vy = Math.max(0, run.vy)
@@ -179,14 +210,14 @@ export function stepRun (run, dt) {
  * seconds ago it arrived: gravity keeps acting and a flying bird keeps moving forward.
  * sample: { p: 0 ready | 1 flying | 2 down, y, v, d }
  */
-export function ghostAt (sample, age, alive) {
+export function ghostAt (sample, age, alive, speed) {
   if (sample.p === 0) return { d: sample.d, y: sample.y, vy: 0, down: false }
   const t = clamp(age, 0, 0.4)
   const flying = alive && sample.p === 1
   const vy = Math.min(MAX_FALL, sample.v + GRAVITY * t)
   const y = clamp(sample.y + ((sample.v + vy) / 2) * t, HALF_H, GROUND_Y - HALF_H)
   return {
-    d: flying ? sample.d + SPEED * clamp(age, 0, 1) : sample.d,
+    d: flying ? sample.d + speed * clamp(age, 0, 1) : sample.d,
     y,
     vy: y >= GROUND_Y - HALF_H ? 0 : vy,
     down: !flying

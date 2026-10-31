@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
-import { COLS, ROWS, CELL_ASPECT, STEP, SPEED, BIRD_X, createCourse, createRun, flap, knockOut, stepRun, ghostAt, tiltFor } from './engine'
+import { COLS, ROWS, CELL_ASPECT, STEP, BIRD_X, levelOf, createCourse, createRun, flap, knockOut, stepRun, ghostAt, tiltFor } from './engine'
 import { createRenderer, WING_CYCLE, DEAD_FRAME } from './renderer'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
 import { GREEN, DIM, LOW, watchFonts } from '../ascii/paint'
@@ -20,6 +20,8 @@ const props = defineProps({
   exitLabel: { type: String, required: true },
   mode: { type: String, default: 'solo' }, // solo | online
   seed: { type: Number, required: true },
+  level: { type: String, default: 'normal' },
+  levelLabel: { type: String, default: '' }, // shown while waiting to take off
   // A new run starts whenever this changes
   runId: { type: Number, required: true },
   paused: { type: Boolean, default: false },
@@ -56,6 +58,7 @@ let stopFonts = null
 let alpha = 0
 
 let course = null
+let speed = 0 // columns/s, set by the level
 let run = null
 let camera = 0
 let ground = 0
@@ -78,8 +81,9 @@ const upper = (text) => text.toLocaleUpperCase(props.t.langCode.toLowerCase())
 const round2 = (value) => Math.round(value * 100) / 100
 
 function newRun () {
-  course = createCourse(props.seed)
-  run = props.runner && !props.out ? createRun(course) : null
+  course = createCourse(props.seed, props.level)
+  speed = levelOf(props.level).speed
+  run = props.runner && !props.out ? createRun(course, speed) : null
   camera = 0
   ground = 0
   Object.assign(prev, { camera: 0, ground: 0, dist: 0, y: run ? run.y : 0, tilt: 0 })
@@ -192,7 +196,7 @@ function countdown () {
 function followLeader () {
   if (!leader || leader.d <= camera) return
   const behind = leader.d - camera
-  camera += Math.min(behind, Math.max(SPEED, behind * 3) * STEP)
+  camera += Math.min(behind, Math.max(speed, behind * 3) * STEP)
 }
 
 function tick () {
@@ -208,7 +212,7 @@ function tick () {
   else if (props.mode === 'online' && (!run || run.phase === 'dead' || run.phase === 'over')) followLeader()
   // The ground keeps moving while waiting to take off, then moves with the view
   const waiting = run ? run.phase === 'ready' : Date.now() < props.startAt
-  ground += waiting ? SPEED * STEP : camera - prev.camera
+  ground += waiting ? speed * STEP : camera - prev.camera
 }
 
 // Other players' birds, eased toward where their last sample says they are now
@@ -222,7 +226,7 @@ function updateGhosts (dt) {
     const sample = samples[id]
     const info = props.runners[id]
     if (id === props.myId || !info || !sample || sample.r !== props.round) continue
-    const estimate = ghostAt(sample, age, info.alive !== false)
+    const estimate = ghostAt(sample, age, info.alive !== false, speed)
     let ghost = ghosts.get(id)
     if (!ghost) {
       ghost = { y: estimate.y, d: estimate.d, tilt: 0 }
@@ -261,8 +265,8 @@ function sendSample (dt) {
 function puff () {
   if (reduceMotion || !run) return
   particles.push(
-    { ch: '-', x: BIRD_X - 3.4, y: run.y + 0.3, vx: -SPEED * 0.6, vy: 4, gravity: 0, life: 0.3, ttl: 0.3, color: LOW },
-    { ch: '=', x: BIRD_X - 3, y: run.y + 0.8, vx: -SPEED * 0.5, vy: 6, gravity: 0, life: 0.25, ttl: 0.3, color: LOW }
+    { ch: '-', x: BIRD_X - 3.4, y: run.y + 0.3, vx: -speed * 0.6, vy: 4, gravity: 0, life: 0.3, ttl: 0.3, color: LOW },
+    { ch: '=', x: BIRD_X - 3, y: run.y + 0.8, vx: -speed * 0.5, vy: 6, gravity: 0, life: 0.25, ttl: 0.3, color: LOW }
   )
 }
 
@@ -325,6 +329,7 @@ function onlineScene (scene, cam) {
   const started = run ? run.phase !== 'ready' : now >= props.startAt
   if (!started) {
     scene.texts.push({ text: upper(props.t.flappyGetReady), y: 14, size: 5, display: true })
+    if (props.levelLabel) scene.texts.push({ text: `[ ${upper(props.levelLabel)} ]`, y: 19, size: 1.3, color: DIM })
     scene.texts.push({ text: String(Math.max(1, Math.ceil((props.startAt - now) / 1000))), y: 29, size: 15, display: true })
   }
   if (goTimer > 0) {
@@ -377,6 +382,7 @@ function render () {
     onlineScene(scene, cam)
   } else if (run?.phase === 'ready') {
     scene.texts.push({ text: upper(props.t.flappyGetReady), y: 14, size: 6, display: true })
+    if (props.levelLabel) scene.texts.push({ text: `[ ${upper(props.levelLabel)} ]`, y: 19.5, size: 1.3, color: DIM })
     if (Math.floor(performance.now() / 500) % 2 === 0) {
       scene.texts.push({ text: `> ${upper(props.t.flappyTapToFlap)} <`, y: 37.5, size: 1.5 })
     }

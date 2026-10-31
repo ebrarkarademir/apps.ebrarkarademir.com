@@ -5,6 +5,7 @@ import TermWindow from '../components/TermWindow.vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom } from '../online/useOnlineRoom'
 import FlappyStage from './flappy/FlappyStage.vue'
+import { LEVEL_NAMES } from './flappy/engine'
 
 const props = defineProps({
   t: { type: Object, required: true },
@@ -16,7 +17,9 @@ const props = defineProps({
 
 const emit = defineEmits(['go-back'])
 
-const BEST_KEY = 'flappyBest'
+// Normal keeps the key from before there were levels, so nobody loses their best score
+const bestKey = (level) => (level === 'normal' ? 'flappyBest' : `flappyBest-${level}`)
+const LEVEL_KEY = 'flappyLevel'
 const COUNTDOWN_MS = 3000
 const LIVE_TIMEOUT_MS = 5000 // a flying player silent this long is counted out
 const OVER_DELAY_MS = 450 // the score card waits for the bird to hit the ground
@@ -41,9 +44,13 @@ const SOLO_ART = [' .--.', '( ^ @)>  ~', " `--'"].join('\n')
 const ONLINE_ART = [' .--.    .--.', '( ^ @)> ( v @)>', " `--'    `--'"].join('\n')
 const WINNER_ART = ['  /\\/\\', '  .--.', ' ( ^ @)>', "  `--'"].join('\n')
 const NO_MEDAL_ART = [' .--.', '( - x)>', " `--'"].join('\n')
+const LEVEL_KEYS = { easy: 'flappyEasy', normal: 'flappyNormal', hard: 'flappyHard', insane: 'flappyInsane' }
+const LEVEL_DESC_KEYS = { easy: 'flappyEasyDesc', normal: 'flappyNormalDesc', hard: 'flappyHardDesc', insane: 'flappyInsaneDesc' }
+const LEVEL_MARKS = { easy: '[*   ]', normal: '[**  ]', hard: '[*** ]', insane: '[****]' }
 const medalArt = (mark) => [' \\ /', ".-'-.", `| ${mark} |`, "'---'"].join('\n')
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
+const levelName = (level) => props.t[LEVEL_KEYS[level]] || level
 const randomSeed = () => Math.floor(Math.random() * 2 ** 31)
 
 // null while choosing, then solo or online; an invite link or a chat invite goes straight online
@@ -51,19 +58,35 @@ const mode = ref(props.initialCode || props.hostRoom ? 'online' : null)
 
 // ---------- Solo ----------
 
-const loadBest = () => {
+function read (key) {
   try {
-    return Number(localStorage.getItem(BEST_KEY)) || 0
+    return localStorage.getItem(key)
   } catch {
-    return 0
+    return null
   }
 }
 
-const best = ref(loadBest())
+function write (key, value) {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // It just isn't kept
+  }
+}
+
+const savedLevel = read(LEVEL_KEY)
+const level = ref(LEVEL_NAMES.includes(savedLevel) ? savedLevel : 'normal')
+const bests = reactive(Object.fromEntries(LEVEL_NAMES.map(name => [name, Number(read(bestKey(name))) || 0])))
+const best = computed(() => bests[level.value])
 const solo = reactive({ runId: 1, seed: randomSeed(), phase: 'ready', score: 0, paused: false, over: false, newBest: false })
 let overTimer = null
 
 const medal = computed(() => MEDALS.find(m => solo.score >= m.min) || null)
+
+function chooseLevel (name) {
+  level.value = name
+  write(LEVEL_KEY, name)
+}
 
 function onSoloState ({ phase, score }) {
   solo.phase = phase
@@ -71,12 +94,8 @@ function onSoloState ({ phase, score }) {
   if (phase !== 'over' || solo.over || overTimer) return
   solo.newBest = score > best.value
   if (solo.newBest) {
-    best.value = score
-    try {
-      localStorage.setItem(BEST_KEY, String(score))
-    } catch {
-      // The best score just isn't kept
-    }
+    bests[level.value] = score
+    write(bestKey(level.value), String(score))
   }
   overTimer = setTimeout(() => {
     overTimer = null
@@ -178,6 +197,9 @@ function crashRunner (s, id, score, dist) {
 function onAction (s, playerId, action) {
   const isHost = playerId === s.hostId
   switch (action.type) {
+    case 'level':
+      if (isHost && s.phase === 'lobby' && LEVEL_NAMES.includes(action.level)) s.level = action.level
+      break
     case 'start':
       if (!isHost || (s.phase !== 'lobby' && s.phase !== 'results')) return
       s.players = s.players.filter(p => p.online)
@@ -209,7 +231,7 @@ const room = useOnlineRoom({
   game: 'flappy',
   initialCode: props.initialCode,
   hostRoom: props.hostRoom,
-  initialState: () => ({ round: 0, seed: 0, deadline: null, runners: {}, standings: [], wins: {} }),
+  initialState: () => ({ level: level.value, round: 0, seed: 0, deadline: null, runners: {}, standings: [], wins: {} }),
   onAction,
   onLive,
   onLeave: (s, player) => {
@@ -272,13 +294,33 @@ const cardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
         <span class="inline-block whitespace-pre text-left text-[0.6rem] min-[400px]:text-xs sm:text-sm leading-tight">{{ TITLE_ART }}</span>
       </div>
 
+      <section>
+        <h2 class="term-label mb-3">{{ t.flappyChooseLevel }}</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" :aria-label="t.flappyLevel">
+          <button
+            v-for="name in LEVEL_NAMES"
+            :key="name"
+            type="button"
+            role="radio"
+            :aria-checked="level === name"
+            :class="['term-option flex flex-col items-start gap-1 px-3 py-2 text-left', { 'is-active': level === name }]"
+            @click="chooseLevel(name)"
+          >
+            <span class="text-xs tracking-widest" aria-hidden="true">{{ LEVEL_MARKS[name] }}</span>
+            <span class="font-display text-2xl leading-none uppercase">{{ levelName(name) }}</span>
+            <span class="text-xs tabular-nums opacity-80">{{ t.flappyBest }}: {{ bests[name] }}</span>
+          </button>
+        </div>
+        <p class="term-muted text-sm leading-relaxed mt-3">&gt; {{ t[LEVEL_DESC_KEYS[level]] }}</p>
+      </section>
+
       <div class="grid sm:grid-cols-2 gap-4">
         <button type="button" :class="cardClass" @click="startSolo">
           <span class="whitespace-pre text-sm leading-tight" aria-hidden="true">{{ SOLO_ART }}</span>
           <span class="font-display text-3xl leading-none uppercase">{{ t.flappySolo }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.flappySoloDesc }}</span>
           <span class="mt-auto flex items-center justify-between gap-2 pt-1">
-            <span class="term-chip">{{ t.flappyBest }}: {{ best }}</span>
+            <span class="term-chip">{{ levelName(level) }} · {{ t.flappyBest }}: {{ best }}</span>
             <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
           </span>
         </button>
@@ -304,6 +346,8 @@ const cardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
     :title="t.flappyTitle"
     :exitLabel="t.flappyQuit"
     :seed="solo.seed"
+    :level="level"
+    :levelLabel="levelName(level)"
     :runId="solo.runId"
     :paused="solo.paused"
     @exit="quitSolo"
@@ -327,6 +371,7 @@ const cardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
       <div v-if="solo.over" class="absolute inset-0 flex items-center justify-center p-3 bg-black/40">
         <div class="term-window w-full max-w-xs p-5 text-center" role="dialog" aria-modal="false" :aria-label="t.flappyGameOver">
           <h2 class="font-display text-5xl leading-none uppercase">{{ t.flappyGameOver }}</h2>
+          <p class="mt-2"><span class="term-chip">{{ LEVEL_MARKS[level] }} {{ levelName(level) }}</span></p>
 
           <div class="mt-4 flex items-center justify-center gap-5">
             <span class="whitespace-pre text-left text-sm leading-tight" aria-hidden="true">{{ medal ? medalArt(medal.mark) : NO_MEDAL_ART }}</span>
@@ -359,8 +404,26 @@ const cardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
 
   <!-- Online race -->
   <OnlineRoom v-else :room="room" :t="t" :title="t.flappyTitle" @go-back="mode = null" @start="room.act('start')">
-    <template #lobby>
-      <p class="term-muted text-sm leading-relaxed">&gt; {{ t.flappyLobbyHint }}</p>
+    <template #lobby="{ view: lobby, isHost }">
+      <div class="space-y-4">
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="term-label mr-1">&gt; {{ t.flappyLevel }}</span>
+          <button
+            v-for="name in LEVEL_NAMES"
+            :key="name"
+            type="button"
+            @click="room.act('level', { level: name })"
+            :disabled="!isHost"
+            :class="['term-option min-h-8 px-3 text-sm font-semibold', { 'is-active': lobby.level === name }]"
+          >
+            {{ levelName(name) }}
+          </button>
+        </div>
+        <div class="space-y-2 text-sm leading-relaxed">
+          <p class="term-muted">&gt; {{ t[LEVEL_DESC_KEYS[lobby.level]] }}</p>
+          <p class="term-muted">&gt; {{ t.flappyLobbyHint }}</p>
+        </div>
+      </div>
     </template>
 
     <FlappyStage
@@ -370,6 +433,8 @@ const cardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
       :title="t.flappyTitle"
       :exitLabel="t.onlineLeave"
       :seed="view.seed"
+      :level="view.level"
+      :levelLabel="levelName(view.level)"
       :runId="view.round"
       :round="view.round"
       :startAt="startAt"
@@ -389,6 +454,7 @@ const cardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
       <div class="text-center">
         <span class="inline-block whitespace-pre text-left text-sm leading-tight mb-3" aria-hidden="true">{{ WINNER_ART }}</span>
         <h2 class="font-display text-5xl leading-none uppercase">{{ fmt(t.flappyRoundResults, { n: view.round }) }}</h2>
+        <p class="mt-2"><span class="term-chip">{{ LEVEL_MARKS[view.level] }} {{ levelName(view.level) }}</span></p>
         <p v-if="winner" class="term-muted mt-2">&gt; {{ fmt(t.flappyRoundWinner, { name: winner.name }) }}</p>
       </div>
 
