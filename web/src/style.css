@@ -37,6 +37,14 @@
      doesn't zoom it */
   html.zoom-locked {
     touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Safari doesn't always pass touch-action down from the page, so every element gets it too.
+     :where() keeps it weaker than a game's own touch-action (touch-none and the like). */
+  html.zoom-locked :where(*) {
+    touch-action: pan-x pan-y;
   }
 
   body {

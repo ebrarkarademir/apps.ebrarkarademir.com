@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   STEP, HALF_W, CIRCLE_R, RESTART_TIME,
   createMatch, stepMatch, setInput, pressKick, snapshot, viewOf, readSnapshot, attackDir
@@ -18,7 +18,8 @@ import { haptics } from '../ascii/haptics'
 // above it, the game loop, the controls and the sound. Arrow keys or WASD run; Space kicks, the
 // moment the ball is in reach while it's held. On a touch screen the left half of the screen is
 // a stick and the right half the kick button. On a tall screen the court stands on end, with
-// this player's team attacking up it.
+// this player's team attacking up it. The full-screen switch leaves nothing on screen but the
+// court, with the score small in a corner.
 //
 // In a solo game and on an online host this device runs the match (engine.js) and plays the
 // bots. The host also sends everyone a snapshot of it many times a second and takes their
@@ -52,7 +53,7 @@ const STALL_MS = 1500 // nothing from the host this long: say so
 const AWAY_MS = 2000 // host: no controls from a guest this long and a bot plays for them
 const STICK_RADIUS = 56 // CSS pixels a finger moves for full speed
 const TOP_BAR = 44
-const BOTTOM_MIN = 48
+const BOTTOM_BAR = 40 // a spectator's "you're watching" line
 const GAP = 8
 const MOVE_KEYS = {
   ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1],
@@ -63,10 +64,10 @@ const CONFETTI = ['*', '+', 'o', '.', "'", '*']
 
 const area = ref(null)
 const canvas = ref(null)
-const box = reactive({ w: 0, h: 0, bottom: BOTTOM_MIN })
-const hud = reactive({ score: [0, 0], clock: '', status: '', golden: false, hurry: false, kicking: false })
+const box = reactive({ w: 0, h: 0, top: TOP_BAR, bottom: 0 })
+const full = ref(false) // just the court, filling the screen
+const hud = reactive({ score: [0, 0], clock: '', status: '', golden: false, hurry: false })
 const stick = reactive({ on: false, x: 0, y: 0, kx: 0, ky: 0 })
-const touchUi = window.matchMedia?.('(pointer: coarse)').matches
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 let renderer = null
@@ -283,6 +284,54 @@ function releaseAll () {
 const onVisibility = () => {
   if (document.hidden) releaseAll()
 }
+
+// Every touch on the play area belongs to the game: the browser gets none of them, so no pinch,
+// double tap or drag can zoom or move the page. Buttons and the windows over the court (pause,
+// full time) still work as usual.
+function guardTouch (event) {
+  if (!event.cancelable || event.target.closest?.('button, a, input, select, textarea, .term-window')) return
+  event.preventDefault()
+}
+
+// ---------- Full screen ----------
+
+// Where the browser can, the court takes the whole screen, browser bars and all. An iPhone can't
+// do that for a page, so there it fills the browser window, which is as much as it gets.
+const arena = () => area.value?.closest('.arena')
+const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement
+
+async function enterFull () {
+  full.value = true
+  sound.unlock()
+  const el = arena()
+  const request = el?.requestFullscreen || el?.webkitRequestFullscreen
+  if (!request) return
+  try {
+    await request.call(el, { navigationUI: 'hide' })
+  } catch {
+    // Refused: the court still fills the window
+  }
+}
+
+function leaveFull () {
+  full.value = false
+  if (!fullscreenElement()) return
+  const exit = document.exitFullscreen || document.webkitExitFullscreen
+  exit?.call(document)?.catch?.(() => {})
+}
+
+function onFullClick (event) {
+  if (full.value) leaveFull()
+  else enterFull()
+  if (event.detail) event.currentTarget.blur()
+}
+
+// The browser's own way out (Esc, the back gesture) leaves the court-only view too
+const onFullscreenChange = () => {
+  if (!fullscreenElement()) full.value = false
+}
+
+watch(full, () => nextTick(fit))
 
 // Guest: the controls go to the host as they change. The direction is rounded to one of 32
 // headings and three speeds, so a wobbling thumb doesn't flood the connection.
@@ -519,7 +568,6 @@ function render (view, time) {
 }
 
 function updateHud (view) {
-  hud.kicking = kickDown()
   if (!view) return
   if (hud.score[0] !== view.score[0] || hud.score[1] !== view.score[1]) hud.score = view.score.slice()
   hud.golden = view.golden
@@ -553,20 +601,22 @@ function after () {
 }
 
 // The court keeps its shape and gets all the room it can, standing on end when that makes it
-// clearly bigger, as on a phone held upright. The bar under it gets what's left.
+// clearly bigger, as on a phone held upright. Full screen, the scoreboard goes too.
 function fit () {
   const el = area.value
   if (!el || !renderer) return
   const style = getComputedStyle(el)
   const w = el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
   const h = el.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
-  const room = Math.max(0, h - TOP_BAR - BOTTOM_MIN - GAP * 2)
+  box.top = full.value ? 0 : TOP_BAR
+  box.bottom = watching.value ? BOTTOM_BAR : 0
+  const gaps = (box.top ? GAP : 0) + (box.bottom ? GAP : 0)
+  const room = Math.max(0, h - box.top - box.bottom - gaps)
   const flat = Math.min(w, (room * VIEW_W) / VIEW_H)
   const upright = Math.min(w, (room * VIEW_H) / VIEW_W)
   turn = upright / VIEW_H > (flat / VIEW_W) * 1.2 ? (myTeam() === 1 ? -1 : 1) : 0
   box.w = Math.floor(Math.max(0, turn ? upright : flat))
   box.h = Math.floor(turn ? (box.w * VIEW_W) / VIEW_H : (box.w * VIEW_H) / VIEW_W)
-  box.bottom = Math.floor(Math.max(BOTTOM_MIN, Math.min(h - TOP_BAR - box.h - GAP * 2, touchUi ? Infinity : 160)))
   renderer.resize(box.w, box.h, Math.min(window.devicePixelRatio || 1, 3), turn)
 }
 
@@ -589,6 +639,9 @@ onMounted(() => {
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('blur', releaseAll)
   document.addEventListener('visibilitychange', onVisibility)
+  document.addEventListener('fullscreenchange', onFullscreenChange)
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange)
+  for (const type of ['touchstart', 'touchmove', 'touchend']) area.value.addEventListener(type, guardTouch, { passive: false })
   stopLoop = startLoop({ step: STEP, tick, after, draw: frame, paused: () => props.paused })
   // Development builds expose the match, for scripted play-testing
   if (import.meta.env.DEV) {
@@ -604,19 +657,31 @@ onUnmounted(() => {
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('blur', releaseAll)
   document.removeEventListener('visibilitychange', onVisibility)
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
+  document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
+  leaveFull()
   if (import.meta.env.DEV) delete window.__futsal
 })
 </script>
 
 <template>
-  <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" @exit="emit('exit')">
+  <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" :bare="full" @exit="emit('exit')">
     <template #actions>
       <slot name="actions" />
+      <button
+        type="button"
+        class="term-icon-btn shrink-0 h-9 text-xs"
+        :aria-label="t.futsalFullscreen"
+        :title="t.futsalFullscreen"
+        @click="onFullClick"
+      >
+        [FULL]
+      </button>
     </template>
 
     <div
       ref="area"
-      class="relative flex-1 min-h-0 flex flex-col items-center justify-center gap-2 p-2 sm:p-4 touch-none"
+      :class="['relative flex-1 min-h-0 flex flex-col items-center justify-center gap-2 touch-none', full ? 'p-0' : 'p-2 sm:p-4']"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
@@ -624,7 +689,7 @@ onUnmounted(() => {
       @contextmenu.prevent
     >
       <!-- Scoreboard: each team's score boxed beside its name, the clock between, and a waiting kick-off under it -->
-      <div class="w-full shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4" :style="{ maxWidth: `${Math.max(box.w, 300)}px`, height: `${TOP_BAR}px` }" aria-hidden="true">
+      <div v-if="!full" class="w-full shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4" :style="{ maxWidth: `${Math.max(box.w, 300)}px`, height: `${TOP_BAR}px` }" aria-hidden="true">
         <p class="flex items-center justify-end gap-2 min-w-0">
           <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">(#) {{ teamNames[0] }}</span>
           <span class="score">{{ hud.score[0] }}</span>
@@ -645,19 +710,23 @@ onUnmounted(() => {
         <slot name="overlay" />
       </div>
 
-      <!-- What the controls do; on a touch screen each half of the screen is one of them -->
-      <div class="w-full shrink-0 grid grid-cols-2 gap-2 text-xs uppercase tracking-widest" :style="{ maxWidth: `${box.w}px`, height: `${box.bottom}px` }" aria-hidden="true">
-        <template v-if="!watching">
-          <div class="border border-term-low flex items-center justify-center px-2 text-center term-muted">
-            {{ touchUi ? t.futsalStickHint : t.futsalKeysHint }}
-          </div>
-          <div :class="['border flex flex-col items-center justify-center gap-1 px-2 text-center', hud.kicking ? 'border-term' : 'border-term-low term-muted']">
-            <span class="font-semibold tracking-normal">{{ hud.kicking ? '((o))' : '(o)' }}</span>
-            <span>{{ touchUi ? t.futsalHoldKick : t.futsalKickKeys }}</span>
-          </div>
-        </template>
-        <div v-else class="col-span-2 border border-term-low flex items-center justify-center px-2 text-center term-muted">{{ t.futsalWatching }}</div>
-      </div>
+      <div v-if="watching" class="w-full shrink-0 border border-term-low flex items-center justify-center px-2 text-center text-xs uppercase tracking-widest term-muted" :style="{ maxWidth: `${Math.max(box.w, 300)}px`, height: `${box.bottom}px` }">{{ t.futsalWatching }}</div>
+
+      <!-- Full screen: the score small in one corner and the way out in the other -->
+      <template v-if="full">
+        <p class="mini-score absolute left-2 top-2 z-10 pointer-events-none font-display text-xl leading-none tabular-nums whitespace-nowrap" aria-hidden="true">
+          (#) {{ hud.score[0] }} : {{ hud.score[1] }} ( ) <span :class="['term-muted', { 'term-blink': hud.hurry }]">{{ hud.clock }}</span>
+        </p>
+        <button
+          type="button"
+          class="term-icon-btn absolute right-2 top-2 z-10 h-9 text-xs bg-black/70"
+          :aria-label="t.futsalExitFullscreen"
+          :title="t.futsalExitFullscreen"
+          @click="onFullClick"
+        >
+          [X]
+        </button>
+      </template>
 
       <!-- The stick, under the finger that's steering -->
       <div v-if="stick.on" class="stick" :style="{ left: `${stick.x}px`, top: `${stick.y}px` }" aria-hidden="true">
@@ -681,6 +750,12 @@ onUnmounted(() => {
   line-height: 1;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+
+.mini-score {
+  padding: 0.15rem 0.4rem 0;
+  background: rgb(0 0 0 / 0.6);
+  opacity: 0.85;
 }
 
 .stick {

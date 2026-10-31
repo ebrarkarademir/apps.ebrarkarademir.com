@@ -13,7 +13,9 @@ const props = defineProps({
   title: { type: String, required: true },
   exitLabel: { type: String, required: true },
   // Off for games where M is something you type
-  soundKey: { type: Boolean, default: true }
+  soundKey: { type: Boolean, default: true },
+  // Just the play area, no header: a game's full-screen view, which brings its own way out
+  bare: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['exit'])
@@ -62,7 +64,7 @@ onUnmounted(() => {
 
 <template>
   <div class="arena fixed inset-0 z-40 flex flex-col bg-black select-none">
-    <header class="shrink-0 flex items-center gap-2 h-12 px-2 sm:px-4 border-b border-term-low">
+    <header v-show="!bare" class="shrink-0 flex items-center gap-2 h-12 px-2 sm:px-4 border-b border-term-low">
       <button type="button" class="term-link shrink-0" @click="emit('exit')">
         <span aria-hidden="true">[&lt;]</span>
         <span>{{ exitLabel }}</span>

@@ -553,10 +553,8 @@ export const translations = {
     futsalWins: 'Wins',
     futsalWaitingHost: 'Waiting for the host…',
     futsalWatching: 'You’re watching this match',
-    futsalStickHint: 'Drag here to run',
-    futsalKeysHint: 'Arrows or WASD to run',
-    futsalHoldKick: 'Tap or hold here to kick',
-    futsalKickKeys: 'Space, X or K to kick',
+    futsalFullscreen: 'Full screen',
+    futsalExitFullscreen: 'Leave full screen',
 
     // Doodle Race
     doodleTitle: 'Doodle Race',
@@ -1442,10 +1440,8 @@ export const translations = {
     futsalWins: 'Galibiyet',
     futsalWaitingHost: 'Sunucu bekleniyor…',
     futsalWatching: 'Bu maçı izliyorsun',
-    futsalStickHint: 'Koşmak için burada sürükle',
-    futsalKeysHint: 'Koşmak için oklar ya da WASD',
-    futsalHoldKick: 'Vurmak için dokun ya da basılı tut',
-    futsalKickKeys: 'Vurmak için Boşluk, X ya da K',
+    futsalFullscreen: 'Tam ekran',
+    futsalExitFullscreen: 'Tam ekrandan çık',
 
     // Doodle Race
     doodleTitle: 'Çizim Yarışı',
@@ -2331,10 +2327,8 @@ export const translations = {
     futsalWins: 'Победы',
     futsalWaitingHost: 'Ждём ведущего…',
     futsalWatching: 'Ты смотришь этот матч',
-    futsalStickHint: 'Веди здесь, чтобы бежать',
-    futsalKeysHint: 'Бег: стрелки или WASD',
-    futsalHoldKick: 'Нажми или держи здесь для удара',
-    futsalKickKeys: 'Удар: пробел, X или K',
+    futsalFullscreen: 'Полный экран',
+    futsalExitFullscreen: 'Выйти из полного экрана',
 
     // Doodle Race
     doodleTitle: 'Рисуй и угадай',
@@ -3220,10 +3214,8 @@ export const translations = {
     futsalWins: 'Жеңіс',
     futsalWaitingHost: 'Жүргізушіні күтеміз…',
     futsalWatching: 'Бұл матчты бақылап отырсың',
-    futsalStickHint: 'Жүгіру үшін осында сүйре',
-    futsalKeysHint: 'Жүгіру: бағыттар не WASD',
-    futsalHoldKick: 'Соғу үшін осында түрт не басып тұр',
-    futsalKickKeys: 'Соғу: Бос орын, X не K',
+    futsalFullscreen: 'Толық экран',
+    futsalExitFullscreen: 'Толық экраннан шығу',
 
     // Doodle Race
     doodleTitle: 'Сал да тап',
