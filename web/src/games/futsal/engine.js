@@ -221,7 +221,55 @@ export function stepMatch (match) {
   return events
 }
 
+// ---------- One player on their own ----------
+
+/**
+ * One STEP for a single player on their own, the way stepMatch moves them: running, posts and
+ * nets, the kick-off rules and the walls, but not the other players or the ball. A guest uses
+ * it to move its own player the moment the controls change, before the host's word comes back.
+ * p: { x, y, vx, vy, team }; input: { x, y, held }.
+ */
+export function stepPlayer (p, input, phase, kickoff) {
+  const dt = STEP
+  const still = phase === 'ready' || phase === 'end'
+  let ix = still ? 0 : finite(input.x, -1, 1)
+  let iy = still ? 0 : finite(input.y, -1, 1)
+  const length = Math.hypot(ix, iy)
+  if (length > 1) {
+    ix /= length
+    iy /= length
+  }
+  const top = RUN_SPEED * (input.held ? HOLD_SPEED : 1)
+  const grip = 1 - Math.exp(-GRIP * dt)
+  p.vx += (ix * top - p.vx) * grip
+  p.vy += (iy * top - p.vy) * grip
+  p.x += p.vx * dt
+  p.y += p.vy * dt
+  for (const post of POSTS) bounce(post, p, POST_R + PLAYER_R, 0, 1, PLAYER_BOUNCE)
+  for (const [x0, y0, x1, y1] of NETS) net(p, PLAYER_R, x0, y0, x1, y1)
+  if (phase === 'kickoff' || phase === 'ready') {
+    const dir = attackDir(p.team)
+    if (p.x * dir > 0) {
+      p.x = 0
+      if (p.vx * dir > 0) p.vx = 0
+    }
+    if (p.team !== kickoff) keepOut(p, 0, 0, CIRCLE_R + PLAYER_R, dt)
+  }
+  const mx = WALL_X - PLAYER_R
+  const my = WALL_Y - PLAYER_R
+  if (Math.abs(p.x) > mx) {
+    p.x = Math.sign(p.x) * mx
+    p.vx = 0
+  }
+  if (Math.abs(p.y) > my) {
+    p.y = Math.sign(p.y) * my
+    p.vy = 0
+  }
+  for (const [x0, y0, x1, y1] of NETS) net(p, PLAYER_R, x0, y0, x1, y1)
+}
+
 // ---------- Contact ----------
+
 
 /**
  * Pushes two discs apart if they overlap and bounces them off each other. `wa` and `wb` are how

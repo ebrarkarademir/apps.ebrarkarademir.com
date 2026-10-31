@@ -21,6 +21,9 @@ import { RELAY_BROKERS, connectRelay, relayTopic } from './relay'
 // stays out of the game state: the host keeps each player's latest and passes everyone's on
 // in one small message, ten times a second by default. One-off "events" (a shot fired) are
 // passed on to everyone straight away instead; the host can also send one to a single player.
+//
+// A guest times a small echo from the host once a second: `connection` says how it reaches the
+// host (direct or relay) and the round trip in ms, and the host keeps every guest's in `pings`.
 
 const PEER_PREFIX = 'ebrarkarademir-'
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -32,6 +35,7 @@ const RELAY_TIMEOUT_MS = 15000 // silence after which a relayed player counts as
 const RECONNECT_MS = 1000
 const TICK_MS = 250
 const LIVE_MS = 100 // how often the host passes on the players' live data
+const RTT_MS = 1000 // how often a guest times the way to the host and back
 const NAME_KEY = 'onlineName'
 const CLIENT_KEY = 'onlineClientId'
 
@@ -129,6 +133,11 @@ export function useOnlineRoom (options) {
   const liveData = new Map()
   let liveChanged = false
   let liveTimer = null
+  let rttTimer = null
+  // Guest: how it reaches the host and how long a message takes there and back
+  const connection = reactive({ kind: null, ms: null })
+  // Host: the same for every guest, by player id: { ms, relay }
+  const pings = reactive({})
 
   const freshState = () => ({ phase: 'lobby', hostId: myId, players: [], ...initialState() })
 
@@ -286,6 +295,10 @@ export function useOnlineRoom (options) {
       onGuestLive?.(known.playerId, msg.data)
     } else if (msg.type === 'event' && known && msg.data && typeof msg.data === 'object') {
       passOnEvent(known.playerId, msg.data)
+    } else if (msg.type === 'rtt' && known) {
+      // Echo it straight back, and keep the round trip the guest last measured
+      known.send({ type: 'rtt', t: msg.t })
+      if (Number.isFinite(msg.last)) pings[known.playerId] = { ms: Math.round(msg.last), relay: !!known.relay }
     }
   }
 
@@ -302,6 +315,7 @@ export function useOnlineRoom (options) {
     if (!guest || !state.value) return
     guests.delete(key)
     liveData.delete(guest.playerId)
+    delete pings[guest.playerId]
     liveChanged = true
     const s = state.value
     const player = s.players.find(p => p.id === guest.playerId)
@@ -381,6 +395,7 @@ export function useOnlineRoom (options) {
       const conn = guestPeer.connect(peerId(code), { reliable: true })
       const link = { send: (msg) => conn.open && conn.send(msg), close: () => conn.close() }
       hostLink = link
+      connection.kind = 'direct'
       conn.on('open', () => conn.send(joinMessage()))
       conn.on('iceStateChanged', (iceState) => {
         if (hostLink === link && iceState === 'failed') toRelay()
@@ -406,6 +421,14 @@ export function useOnlineRoom (options) {
   function receiveFromHost (msg) {
     lastHostMessage = Date.now()
     if (msg?.type === 'rejoin') hostLink?.send(joinMessage())
+    if (msg?.type === 'rtt') {
+      if (Number.isFinite(msg.t)) {
+        const ms = performance.now() - msg.t
+        // Eased a little, so one slow message doesn't make the number jump
+        connection.ms = connection.ms === null ? ms : connection.ms * 0.6 + ms * 0.4
+      }
+      return
+    }
     if (msg?.type === 'live') {
       if (msg.data && typeof msg.data === 'object') onLive?.(msg.data)
       return
@@ -424,6 +447,15 @@ export function useOnlineRoom (options) {
     }
     remote.value = next
     screen.value = 'room'
+    startTiming()
+  }
+
+  // Once a second the guest sends the time and the host sends it straight back
+  function startTiming () {
+    if (rttTimer) return
+    const send = () => hostLink?.send({ type: 'rtt', t: performance.now(), last: connection.ms })
+    send()
+    rttTimer = setInterval(send, RTT_MS)
   }
 
   // Try each broker until the host answers there. Also used to get back in after the relay drops.
@@ -451,6 +483,8 @@ export function useOnlineRoom (options) {
         return
       }
       guestRelay = relay
+      connection.kind = 'relay'
+      connection.ms = null
       await relay.subscribe(guestTopic(code, relayId))
       const link = {
         send: (msg) => relay.publish(hostTopic(code), { from: relayId, msg }),
@@ -530,6 +564,11 @@ export function useOnlineRoom (options) {
     clearTimeout(connectTimer)
     clearTimeout(directTimer)
     clearInterval(relayTimer)
+    clearInterval(rttTimer)
+    rttTimer = null
+    connection.kind = null
+    connection.ms = null
+    Object.keys(pings).forEach(id => delete pings[id])
     guests.clear()
     liveData.clear()
     liveChanged = false
@@ -584,7 +623,8 @@ export function useOnlineRoom (options) {
 
   return reactive({
     screen, role, isHost, roomCode, errorKey, playerName, joinCode, now, myId,
-    view, me, shareLink,
+    view, me, shareLink, connection, pings,
+
     createRoom, joinRoom, leave, act, sendLive, sendEvent, sendEventTo
   })
 }
