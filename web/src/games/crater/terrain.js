@@ -276,11 +276,13 @@ export function createTerrain (seed, level = null) {
 }
 
 /**
- * Spots for the units: each side on its own half, standing on dry ground with room above,
- * kept apart. Side 0 starts on the left.
+ * Spots for the units: the map is split into one stretch per side, left to right, and each
+ * side's units stand on dry ground with room above in its own stretch, kept apart.
  */
-export function spawnUnits (terrain, perSide, random) {
+export function spawnUnits (terrain, perSide, random, sides = 2) {
   const units = []
+  const span = (W - 12) / sides
+  const apart = Math.min(8, span / (perSide + 1))
   const spotsIn = (x) => {
     const spots = []
     for (let y = 6; y < WATER_START - 2; y++) {
@@ -288,14 +290,16 @@ export function spawnUnits (terrain, perSide, random) {
     }
     return spots
   }
-  for (let side = 0; side < 2; side++) {
-    const from = side === 0 ? 6 : W * 0.58
-    const to = side === 0 ? W * 0.42 : W - 6
+  for (let side = 0; side < sides; side++) {
+    const margin = sides > 1 ? span * 0.1 : 0
+    const from = 6 + side * span + (side > 0 ? margin : 0)
+    const to = 6 + (side + 1) * span - (side < sides - 1 ? margin : 0)
     for (let k = 0; k < perSide; k++) {
       let spot = null
       for (let tries = 0; tries < 300 && !spot; tries++) {
         const x = Math.floor(from + random() * (to - from)) + 0.5
-        if (units.some(u => Math.abs(u.x - x) < 8)) continue
+        if (units.some(u => Math.abs(u.x - x) < apart)) continue
+
         const spots = spotsIn(x)
         if (spots.length) spot = { x, y: spots[Math.floor(random() * spots.length)] }
       }

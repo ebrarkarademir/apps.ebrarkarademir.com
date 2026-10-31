@@ -6,7 +6,8 @@ import { GREEN, DIM, LOW, MONO, paint, drawSprite, drawText, drawGlyph } from '.
 // whole height of the map; when the screen is too narrow for its whole width it shows part of
 // it (camX, in cells, is its left edge), with a strip along the top showing all of it.
 
-export const SIDE_COLORS = ['#f2f6ea', '#ffb000']
+// One color per side, up to six: white, amber, red, violet, pink and sky blue
+export const SIDE_COLORS = ['#f2f6ea', '#ffb000', '#ff5c5c', '#c58bff', '#ff8ad8', '#8ec8ff']
 const MINIMAP_H = 16
 const FIRE = ['#ffe680', '#ffb000', '#ff6a2a']
 const SMOKE = '#7f8f7f'

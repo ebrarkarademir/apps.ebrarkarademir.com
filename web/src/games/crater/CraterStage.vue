@@ -13,8 +13,9 @@ import { createRenderer, SIDE_COLORS } from './renderer'
 
 // The full-screen match. In the aiming part of a turn this player picks a unit, walks it,
 // aims by dragging (pull back, like a slingshot) and fires; the shot goes to the host, which
-// plays the turn out once both have fired or the clock runs out. Then everyone plays back the
-// host's recording: shots flying, craters opening, units thrown about.
+// plays the turn out once every side has fired or the clock runs out. Then everyone plays back
+// the host's recording: shots flying, craters opening, units thrown about. There are two to six
+// sides, each a person or a bot, every side for itself.
 
 const props = defineProps({
   t: { type: Object, required: true },
@@ -26,16 +27,16 @@ const props = defineProps({
   level: { type: String, required: true }, // the kind of map; with the seed it makes the ground
   craters: { type: Array, required: true }, // [x, y, r] in the order they happened
   units: { type: Array, required: true }, // [{ side, x, y, hp, alive }]
-  mySide: { type: Number, default: -1 }, // 0 or 1, or -1 watching
+  mySide: { type: Number, default: -1 }, // this player's side, or -1 watching
   names: { type: Array, required: true },
   wind: { type: Number, default: 0 }, // -1 to 1
   water: { type: Number, required: true },
   sudden: { type: Boolean, default: false }, // the sea rises every turn now
   deadline: { type: Number, default: 0 },
-  locked: { type: Array, default: () => [false, false] }, // by side: has fired this turn
+  locked: { type: Array, default: () => [] }, // by side: has fired this turn
   replay: { type: Object, default: null }, // { turn, before, frames, events, duration }
   live: { type: Object, required: true }, // { samples: { side: { turn, u, x, y } } }, the other player walking
-  ammo: { type: Array, default: () => [{}, {}] } // by side: what's left of each limited weapon
+  ammo: { type: Array, default: () => [] } // by side: what's left of each limited weapon
 })
 
 const emit = defineEmits(['exit', 'fire', 'walk'])
@@ -114,10 +115,21 @@ function newTurn () {
   if (!playing.value) return
   if (!mine.value.includes(ui.selected)) ui.selected = mine.value[0] ?? -1
   if (ui.selected >= 0) selectUnit(ui.selected)
-  // Face the other side to start with
-  const facingRight = props.mySide === 0
+  // Face the nearest enemy to start with
+  const facingRight = enemyToRight()
   const elevation = Math.cos(ui.angle) >= 0 ? ui.angle : Math.PI - ui.angle
   ui.angle = facingRight ? elevation : Math.PI - elevation
+}
+
+function enemyToRight () {
+  const me = props.units[ui.selected]
+  if (!me) return true
+  let nearest = null
+  for (const u of props.units) {
+    if (!u.alive || u.side === props.mySide) continue
+    if (!nearest || Math.abs(u.x - me.x) < Math.abs(nearest.x - me.x)) nearest = u
+  }
+  return nearest ? nearest.x >= me.x : me.x < W / 2
 }
 
 function nextUnit () {
@@ -375,7 +387,8 @@ function render () {
     // A unit the replay kills stays up until the replay gets there
     const alive = frame ? u.alive || diedBy(i) : u.alive
     const aiming = i === ui.selected && props.phase === 'aim' && playing.value
-    const facing = aiming ? (Math.cos(ui.angle) < 0 ? 1 : 0) : u.side
+    // Everyone else faces the middle of the map
+    const facing = aiming ? (Math.cos(ui.angle) < 0 ? 1 : 0) : u.x > W / 2 ? 1 : 0
     return {
       x,
       y,
@@ -555,11 +568,18 @@ function press (event, run) {
 
 // ---------- HUD ----------
 
-const teams = computed(() => [0, 1].map(side => {
+const teams = computed(() => props.names.map((name, side) => {
   const list = props.units.filter(u => u.side === side)
   const hp = list.reduce((sum, u) => sum + (u.alive ? u.hp : 0), 0)
-  return { side, name: props.names[side] || '?', hp, units: list.map(u => (u.alive ? u.hp : 0)), me: side === props.mySide, fired: props.locked[side] }
+  return { side, name: name || '?', hp, units: list.map(u => (u.alive ? u.hp : 0)), me: side === props.mySide, fired: props.locked[side] }
 }))
+// The first half of the sides down the left of the bar, the rest down the right; past two,
+// each one takes a single line
+const halves = computed(() => {
+  const n = Math.ceil(teams.value.length / 2)
+  return [teams.value.slice(0, n), teams.value.slice(n)]
+})
+const compact = computed(() => teams.value.length > 2)
 // The wind as a gauge out from the middle, five marks at full strength
 const windGauge = computed(() => {
   const n = Math.round(Math.abs(props.wind) * 5)
@@ -580,7 +600,11 @@ const status = computed(() => {
   if (props.phase !== 'aim') return ''
   if (!playing.value) return props.t.craterWatching
   if (!mine.value.length) return props.t.craterOut
-  if (ui.fired || props.locked[props.mySide]) return fmt(props.t.craterWaiting, { name: props.names[1 - props.mySide] || '?' })
+  if (ui.fired || props.locked[props.mySide]) {
+    // Everyone still to fire, by name
+    const waiting = props.names.filter((_, side) => side !== props.mySide && !props.locked[side] && props.units.some(u => u.side === side && u.alive))
+    return fmt(props.t.craterWaiting, { name: waiting.join(', ') || '…' })
+  }
   return ''
 })
 const showControls = computed(() => playing.value && props.phase === 'aim' && mine.value.length > 0 && !ui.fired && !props.locked[props.mySide])
@@ -661,14 +685,16 @@ onUnmounted(() => {
 <template>
   <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" @exit="emit('exit')" @contextmenu.prevent>
     <div class="relative flex-1 min-h-0 flex flex-col">
-      <!-- Both sides' health, the clock and the wind -->
+      <!-- Every side's health, the clock and the wind -->
       <div class="hud">
-        <div v-for="team in teams" :key="team.side" :class="['team', team.side ? 'side-1 text-right items-end' : 'side-0 items-start', { 'is-me': team.me }]" :style="{ color: SIDE_COLORS[team.side] }">
-          <span class="name truncate">{{ team.name }}<span v-if="team.fired && phase === 'aim'" class="ok"> [ok]</span></span>
-          <span class="pips" aria-hidden="true">
-            <span v-for="(hp, k) in team.units" :key="k" :class="['pip', { 'is-down': !hp }]"><span :style="{ width: hp + '%', background: SIDE_COLORS[team.side] }"></span></span>
-          </span>
-          <span class="sr-only">{{ team.hp }}</span>
+        <div v-for="(half, h) in halves" :key="h" :class="['group', h ? 'side-1 items-end' : 'side-0 items-start']">
+          <div v-for="team in half" :key="team.side" :class="['team', h ? 'text-right items-end' : 'items-start', { 'is-me': team.me, compact }]" :style="{ color: SIDE_COLORS[team.side] }">
+            <span class="name truncate">{{ team.name }}<span v-if="team.fired && phase === 'aim'" class="ok"> [ok]</span></span>
+            <span class="pips" aria-hidden="true">
+              <span v-for="(hp, k) in team.units" :key="k" :class="['pip', { 'is-down': !hp }]"><span :style="{ width: hp + '%', background: SIDE_COLORS[team.side] }"></span></span>
+            </span>
+            <span class="sr-only">{{ team.hp }}</span>
+          </div>
         </div>
         <div class="center">
           <span class="text-[10px] uppercase tracking-widest term-muted">{{ fmt(t.craterTurn, { n: turn }) }}</span>
@@ -738,14 +764,41 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--color-term-low);
   min-height: 3rem;
 }
+.hud .group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
 .hud .team {
   display: flex;
   flex-direction: column;
+  max-width: 100%;
   min-width: 0;
   font-size: 0.75rem;
   line-height: 1.25;
   text-shadow: 0 0 5px currentColor;
 }
+.hud .team.compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+.hud .side-1 .team.compact {
+  flex-direction: row-reverse;
+}
+.hud .compact .name {
+  font-size: 0.7rem;
+}
+.hud .compact .pips {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+.hud .compact .pip {
+  width: 1.3rem;
+  height: 0.4rem;
+}
+
 .hud .side-0 {
   grid-column: 1;
   grid-row: 1;

@@ -149,11 +149,11 @@ export const rules = {
     EN: {
       icon: '[T]',
       title: 'Tank',
-      players: '2–8 players, one device each',
+      players: '1 player against bots, or 2–8 online',
       duration: '2½ min rounds',
       goal: 'Hit the other tanks with your shells and be the last tank standing.',
       steps: [
-        'One person creates a room and the others join with the code. Everyone plays on their own phone or computer.',
+        'Solo: you against up to seven bot tanks. Online: one person creates a room and the others join with the code, each on their own phone or computer; the host can add bots to fill the arena.',
         'There is only one button: hold it anywhere on the screen (or Space) and your tank drives forward and fires.',
         'Let go and the tank stops and turns on the spot — the other way round after every press. Press again when the dotted line points where you want to go.',
         'Every tank has 3 hearts. A hit costs one heart, then the tank blinks and is safe for a moment.',
@@ -169,11 +169,11 @@ export const rules = {
     TR: {
       icon: '[T]',
       title: 'Tank',
-      players: '2–8 oyuncu, herkes kendi cihazından',
+      players: '1 oyuncu botlara karşı ya da çevrim içi 2–8',
       duration: '2,5 dakikalık turlar',
       goal: 'Diğer tankları mermilerinle vur ve ayakta kalan son tank ol.',
       steps: [
-        'Bir kişi oda oluşturur, diğerleri kodla katılır. Herkes kendi telefonundan ya da bilgisayarından oynar.',
+        'Tek kişilik: yediye kadar bot tanka karşı sen. Çevrim içi: bir kişi oda oluşturur, diğerleri kodla katılır, herkes kendi telefonundan ya da bilgisayarından oynar; sunucu arenayı doldurmak için bot ekleyebilir.',
         'Tek bir tuş var: ekranın herhangi bir yerine basılı tut (ya da Boşluk) — tankın ileri gider ve ateş eder.',
         'Bırakınca tank durur ve olduğu yerde döner — her basıştan sonra ters yöne. Noktalı çizgi istediğin yönü gösterdiğinde tekrar bas.',
         'Her tankın 3 canı var. Her isabet bir can götürür, sonra tank yanıp söner ve kısa bir süre güvende olur.',
@@ -189,11 +189,11 @@ export const rules = {
     RU: {
       icon: '[T]',
       title: 'Tank',
-      players: '2–8 игроков, у каждого своё устройство',
+      players: '1 игрок против ботов или 2–8 онлайн',
       duration: 'Раунды по 2½ мин',
       goal: 'Попадай снарядами в другие танки и останься последним уцелевшим.',
       steps: [
-        'Один создаёт комнату, остальные входят по коду. Каждый играет со своего телефона или компьютера.',
+        'Одиночная игра: ты против танков-ботов, до семи. Онлайн: один создаёт комнату, остальные входят по коду, каждый со своего телефона или компьютера; ведущий может добавить ботов.',
         'Кнопка всего одна: держи нажатым любое место экрана (или пробел) — и танк едет вперёд и стреляет.',
         'Отпусти — и танк остановится и начнёт поворачиваться на месте, после каждого нажатия в другую сторону. Нажми снова, когда пунктир смотрит туда, куда нужно.',
         'У каждого танка 3 жизни. Попадание отнимает одну, после чего танк мигает и недолго неуязвим.',
@@ -209,11 +209,11 @@ export const rules = {
     KK: {
       icon: '[T]',
       title: 'Tank',
-      players: '2–8 ойыншы, әркімде өз құрылғысы',
+      players: '1 ойыншы боттарға қарсы не онлайн 2–8',
       duration: '2½ минуттық раундтар',
       goal: 'Снарядтарыңмен басқа танктерге тигізіп, соңғы қалған танк бол.',
       steps: [
-        'Бір адам бөлме ашады, қалғандары кодпен кіреді. Әркім өз телефонынан не компьютерінен ойнайды.',
+        'Жалғыз: жетіге дейін бот танкке қарсы сен. Онлайн: бір адам бөлме ашады, қалғандары кодпен кіреді, әркім өз телефонынан не компьютерінен ойнайды; жүргізуші бот қоса алады.',
         'Түйме біреу ғана: экранның кез келген жерін (немесе Бос орынды) басып тұрсаң, танкің алға жүріп, атады.',
         'Жіберсең, танк тоқтап, орнында бұрыла бастайды — әр басқан сайын қарама-қарсы жаққа. Нүктелі сызық керек жаққа қарағанда қайта бас.',
         'Әр танктің 3 жүрегі бар. Әр тигенде бір жүрек кетеді, сосын танк жыпылықтап, біраз уақыт қауіпсіз болады.',
@@ -493,16 +493,16 @@ export const rules = {
     EN: {
       icon: '[~]',
       title: 'Crater Duel',
-      players: '2 players online, others can watch',
+      players: '1 player against bots, or 2–6 online; others can watch',
       duration: '3–8 min',
-      goal: 'Knock out all the other player’s units before they knock out yours.',
+      goal: 'Knock out every other side’s units before they knock out yours.',
       steps: [
-        'One person creates a room and picks the units each side gets, the time to aim and the map, or Random; the other joins with the code. There are ten maps, from Green Hills to Lava Caverns and Sky Islands, and every match lays one out anew. Some have rock no blast can break.',
-        'Each turn you both aim at the same time. Pick one of your units (tap it, or Tab), walk it a little if you like, choose a weapon and drag anywhere on the field to aim: pull back like a slingshot, further for more power. Then press Fire.',
-        'When both have fired, or the time is up, both shots fly together. Gravity pulls them down and the wind (shown at the top) pushes them sideways.',
+        'Solo: you against one to five bot armies. Online: one person creates a room and picks the units each side gets, the time to aim and the map, or Random; the others join with the code, and the host can add bots, up to six sides in all, every side for itself. There are ten maps, from Green Hills to Lava Caverns and Sky Islands, and every match lays one out anew. Some have rock no blast can break.',
+        'Each turn every side aims at the same time. Pick one of your units (tap it, or Tab), walk it a little if you like, choose a weapon and drag anywhere on the field to aim: pull back like a slingshot, further for more power. Then press Fire.',
+        'When every side has fired, or the time is up, all the shots fly together. Gravity pulls them down and the wind (shown at the top) pushes them sideways.',
         'Shell bursts where it lands, and never runs out. Grenade (3 a match) bounces and goes off after a few seconds. Cluster (2) bursts into five small bombs. Molotov (2) spills fire that burns anyone standing in it. Dynamite (1) only goes a short throw, then after a long fuse makes the biggest blast of all.',
         'Every burst blasts a crater out of the ground, hurts units nearby and throws them. Units fall into holes, a hard landing hurts, and the sea takes anyone who falls in.',
-        'From turn 8 the sea rises every turn, so every battle ends. The last side with units standing wins; if both go down together it’s a draw.'
+        'From turn 8 the sea rises every turn, so every battle ends. The last side with units standing wins; if the last ones go down together it’s a draw.'
       ],
       tips: [
         'The dotted line shows only the start of the flight, without the wind: the rest is up to you.',
@@ -514,16 +514,16 @@ export const rules = {
     TR: {
       icon: '[~]',
       title: 'Krater Düellosu',
-      players: 'Çevrim içi 2 oyuncu, diğerleri izler',
+      players: '1 oyuncu botlara karşı ya da çevrim içi 2–6; diğerleri izler',
       duration: '3–8 dk',
-      goal: 'Rakibin bütün birliklerini, o seninkileri devirmeden önce devir.',
+      goal: 'Diğer tarafların bütün birliklerini, onlar seninkileri devirmeden önce devir.',
       steps: [
-        'Bir kişi oda oluşturur; taraf başına birlik sayısını, nişan süresini ve haritayı (ya da Rastgele) seçer; diğeri kodla katılır. Yeşil Tepeler’den Lav Mağaraları’na ve Gök Adaları’na on harita var ve her maç bir haritayı yeniden kurar. Bazılarında hiçbir patlamanın kıramadığı kaya var.',
-        'Her turda ikiniz aynı anda nişan alırsınız. Birliklerinden birini seç (ona dokun ya da Tab), istersen biraz yürüt, bir silah seç ve nişan için sahada herhangi bir yerden sürükle: sapan gibi geri çek, ne kadar çekersen o kadar güçlü. Sonra Ateş’e bas.',
-        'İkiniz de ateş edince ya da süre bitince iki atış birlikte uçar. Yerçekimi aşağı çeker, rüzgâr (üstte gösterilir) yana iter.',
+        'Tek kişilik: bir ile beş bot ordusuna karşı sen. Çevrim içi: bir kişi oda oluşturur; taraf başına birlik sayısını, nişan süresini ve haritayı (ya da Rastgele) seçer; diğerleri kodla katılır ve sunucu bot ekleyebilir. Toplam altı tarafa kadar, her taraf kendi başına. Yeşil Tepeler’den Lav Mağaraları’na ve Gök Adaları’na on harita var ve her maç bir haritayı yeniden kurar. Bazılarında hiçbir patlamanın kıramadığı kaya var.',
+        'Her turda bütün taraflar aynı anda nişan alır. Birliklerinden birini seç (ona dokun ya da Tab), istersen biraz yürüt, bir silah seç ve nişan için sahada herhangi bir yerden sürükle: sapan gibi geri çek, ne kadar çekersen o kadar güçlü. Sonra Ateş’e bas.',
+        'Bütün taraflar ateş edince ya da süre bitince tüm atışlar birlikte uçar. Yerçekimi aşağı çeker, rüzgâr (üstte gösterilir) yana iter.',
         'Mermi düştüğü yerde patlar ve hiç bitmez. Bomba (maç başına 3) seker ve birkaç saniye sonra patlar. Parça bombası (2) beş küçük bombaya ayrılır. Molotof (2) içinde duranı yakan bir ateş saçar. Dinamit (1) sadece kısa bir mesafeye atılır, uzun bir fitilden sonra en büyük patlamayı yapar.',
         'Her patlama yerde bir krater açar, yakındaki birliklere hasar verir ve onları fırlatır. Birlikler çukurlara düşer, sert iniş canı yakar ve denize düşen gider.',
-        '8. turdan sonra deniz her tur yükselir, böylece her savaş biter. Ayakta birliği kalan son taraf kazanır; ikisi birlikte düşerse berabere.'
+        '8. turdan sonra deniz her tur yükselir, böylece her savaş biter. Ayakta birliği kalan son taraf kazanır; son kalanlar birlikte düşerse berabere.'
       ],
       tips: [
         'Noktalı çizgi rüzgâr olmadan uçuşun sadece başını gösterir: gerisi sana kalmış.',
@@ -535,16 +535,16 @@ export const rules = {
     RU: {
       icon: '[~]',
       title: 'Дуэль кратеров',
-      players: '2 игрока онлайн, остальные смотрят',
+      players: '1 игрок против ботов или 2–6 онлайн; остальные смотрят',
       duration: '3–8 мин',
-      goal: 'Выбей всех бойцов соперника раньше, чем он выбьет твоих.',
+      goal: 'Выбей бойцов всех остальных сторон раньше, чем они выбьют твоих.',
       steps: [
-        'Один создаёт комнату и выбирает число бойцов у каждой стороны, время на прицел и карту или «Случайная»; второй входит по коду. Есть десять карт — от «Зелёных холмов» до «Лавовых пещер» и «Небесных островов», и каждый матч строит карту заново. На некоторых есть скала, которую не берёт ни один взрыв.',
-        'Каждый ход вы оба целитесь одновременно. Выбери бойца (нажми на него или Tab), при желании пройди немного, выбери оружие и целься, перетаскивая по полю: оттяни назад, как рогатку, — чем дальше, тем сильнее. Затем нажми «Огонь».',
-        'Когда оба выстрелили или время вышло, оба выстрела летят вместе. Гравитация тянет вниз, а ветер (показан сверху) сносит вбок.',
+        'Одиночная игра: ты против армий ботов, от одной до пяти. Онлайн: один создаёт комнату и выбирает число бойцов у каждой стороны, время на прицел и карту или «Случайная»; остальные входят по коду, а ведущий может добавить ботов — всего до шести сторон, каждый сам за себя. Есть десять карт — от «Зелёных холмов» до «Лавовых пещер» и «Небесных островов», и каждый матч строит карту заново. На некоторых есть скала, которую не берёт ни один взрыв.',
+        'Каждый ход все стороны целятся одновременно. Выбери бойца (нажми на него или Tab), при желании пройди немного, выбери оружие и целься, перетаскивая по полю: оттяни назад, как рогатку, — чем дальше, тем сильнее. Затем нажми «Огонь».',
+        'Когда все выстрелили или время вышло, все выстрелы летят вместе. Гравитация тянет вниз, а ветер (показан сверху) сносит вбок.',
         'Снаряд взрывается там, где упал, и никогда не кончается. Граната (3 за матч) отскакивает и взрывается через несколько секунд. Кассета (2) разлетается на пять маленьких бомб. Молотов (2) разливает огонь, который жжёт всех, кто в нём стоит. Динамит (1) летит совсем недалеко, зато после долгого фитиля даёт самый мощный взрыв.',
         'Каждый взрыв выбивает в земле кратер, ранит бойцов рядом и отбрасывает их. Бойцы падают в ямы, жёсткое приземление ранит, а упавшего в море уже не спасти.',
-        'С 8-го хода море поднимается каждый ход, так что любой бой заканчивается. Побеждает сторона, у которой последней остались бойцы; если обе выбыли одновременно — ничья.'
+        'С 8-го хода море поднимается каждый ход, так что любой бой заканчивается. Побеждает сторона, у которой последней остались бойцы; если последние выбыли одновременно — ничья.'
       ],
       tips: [
         'Пунктир показывает только начало полёта и без ветра: остальное — на тебе.',
@@ -556,16 +556,16 @@ export const rules = {
     KK: {
       icon: '[~]',
       title: 'Кратер жекпе-жегі',
-      players: 'Онлайн 2 ойыншы, қалғандары көреді',
+      players: '1 ойыншы боттарға қарсы не онлайн 2–6; қалғандары көреді',
       duration: '3–8 мин',
-      goal: 'Қарсыластың барлық жауынгерін ол сенікін құлатқанша құлат.',
+      goal: 'Басқа жақтардың барлық жауынгерін олар сенікін құлатқанша құлат.',
       steps: [
-        'Бір адам бөлме ашып, әр жақтағы жауынгер санын, көздеу уақытын және картаны (не «Кездейсоқ») таңдайды; екіншісі кодпен кіреді. «Жасыл төбелерден» «Лава үңгірлері» мен «Аспан аралдарына» дейін он карта бар, әр матч картаны жаңадан құрады. Кейбірінде ешбір жарылыс бұза алмайтын тас бар.',
-        'Әр жүрісте екеуің бір мезетте көздейсің. Жауынгеріңді таңда (оны бас не Tab), қаласаң сәл жүргіз, қару таңда да алаңның кез келген жерінен сүйреп көзде: салбырауық сияқты артқа тарт, неғұрлым алыс тартсаң, соғұрлым күшті. Сосын «Ату» бас.',
-        'Екеуің де атқанда не уақыт біткенде екі оқ бірге ұшады. Ауырлық күші төмен тартады, ал жел (жоғарыда көрсетілген) жанына итереді.',
+        'Жалғыз: бірден беске дейін бот әскеріне қарсы сен. Онлайн: бір адам бөлме ашып, әр жақтағы жауынгер санын, көздеу уақытын және картаны (не «Кездейсоқ») таңдайды; қалғандары кодпен кіреді, жүргізуші бот қоса алады — барлығы алты жаққа дейін, әр жақ өзі үшін. «Жасыл төбелерден» «Лава үңгірлері» мен «Аспан аралдарына» дейін он карта бар, әр матч картаны жаңадан құрады. Кейбірінде ешбір жарылыс бұза алмайтын тас бар.',
+        'Әр жүрісте барлық жақ бір мезетте көздейді. Жауынгеріңді таңда (оны бас не Tab), қаласаң сәл жүргіз, қару таңда да алаңның кез келген жерінен сүйреп көзде: салбырауық сияқты артқа тарт, неғұрлым алыс тартсаң, соғұрлым күшті. Сосын «Ату» бас.',
+        'Барлығы атқанда не уақыт біткенде барлық оқ бірге ұшады. Ауырлық күші төмен тартады, ал жел (жоғарыда көрсетілген) жанына итереді.',
         'Снаряд түскен жерінде жарылады және ешқашан таусылмайды. Граната (матчқа 3) секіріп, бірнеше секундтан кейін жарылады. Кассета (2) бес кішкене бомбаға бөлінеді. Молотов (2) ішінде тұрғанды күйдіретін от шашады. Динамит (1) тек жақынға лақтырылады, бірақ ұзын пілтеден кейін ең үлкен жарылыс жасайды.',
         'Әр жарылыс жерде кратер ашады, жақын жауынгерлерді жаралап, лақтырып жібереді. Жауынгерлер шұңқырға құлайды, қатты қону жаралайды, ал теңізге түскен жоғалады.',
-        '8-жүрістен бастап теңіз әр жүріс сайын көтеріледі, сондықтан кез келген шайқас аяқталады. Жауынгері соңғы болып қалған жақ жеңеді; екеуі бірге құласа — тепе-тең.'
+        '8-жүрістен бастап теңіз әр жүріс сайын көтеріледі, сондықтан кез келген шайқас аяқталады. Жауынгері соңғы болып қалған жақ жеңеді; соңғылары бірге құласа — тепе-тең.'
       ],
       tips: [
         'Нүктелі сызық ұшудың тек басын, жел жоқ кездегідей көрсетеді: қалғаны өзіңе байланысты.',

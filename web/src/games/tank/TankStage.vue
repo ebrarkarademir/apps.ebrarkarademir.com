@@ -5,6 +5,7 @@ import {
   mapWalls, spawnTank, moveTank, fireShell, stepShell, touches, aimPath, tankAt, wrapAngle, angleDiff
 } from './engine'
 import { createRenderer } from './renderer'
+import { LEVELS, newBrain, botHeld } from './bots'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
 import { GREEN, DIM, watchFonts } from '../ascii/paint'
 import { startLoop } from '../ascii/loop'
@@ -18,7 +19,9 @@ import { haptics } from '../ascii/haptics'
 // the tank forward and fires on the press; letting go stops it and it turns on the spot.
 //
 // This device moves its own tank and decides when a shell hits it. Positions go out as live
-// samples, shots and hits as events, and the host keeps the hearts.
+// samples, shots and hits as events, and the host keeps the hearts. The host's device (or a
+// solo game) also drives the bot tanks (`drones`) the same way: their positions ride along in
+// its own samples, and it decides when they're hit.
 
 const props = defineProps({
   t: { type: Object, required: true },
@@ -35,7 +38,9 @@ const props = defineProps({
   names: { type: Object, required: true }, // id -> name
   live: { type: Object, required: true }, // { samples: { id -> sample }, at }
   inbox: { type: Array, required: true }, // events from the others: { from, data }
-  outcome: { type: Object, default: null } // { reason, winner } once the round is decided
+  outcome: { type: Object, default: null }, // { reason, winner } once the round is decided
+  drones: { type: Array, default: () => [] }, // ids of the bot tanks this device drives
+  level: { type: String, default: 'normal' } // how good those bots are
 })
 
 const emit = defineEmits(['exit', 'sample', 'shot', 'hit'])
@@ -77,6 +82,7 @@ let flash = 0
 let shake = 0
 const shells = new Map()
 const ghosts = new Map() // id -> another player's tank, eased toward their samples
+const drones = new Map() // id -> a bot tank this device drives: a tank plus { brain, held, safeUntil, lastShot }
 const known = new Map() // id -> { hearts, alive } as last seen, to spot changes
 const particles = []
 const pointers = new Set()
@@ -120,6 +126,13 @@ function newRound () {
   if (me) Object.assign(me, { prevX: me.x, prevY: me.y, prevA: me.a })
   shells.clear()
   ghosts.clear()
+  drones.clear()
+  for (const id of props.drones) {
+    const info = props.tanks[id]
+    if (!info) continue
+    const tank = spawnTank(info.slot)
+    drones.set(id, { ...tank, prevX: tank.x, prevY: tank.y, prevA: tank.a, alive: info.alive, hurtUntil: 0, safeUntil: 0, lastShot: -Infinity, held: false, brain: newBrain() })
+  }
   known.clear()
   particles.length = 0
   started = false
@@ -208,6 +221,19 @@ function fire () {
   muzzle(shot)
 }
 
+// A bot's press: the same limits as anyone's
+function droneFire (id, drone) {
+  let inAir = 0
+  for (const shell of shells.values()) if (shell.owner === id) inAir++
+  if (clock - drone.lastShot < FIRE_COOLDOWN || inAir >= MAX_SHELLS) return
+  drone.lastShot = clock
+  const shot = { id: `${props.round}.${id}.${++shotSeq}`, ...fireShell(drone, walls) }
+  addShell(shot, id)
+  emit('shot', { k: 'shot', o: id, ...shot })
+  sound.play('fire')
+  muzzle(shot)
+}
+
 const isNumber = (value) => typeof value === 'number' && Number.isFinite(value)
 
 function readInbox () {
@@ -215,7 +241,8 @@ function readInbox () {
     const { from, data } = props.inbox.shift()
     if (data.k === 'shot' && typeof data.id === 'string' && data.id.startsWith(`${props.round}.`) &&
         [data.x, data.y, data.dx, data.dy].every(isNumber)) {
-      addShell(data, from)
+      // A bot's shot comes from the host's device, with the bot as its owner
+      addShell(data, typeof data.o === 'string' && props.tanks[data.o]?.bot ? data.o : from)
       muzzle(data)
     } else if (data.k === 'hit' && typeof data.sid === 'string') {
       shells.delete(data.sid)
@@ -242,7 +269,7 @@ function watchTanks () {
     const before = known.get(id)
     known.set(id, { hearts: info.hearts, alive: info.alive })
     if (!before) continue
-    const body = id === props.myId ? me : ghosts.get(id)
+    const body = id === props.myId ? me : drones.get(id) || ghosts.get(id)
     if (!body) continue
     if (info.hearts < before.hearts && body !== me) body.hurtUntil = clock + INVULNERABLE
     if (before.alive && !info.alive && body.alive) explode(body, body === me)
@@ -306,6 +333,7 @@ function tick () {
       moveTank(me, walls, others, STEP)
     }
   }
+  driveDrones()
   for (const shell of shells.values()) {
     shell.prevX = shell.x
     shell.prevY = shell.y
@@ -327,6 +355,19 @@ function tick () {
       gotHit(shell)
       continue
     }
+    // A bot tank this device drives: its hits are decided here
+    let struck = false
+    for (const [id, drone] of drones) {
+      if (drone.alive && id !== shell.owner && clock >= drone.safeUntil && touches(shell, drone)) {
+        shells.delete(shell.id)
+        drone.safeUntil = clock + INVULNERABLE
+        emit('hit', { target: id, by: shell.owner, sid: shell.id, x: round2(shell.x), y: round2(shell.y) })
+        sparks(shell.x, shell.y, 8)
+        struck = true
+        break
+      }
+    }
+    if (struck) continue
     // Shells vanish into other tanks right away; whether that cost a heart is up to their owner
     for (const [id, ghost] of ghosts) {
       if (ghost.alive && id !== shell.owner && touches(shell, ghost)) {
@@ -338,13 +379,46 @@ function tick () {
   }
 }
 
+// The bots: each decides whether its button is down, then drives like anyone
+function driveDrones () {
+  if (!drones.size) return
+  const level = LEVELS[props.level] || LEVELS.normal
+  const active = fighting()
+  const bodies = []
+  if (me?.alive) bodies.push({ id: props.myId, tank: me })
+  for (const [id, ghost] of ghosts) if (ghost.alive) bodies.push({ id, tank: ghost })
+  for (const [id, drone] of drones) if (drone.alive) bodies.push({ id, tank: drone })
+  const flying = [...shells.values()]
+  for (const [id, drone] of drones) {
+    drone.prevX = drone.x
+    drone.prevY = drone.y
+    drone.prevA = drone.a
+    if (!drone.alive || props.phase === 'ending') continue
+    const others = bodies.filter(b => b.id !== id).map(b => b.tank)
+    let down = false
+    if (active) {
+      const seen = flying.map(s => ({ x: s.x, y: s.y, dx: s.dx, dy: s.dy, mine: s.owner === id }))
+      down = botHeld(drone, drone.brain, { clock, walls, targets: others, shells: seen }, level)
+    }
+    if (down !== drone.held) {
+      drone.held = down
+      if (down) {
+        drone.spin = -drone.spin
+        droneFire(id, drone)
+      }
+    }
+    drone.moving = active && drone.held
+    moveTank(drone, walls, others, STEP)
+  }
+}
+
 // Other players' tanks, eased toward where their last sample says they are now
 function updateGhosts (dt) {
   const samples = props.live.samples || {}
   const age = (Date.now() - (props.live.at || 0)) / 1000
   const ease = 1 - Math.exp(-dt * 18)
   for (const id in props.tanks) {
-    if (id === props.myId) continue
+    if (id === props.myId || drones.has(id)) continue
     const info = props.tanks[id]
     let ghost = ghosts.get(id)
     if (!ghost) {
@@ -353,7 +427,7 @@ function updateGhosts (dt) {
     }
     if (!ghost.alive || props.phase === 'ending') continue
     const sample = samples[id]
-    if (!sample || sample.r !== props.round) {
+    if (!sample || sample.r !== props.round || !isNumber(sample.x)) {
       ghost.a = wrapAngle(ghost.a + TURN_SPEED * ghost.spin * dt)
       continue
     }
@@ -372,12 +446,21 @@ function updateGhosts (dt) {
   }
 }
 
+const pose = (tank) => ({ x: round2(tank.x), y: round2(tank.y), a: Math.round(tank.a * 1000) / 1000, m: tank.moving ? 1 : 0, s: tank.spin })
+
+// This tank's place, and the bots' as `b`, so everyone else can draw them
 function sendSample (dt) {
-  if (!me?.alive) return
+  let bots = null
+  for (const [id, drone] of drones) {
+    if (!drone.alive) continue
+    bots ||= {}
+    bots[id] = pose(drone)
+  }
+  if (!me?.alive && !bots) return
   sampleClock += dt * 1000
   if (sampleClock < SAMPLE_MS) return
   sampleClock = 0
-  emit('sample', { r: props.round, x: round2(me.x), y: round2(me.y), a: Math.round(me.a * 1000) / 1000, m: me.moving ? 1 : 0, s: me.spin, q: ++sampleSeq })
+  emit('sample', { r: props.round, ...(me?.alive ? pose(me) : {}), ...(bots ? { b: bots } : {}), q: ++sampleSeq })
 }
 
 // ---------- Drawing ----------
@@ -432,6 +515,18 @@ function render () {
       label: ghost.alive ? `${props.names[id] || '?'} ${heartsLabel(props.tanks[id]?.hearts)}` : ''
     })
   }
+  for (const [id, drone] of drones) {
+    scene.tanks.push({
+      x: lerp(drone.prevX, drone.x),
+      y: lerp(drone.prevY, drone.y),
+      a: drone.prevA + angleDiff(drone.prevA, drone.a) * alpha,
+      me: false,
+      alive: drone.alive,
+      tread: tread(drone),
+      alpha: drone.hurtUntil > clock && blinking ? 0.3 : 1,
+      label: drone.alive ? `${props.names[id] || '?'} ${heartsLabel(props.tanks[id]?.hearts)}` : ''
+    })
+  }
   if (me) {
     const tank = {
       x: lerp(me.prevX, me.x),
@@ -462,6 +557,7 @@ function before (dt) {
   updateGhosts(dt)
   others = []
   for (const ghost of ghosts.values()) if (ghost.alive) others.push(ghost)
+  for (const drone of drones.values()) if (drone.alive) others.push(drone)
 }
 
 function after (dt) {
@@ -507,7 +603,7 @@ onMounted(() => {
   })
   // Development builds expose the battle, for scripted play-testing
   if (import.meta.env.DEV) {
-    window.__tank = { get me () { return me }, get ghosts () { return ghosts }, get shells () { return shells }, get held () { return held.value } }
+    window.__tank = { get me () { return me }, get ghosts () { return ghosts }, get drones () { return drones }, get shells () { return shells }, get held () { return held.value } }
   }
 })
 

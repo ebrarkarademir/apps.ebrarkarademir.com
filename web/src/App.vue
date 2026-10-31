@@ -77,25 +77,26 @@ const games = computed(() => [
   },
   {
     id: 'tanks',
-    category: ['online', 'party'],
+    category: ['solo', 'online', 'party'],
     title: t.value.tankTitle,
     description: t.value.tankDesc,
     icon: '[T]',
     art: cardArt.tanks,
-    players: '2–8',
+    players: '1–8',
     duration: minutes('2–5'),
-    mode: t.value.cardModeOnline
+    mode: t.value.cardModeSoloOnline
   },
   {
     id: 'crater',
-    category: ['online', 'party'],
+    category: ['solo', 'online', 'party'],
     title: t.value.craterTitle,
     description: t.value.craterDesc,
     icon: '[~]',
     art: cardArt.crater,
-    players: '2',
+    players: '1–6',
     duration: minutes('3–8'),
-    mode: t.value.cardModeOnline
+    mode: t.value.cardModeSoloOnline
+
   },
   {
     id: 'futsal',
