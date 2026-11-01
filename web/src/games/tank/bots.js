@@ -6,13 +6,14 @@ import { TANK_R, TANK_SPEED, TURN_SPEED, SHELL_SPEED, castRay, angleDiff } from 
 //
 // It picks the nearest tank, waits for its barrel to swing round onto it and taps to fire when
 // the way is clear. With a wall in between it finds the most open way towards the target and
-// drives along it. Better bots react sooner, aim finer, lead a moving target and get out of
-// the way of shells coming at them.
+// drives along it. A gift in clear view that's a good deal nearer than any tank is worth a shot
+// first. Better bots react sooner, aim finer, lead a moving target, go for gifts more and get
+// out of the way of shells coming at them.
 
 export const LEVELS = {
-  easy: { react: 0.5, aim: 0.24, fire: 0.5, lead: 0, dodge: 0, drive: 0.6 },
-  normal: { react: 0.25, aim: 0.13, fire: 0.85, lead: 0.6, dodge: 0.35, drive: 0.8 },
-  hard: { react: 0.1, aim: 0.07, fire: 1, lead: 1, dodge: 0.75, drive: 1 }
+  easy: { react: 0.5, aim: 0.24, fire: 0.5, lead: 0, dodge: 0, drive: 0.6, greed: 0.35 },
+  normal: { react: 0.25, aim: 0.13, fire: 0.85, lead: 0.6, dodge: 0.35, drive: 0.8, greed: 0.55 },
+  hard: { react: 0.1, aim: 0.07, fire: 1, lead: 1, dodge: 0.75, drive: 1, greed: 0.7 }
 }
 
 export const newBrain = () => ({ until: 0, held: false, next: 0, goal: null, goalAt: 0, dodgeAt: 0, x: 0, y: 0, checked: 0 })
@@ -27,7 +28,8 @@ const room = (x, y, a, walls, max) => castRay(x, y, Math.cos(a), Math.sin(a), wa
 
 /**
  * Whether a bot's button is down this moment.
- * world: { clock, walls, targets: [{ x, y, a, moving }], shells: [{ x, y, dx, dy, mine }] }
+ * world: { clock, walls, targets: [{ x, y, a, moving }], shells: [{ x, y, dx, dy, mine }],
+ *          gifts: [{ x, y }] }
  */
 export function botHeld (bot, brain, world, level = LEVELS.normal) {
   const { clock, walls } = world
@@ -56,7 +58,14 @@ export function botHeld (bot, brain, world, level = LEVELS.normal) {
     if (Math.random() < level.dodge && room(bot.x, bot.y, bot.a, walls, 6) > 4) return press(brain, bot, clock, 0.3)
   }
 
-  const target = nearest(bot, world.targets)
+  let target = nearest(bot, world.targets)
+  const gift = level.greed ? nearest(bot, world.gifts || []) : null
+  if (gift) {
+    const away = Math.hypot(gift.x - bot.x, gift.y - bot.y)
+    const sees = room(bot.x, bot.y, Math.atan2(gift.y - bot.y, gift.x - bot.x), walls, away) >= away - 1
+    const tankAway = target ? Math.hypot(target.x - bot.x, target.y - bot.y) : Infinity
+    if (sees && away < 32 && away < tankAway * level.greed * 1.6) target = gift
+  }
   if (!target) return false
   const dist = Math.hypot(target.x - bot.x, target.y - bot.y)
   // Where the target will be when a shell gets there

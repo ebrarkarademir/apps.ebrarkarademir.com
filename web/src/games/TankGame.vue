@@ -5,7 +5,7 @@ import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom } from '../online/useOnlineRoom'
 import { useLocalRoom } from '../online/useLocalRoom'
 import TankMatch from './tank/TankMatch.vue'
-import { HEARTS, INVULNERABLE, MAPS, SPAWNS } from './tank/engine'
+import { ARMOR, INVULNERABLE, MAPS, POWER_DAMAGE, GIFT_LIFE, MAX_GIFTS, freeSpot, mapOf } from './tank/engine'
 import { LEVELS } from './tank/bots'
 
 const props = defineProps({
@@ -22,7 +22,7 @@ const COUNTDOWN_MS = 3000
 const ROUND_MS = 150000
 const ENDING_MS = 2600 // the winner banner shows in the arena before the results
 const LIVE_TIMEOUT_MS = 5000 // a tank that sends nothing this long is counted out
-const MAX_TANKS = SPAWNS.length
+const MAX_TANKS = mapOf(0).spawns.length
 const SETUP_KEY = 'tankSolo'
 const LEVEL_NAMES = Object.keys(LEVELS)
 
@@ -53,14 +53,18 @@ const mode = ref(props.initialCode || props.hostRoom ? 'online' : null)
 // ---------- Host-side rules, for an online room and a solo game alike ----------
 //
 // Every device drives its own tank and decides when a shell hits it, then reports the hit.
-// The host keeps the hearts, so a heart is only ever lost once. The host's device also drives
-// the bots and decides their hits; a solo game is a room where this device is the host.
+// The host keeps the armor, so a hit only ever counts once. It also drops the gifts and says
+// who got each one: a shield that takes the next hit instead of the tank, a spell of speed, or
+// power shots that count as two hits (counters each tank's own device acts on). The host's
+// device also drives the bots and decides their hits; a solo game is a room where this device
+// is the host.
 
 const live = markRaw({ samples: {}, at: 0 }) // everyone's latest position
 const inbox = markRaw([]) // shots and hits from the others, for the arena to pick up
 const freshness = {} // host: id -> { q, at }, when each tank's sample last changed
-const lastHit = {} // host: id -> when it last lost a heart
+const lastHit = {} // host: id -> when it was last hit
 let fightStart = 0 // host clock
+let nextGiftAt = 0 // host clock
 
 const fightOn = (s) => s.phase === 'playing' || (s.phase === 'countdown' && Date.now() >= s.deadline)
 const between = (s) => s.phase === 'lobby' || s.phase === 'results'
@@ -68,12 +72,12 @@ const people = (s) => s.players.filter(p => p.online)
 
 function endRound (s, reason) {
   const entries = Object.entries(s.tanks)
-  // Survivors first, then the most hearts, then whoever lasted longer, then hits
+  // Survivors first, then the least damaged, then whoever lasted longer, then hits
   s.standings = entries
-    .map(([id, tank]) => ({ id, hearts: tank.alive ? tank.hearts : 0, hits: tank.hits, alive: tank.alive, out: tank.out }))
-    .sort((a, b) => Number(b.alive) - Number(a.alive) || b.hearts - a.hearts || b.out - a.out || b.hits - a.hits)
+    .map(([id, tank]) => ({ id, hp: tank.alive ? tank.hp : 0, hits: tank.hits, alive: tank.alive, out: tank.out }))
+    .sort((a, b) => Number(b.alive) - Number(a.alive) || b.hp - a.hp || b.out - a.out || b.hits - a.hits)
   const [first, second] = s.standings
-  const winner = first?.alive && !(second?.alive && second.hearts === first.hearts) ? first.id : null
+  const winner = first?.alive && !(second?.alive && second.hp === first.hp) ? first.id : null
   if (winner && entries.length > 1) s.wins[winner] = (s.wins[winner] || 0) + 1
   s.outcome = { reason, winner }
   s.phase = 'ending'
@@ -84,24 +88,54 @@ function knockOut (s, id) {
   const tank = s.tanks[id]
   if (!tank?.alive) return
   tank.alive = false
-  tank.hearts = 0
+  tank.hp = 0
   tank.out = ++s.knockedOut
   if ((s.phase === 'countdown' || s.phase === 'playing') && Object.values(s.tanks).filter(t => t.alive).length <= 1) {
     endRound(s, 'last')
   }
 }
 
-// One heart per hit, with the same short safety the tank shows after it
-function takeHeart (s, id, by) {
+// A hit: a shield takes it if the tank has one, otherwise it costs armor (two for a power
+// shot), with the same short safety the tank shows after it
+function takeHit (s, id, by, dmg) {
   const tank = s.tanks[id]
   if (!fightOn(s) || !tank?.alive) return
   const now = Date.now()
   if (now - (lastHit[id] || 0) < INVULNERABLE * 700) return
   lastHit[id] = now
-  tank.hearts--
+  if (tank.shield) {
+    tank.shield = false
+    return
+  }
+  tank.hp = Math.max(0, tank.hp - (dmg === POWER_DAMAGE ? POWER_DAMAGE : 1))
   const shooter = s.tanks[by]
   if (shooter && by !== id) shooter.hits++
-  if (tank.hearts <= 0) knockOut(s, id)
+  if (tank.hp <= 0) knockOut(s, id)
+}
+
+// Where the tanks are, so a gift doesn't land on one
+const tankSpots = (s) => Object.entries(live.samples)
+  .filter(([id, sample]) => s.tanks[id]?.alive && Number.isFinite(sample?.x) && Number.isFinite(sample?.y))
+  .map(([, sample]) => ({ x: sample.x, y: sample.y, r: 7 }))
+
+const pickGift = () => {
+  const r = Math.random()
+  return r < 0.4 ? 'shield' : r < 0.7 ? 'speed' : 'power'
+}
+
+// Every so often a gift lands in open ground, up to MAX_GIFTS at a time, and each fades after
+// GIFT_LIFE. `at` is when it landed, in ms since the fight started, which every device can
+// work out the time from without sharing a clock.
+function dropGifts (s, now) {
+  const age = now - fightStart
+  const life = GIFT_LIFE * 1000
+  if (s.gifts.some(g => age - g.at > life)) s.gifts = s.gifts.filter(g => age - g.at <= life)
+  if (now < nextGiftAt) return
+  nextGiftAt = now + 6000 + Math.random() * 5000
+  if (s.gifts.length >= MAX_GIFTS) return
+  const spot = freeSpot(s.map, Math.random, [...s.gifts, ...tankSpots(s)])
+  if (!spot) return
+  s.gifts.push({ id: ++s.giftSeq, kind: pickGift(), x: Math.round(spot.x * 10) / 10, y: Math.round(spot.y * 10) / 10, at: Math.round(age) })
 }
 
 function onAction (s, playerId, action) {
@@ -126,27 +160,43 @@ function onAction (s, playerId, action) {
       // People first, then bots, up to eight tanks; anyone past that watches the round
       const fighters = [...s.players.map(p => ({ id: p.id, bot: 0 })), ...s.bots.map(b => ({ id: b.id, bot: b.n }))].slice(0, MAX_TANKS)
       if (fighters.length < 2) return
-      const slots = shuffle(SPAWNS.map((_, i) => i).slice(0, fighters.length))
+      const slots = shuffle(Array.from({ length: fighters.length }, (_, i) => i))
       s.round++
       s.map = Math.floor(Math.random() * MAPS.length)
-      s.tanks = Object.fromEntries(fighters.map((f, i) => [f.id, { slot: slots[i], hearts: HEARTS, alive: true, hits: 0, out: 0, bot: f.bot }]))
+      s.tanks = Object.fromEntries(fighters.map((f, i) => [f.id, { slot: slots[i], hp: ARMOR, alive: true, hits: 0, out: 0, bot: f.bot, shield: false, speed: 0, power: 0 }]))
+      s.gifts = []
       s.knockedOut = 0
       s.standings = []
       s.outcome = null
       s.deadline = Date.now() + COUNTDOWN_MS
       s.phase = 'countdown'
       fightStart = s.deadline
+      nextGiftAt = fightStart + 5000 + Math.random() * 3000
       Object.keys(lastHit).forEach(id => delete lastHit[id])
       break
     }
     case 'hit':
-      takeHeart(s, playerId, action.by)
+      takeHit(s, playerId, action.by, action.dmg)
       break
     // The host's device says one of the bots was hit
     case 'botHit':
       if (!isHost || !s.tanks[action.id]?.bot) return
-      takeHeart(s, action.id, action.by)
+      takeHit(s, action.id, action.by, action.dmg)
       break
+    // A shell popped a gift: it goes to the tank that fired it, if it's still there. The host's
+    // device asks for its bots too.
+    case 'grab': {
+      if (!fightOn(s)) return
+      const id = action.bot === undefined ? playerId : isHost && s.tanks[action.bot]?.bot ? action.bot : null
+      const tank = id ? s.tanks[id] : null
+      const index = s.gifts.findIndex(g => g.id === action.gift)
+      if (!tank?.alive || index < 0) return
+      const [gift] = s.gifts.splice(index, 1)
+      if (gift.kind === 'shield') tank.shield = true
+      else if (gift.kind === 'speed') tank.speed++
+      else tank.power++
+      break
+    }
     case 'lobby':
       if (!isHost || s.phase !== 'results') return
       s.players = people(s)
@@ -164,6 +214,7 @@ function onTick (s, now) {
       endRound(s, 'time')
       return
     }
+    dropGifts(s, now)
     // A person whose tank has gone quiet left the fight; bots and a solo game don't go quiet
     if (s.solo) return
     for (const [id, tank] of Object.entries(s.tanks)) {
@@ -176,12 +227,12 @@ function onTick (s, now) {
   }
 }
 
-const initialState = () => ({ round: 0, map: 0, deadline: null, tanks: {}, knockedOut: 0, standings: [], wins: {}, outcome: null, bots: [], botSeq: 0, level: 'normal', solo: false })
+const initialState = () => ({ round: 0, map: 0, deadline: null, tanks: {}, gifts: [], giftSeq: 0, knockedOut: 0, standings: [], wins: {}, outcome: null, bots: [], botSeq: 0, level: 'normal', solo: false })
 
 // ---------- Online ----------
 
 // The host's sample carries the bots' places too (as `b`): each bot becomes a sample of its own
-function onLive (data) {
+function readSamples (data) {
   const samples = {}
   for (const [id, sample] of Object.entries(data)) {
     if (!sample || typeof sample !== 'object') continue
@@ -192,6 +243,10 @@ function onLive (data) {
   }
   live.samples = samples
   live.at = Date.now()
+}
+
+function onLive (data) {
+  readSamples(data)
   if (!room.isHost) return
   const round = room.view?.round
   for (const [id, sample] of Object.entries(data)) {
@@ -244,7 +299,8 @@ watch(setup, (value) => {
   }
 })
 
-const solo = useLocalRoom({ initialState, onAction, onTick })
+// A solo game hears this device's own samples too, so gifts can keep clear of the tanks
+const solo = useLocalRoom({ initialState, onAction, onTick, onGuestLive: (id, data) => readSamples({ [id]: data }) })
 
 const savedName = () => {
   try {

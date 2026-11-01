@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import confetti from 'canvas-confetti'
 import TermWindow from '../../components/TermWindow.vue'
 import TankStage from './TankStage.vue'
+import { ARMOR } from './engine'
 
 // A round of Tank and its results, the same for a solo game against bots and an online room.
 // `room` is either room (useOnlineRoom or useLocalRoom); its host-side rules are in TankGame.
@@ -19,7 +20,8 @@ const emit = defineEmits(['exit', 'setup'])
 
 const WINNER_ART = ['  \\|/', ' #=#=#', ' [(@)]=-', ' #=#=#'].join('\n')
 
-const heartsText = (hearts) => (hearts > 0 ? '<3'.repeat(hearts) : 'x')
+// How a tank came out of the round, in words: intact, scratched, battered, burning or wrecked
+const conditionText = (entry) => props.t[`tankState${entry.alive ? Math.max(0, Math.min(3, ARMOR - entry.hp)) : 4}`]
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 
 const view = computed(() => props.room.view)
@@ -52,11 +54,14 @@ const fighter = computed(() => !!view.value?.tanks?.[props.room.myId] && counted
 // A fresh arena never sees shots from an earlier round
 watch(() => view.value?.round, () => { props.inbox.length = 0 })
 
-function onHit ({ target, by, sid, x, y }) {
-  if (target) props.room.act('botHit', { id: target, by })
-  else props.room.act('hit', { by })
-  props.room.sendEvent({ k: 'hit', sid, x, y })
+function onHit ({ target, by, sid, x, y, dmg, b }) {
+  if (target) props.room.act('botHit', { id: target, by, dmg })
+  else props.room.act('hit', { by, dmg })
+  props.room.sendEvent({ k: 'hit', sid, x, y, ...(b ? { b: 1 } : {}) })
 }
+
+// A shell from this device (or one of the bots it drives) popped a gift
+const onGrab = ({ gift, bot }) => props.room.act('grab', { gift, ...(bot ? { bot } : {}) })
 
 const standings = computed(() => (view.value?.standings || []).map((entry, index) => ({
   ...entry,
@@ -93,6 +98,7 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
     :names="names"
     :live="live"
     :inbox="inbox"
+    :gifts="view.gifts || []"
     :outcome="view.outcome"
     :drones="drones"
     :level="view.level"
@@ -100,6 +106,7 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
     @sample="room.sendLive($event)"
     @shot="room.sendEvent($event)"
     @hit="onHit"
+    @grab="onGrab"
   />
 
   <!-- Round results -->
@@ -115,7 +122,7 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
         <div class="flex items-center gap-3 px-4 pb-2 term-label">
           <span class="w-8">#</span>
           <span class="flex-1">{{ t.onlinePlayers }}</span>
-          <span class="w-16 text-right">{{ t.tankHearts }}</span>
+          <span class="w-24 text-right">{{ t.tankCondition }}</span>
           <span class="w-12 text-right">{{ t.tankHits }}</span>
           <span class="w-12 text-right">{{ t.tankWins }}</span>
         </div>
@@ -127,7 +134,7 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
           >
             <span class="w-8 tabular-nums font-semibold">#{{ entry.rank }}</span>
             <span :class="['flex-1 truncate', { 'font-semibold': entry.id === room.myId }]">{{ entry.name }}</span>
-            <span class="w-16 text-right text-sm font-semibold whitespace-nowrap">{{ heartsText(entry.hearts) }}</span>
+            <span class="w-24 text-right text-xs sm:text-sm font-semibold truncate">{{ conditionText(entry) }}</span>
             <span class="w-12 text-right tabular-nums">{{ entry.hits }}</span>
             <span class="w-12 text-right font-bold tabular-nums">{{ entry.wins }}</span>
           </li>

@@ -139,6 +139,36 @@ const patches = {
     tone(t, { from: 900, to: 180, duration: 0.09, volume: 0.045 })
   },
   bounce: (t) => tone(t, { type: 'triangle', from: 1300, to: 900, duration: 0.05, volume: 0.025 }),
+  // A power shot: a deeper, heavier bang
+  heavy: (t) => {
+    thud(t, 0.13, 0.2, 1200)
+    tone(t, { from: 520, to: 70, duration: 0.2, volume: 0.06 })
+  },
+  // A teleporter: a rising shimmer
+  warp: (t) => {
+    tone(t, { type: 'sine', from: 240, to: 1500, duration: 0.32, volume: 0.05 })
+    tone(t + 0.04, { type: 'triangle', from: 480, to: 2600, duration: 0.26, volume: 0.022 })
+    hiss(t, { duration: 0.3, volume: 0.05, type: 'bandpass', frequency: 2400, to: 5000 })
+  },
+  // A gift picked up: three quick rising notes
+  pickup: (t) => {
+    ;[784, 1046.5, 1568].forEach((frequency, i) => tone(t + i * 0.06, { type: 'triangle', from: frequency, duration: 0.09, volume: 0.06 }))
+  },
+  // A shell popping a gift
+  gift: (t) => {
+    tone(t, { type: 'triangle', from: 1400, to: 2200, duration: 0.07, volume: 0.05 })
+    hiss(t, { duration: 0.05, volume: 0.06, type: 'highpass', frequency: 3500 })
+  },
+  // A gift landing in the arena
+  spawn: (t) => {
+    tone(t, { type: 'sine', from: 660, to: 990, duration: 0.18, volume: 0.03 })
+    tone(t + 0.09, { type: 'sine', from: 990, to: 1320, duration: 0.2, volume: 0.025 })
+  },
+  // A shield taking a hit: breaking glass and a ring
+  shield: (t) => {
+    bell(t, 1320, 0.04)
+    hiss(t, { duration: 0.18, volume: 0.1, type: 'highpass', frequency: 4000, to: 2000 })
+  },
   boom: (t) => {
     thud(t, 0.55, 0.35, 700)
     tone(t, { from: 110, to: 35, duration: 0.45, volume: 0.07 })

@@ -152,14 +152,17 @@ export const rules = {
         'Solo: you against up to seven bot tanks. Online: one person creates a room and the others join with the code, each on their own phone or computer; the host can add bots to fill the arena.',
         'There is only one button: hold it anywhere on the screen (or Space) and your tank drives forward and fires.',
         'Let go and the tank stops and turns on the spot — the other way round after every press. Press again when the dotted line points where you want to go.',
-        'Every tank has 3 hearts. A hit costs one heart, then the tank blinks and is safe for a moment.',
-        'The last tank standing wins the round. If the clock runs out, the tank with the most hearts wins.'
+        'Every tank takes 4 hits, and you can see each one on it: scorched, then battered and smoking, then burning and slow. The fourth hit destroys it. After a hit the tank blinks and is safe for a moment.',
+        'Gifts turn up here and there; shoot one to get it. A shield blocks the next hit, speed makes you faster for a few seconds, and power shots count as two hits.',
+        'Stay on a teleporter for 3 seconds and you jump to another one.',
+        'The last tank standing wins the round. If the clock runs out, the least damaged tank wins.'
       ],
       tips: [
         'Shells bounce off a wall once — the dotted line shows the bounce too.',
         'You can only have 3 shells in the air, so pick your shots.',
         'Short taps fire without driving far; long holds get you out of trouble.',
-        'Turned past your target? A quick tap swings the barrel back the other way.'
+        'Turned past your target? A quick tap swings the barrel back the other way.',
+        'While you have power shots, your barrel glows red and so does the dotted line.'
       ]
     },
     TR: {
@@ -172,14 +175,17 @@ export const rules = {
         'Tek kişilik: yediye kadar bot tanka karşı sen. Çevrim içi: bir kişi oda oluşturur, diğerleri kodla katılır, herkes kendi telefonundan ya da bilgisayarından oynar; sunucu arenayı doldurmak için bot ekleyebilir.',
         'Tek bir tuş var: ekranın herhangi bir yerine basılı tut (ya da Boşluk) — tankın ileri gider ve ateş eder.',
         'Bırakınca tank durur ve olduğu yerde döner — her basıştan sonra ters yöne. Noktalı çizgi istediğin yönü gösterdiğinde tekrar bas.',
-        'Her tankın 3 canı var. Her isabet bir can götürür, sonra tank yanıp söner ve kısa bir süre güvende olur.',
-        'Ayakta kalan son tank turu kazanır. Süre dolarsa en çok canı kalan tank kazanır.'
+        'Her tank 4 isabete dayanır ve her biri üzerinde görünür: önce isli, sonra hırpalanmış ve dumanlı, sonra yanan ve yavaş. Dördüncü isabet onu yok eder. İsabetten sonra tank yanıp söner ve kısa bir süre güvende olur.',
+        'Arada bir hediyeler belirir; almak için vur. Kalkan bir sonraki isabeti engeller, hız birkaç saniye hızlandırır, güçlü atışlar iki isabet sayılır.',
+        'Bir ışınlayıcının üzerinde 3 saniye kalırsan başka birine geçersin.',
+        'Ayakta kalan son tank turu kazanır. Süre dolarsa en az hasar alan tank kazanır.'
       ],
       tips: [
         'Mermiler duvardan bir kez seker — noktalı çizgi sekmeyi de gösterir.',
         'Havada aynı anda en fazla 3 merminin olabilir, atışlarını seç.',
         'Kısa dokunuşlar fazla ilerlemeden ateş eder; uzun basışlar seni tehlikeden kurtarır.',
-        'Hedefi geçtin mi? Kısa bir dokunuş namluyu ters yöne çevirir.'
+        'Hedefi geçtin mi? Kısa bir dokunuş namluyu ters yöne çevirir.',
+        'Güçlü atışın varken namlun kırmızı parlar, noktalı çizgi de kırmızıya döner.'
       ]
     },
     RU: {
@@ -192,14 +198,17 @@ export const rules = {
         'Одиночная игра: ты против танков-ботов, до семи. Онлайн: один создаёт комнату, остальные входят по коду, каждый со своего телефона или компьютера; ведущий может добавить ботов.',
         'Кнопка всего одна: держи нажатым любое место экрана (или пробел) — и танк едет вперёд и стреляет.',
         'Отпусти — и танк остановится и начнёт поворачиваться на месте, после каждого нажатия в другую сторону. Нажми снова, когда пунктир смотрит туда, куда нужно.',
-        'У каждого танка 3 жизни. Попадание отнимает одну, после чего танк мигает и недолго неуязвим.',
-        'Раунд выигрывает последний уцелевший танк. Если время вышло, побеждает танк, у которого больше всего жизней.'
+        'Каждый танк выдерживает 4 попадания, и каждое видно на нём: сначала копоть, потом вмятины и дым, потом огонь и медленный ход. Четвёртое попадание его уничтожает. После попадания танк мигает и недолго неуязвим.',
+        'То тут, то там появляются подарки — выстрели в подарок, чтобы забрать его. Щит отразит следующее попадание, скорость на несколько секунд ускорит танк, а мощный выстрел засчитывается за два попадания.',
+        'Простой 3 секунды на телепорте — и перенесёшься на другой.',
+        'Раунд выигрывает последний уцелевший танк. Если время вышло, побеждает наименее повреждённый танк.'
       ],
       tips: [
         'Снаряды один раз отскакивают от стены — пунктир показывает и отскок.',
         'В воздухе может быть не больше 3 твоих снарядов, так что стреляй с умом.',
         'Короткие нажатия стреляют, почти не сдвигая танк; долгие помогают выбраться из передряги.',
-        'Ствол ушёл дальше цели? Короткое нажатие повернёт его обратно.'
+        'Ствол ушёл дальше цели? Короткое нажатие повернёт его обратно.',
+        'Пока у тебя есть мощные выстрелы, ствол светится красным, и пунктир тоже красный.'
       ]
     },
     KK: {
@@ -212,14 +221,17 @@ export const rules = {
         'Жалғыз: жетіге дейін бот танкке қарсы сен. Онлайн: бір адам бөлме ашады, қалғандары кодпен кіреді, әркім өз телефонынан не компьютерінен ойнайды; жүргізуші бот қоса алады.',
         'Түйме біреу ғана: экранның кез келген жерін (немесе Бос орынды) басып тұрсаң, танкің алға жүріп, атады.',
         'Жіберсең, танк тоқтап, орнында бұрыла бастайды — әр басқан сайын қарама-қарсы жаққа. Нүктелі сызық керек жаққа қарағанда қайта бас.',
-        'Әр танктің 3 жүрегі бар. Әр тигенде бір жүрек кетеді, сосын танк жыпылықтап, біраз уақыт қауіпсіз болады.',
-        'Раундты соңғы қалған танк жеңеді. Уақыт бітсе, жүрегі ең көп танк жеңеді.'
+        'Әр танк 4 тигенге шыдайды, әрқайсысы оның өзінен көрінеді: алдымен күйе, сосын мыжылып түтіндейді, сосын жанып баяулайды. Төртінші тигенде ол жойылады. Тигеннен кейін танк жыпылықтап, біраз уақыт қауіпсіз болады.',
+        'Анда-санда сыйлықтар пайда болады; алу үшін оны ат. Қалқан келесі тигенді тосады, жылдамдық бірнеше секундқа үдетеді, қуатты ату екі тиген болып саналады.',
+        'Телепортта 3 секунд тұрсаң, басқа телепортқа өтесің.',
+        'Раундты соңғы қалған танк жеңеді. Уақыт бітсе, ең аз зақымдалған танк жеңеді.'
       ],
       tips: [
         'Снарядтар қабырғадан бір рет серпіледі — нүктелі сызық серпілісті де көрсетеді.',
         'Ауада бір мезетте тек 3 снарядың бола алады, сондықтан мұқият ат.',
         'Қысқа басу алысқа жүрмей атады; ұзақ басып тұру қиын жағдайдан шығарады.',
-        'Нысанадан асып кеттің бе? Қысқа басу ұңғыны кері бұрады.'
+        'Нысанадан асып кеттің бе? Қысқа басу ұңғыны кері бұрады.',
+        'Қуатты атуың барда ұңғың қызыл жанады, нүктелі сызық та қызыл болады.'
       ]
     }
   },
