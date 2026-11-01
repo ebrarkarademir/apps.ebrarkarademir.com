@@ -27,7 +27,7 @@ export const INVULNERABLE = 1.2 // seconds of safety after a hit
 export const SLOW = 0.6 // how fast a tank on its last legs drives
 
 // Gifts appear now and then in open ground; the tank whose shell hits one gets it
-export const GIFT_KINDS = ['shield', 'speed', 'power']
+export const GIFT_KINDS = ['shield', 'speed', 'power', 'repair']
 export const GIFT_R = 1.7
 export const GIFT_LIFE = 20 // seconds a gift waits before it fades
 export const MAX_GIFTS = 3
@@ -38,6 +38,8 @@ export const POWER_MAX = 6
 export const POWER_DAMAGE = 2 // a power shot counts as two hits
 export const POWER_SPEED = 1.3
 const POWER_R = 0.6 // how far a power shell reaches into a tank
+export const REPAIR_TIME = 3 // a repair mends one hit and gives this many seconds of a little speed
+export const REPAIR_BOOST = 1.2
 
 // Teleporters: a tank that stays on one for PAD_WAIT seconds jumps to another
 export const PAD_R = 2.6

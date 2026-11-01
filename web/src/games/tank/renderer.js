@@ -1,5 +1,5 @@
 import { W, H, TANK_R, BARREL, PAD_R, GIFT_R, mapOf } from './engine'
-import { SHIELD_COLOR, PAD_COLOR, FIRE } from './effects'
+import { SHIELD_COLOR, REPAIR_COLOR, PAD_COLOR, FIRE } from './effects'
 import { GREEN, GLOW, MONO, drawText, truncate } from '../ascii/paint'
 import { mulberry32 } from '../ascii/random'
 
@@ -11,10 +11,10 @@ import { mulberry32 } from '../ascii/random'
 // On a screen taller than it is wide the arena stands on end (`turn`): the world turns a
 // quarter clockwise, while text stays upright.
 
-export const MY_COLOR = GREEN
-// The other tanks, by spawn slot: none of them green, so your own tank always stands out
-export const TANK_COLORS = ['#f2f6ea', '#ffc94d', '#ff6b6b', '#b59cff', '#ff8ad8', '#6cc4ff', '#ff9f43', '#d2b48c']
-export const GIFT_COLORS = { shield: SHIELD_COLOR, speed: '#ffb000', power: '#ff5c5c' }
+// Every tank's own color, the same on every screen, and its shells' too. None is green, so
+// tanks stand out against the walls; your own tank has a marker over it instead.
+export const TANK_COLORS = ['#4da3ff', '#ff5f5f', '#ffd23f', '#f2f6ea', '#ff7ad9', '#ff9a3c', '#b48cff', '#3fe0d0']
+export const GIFT_COLORS = { shield: SHIELD_COLOR, speed: '#ffb000', power: '#ff5c5c', repair: REPAIR_COLOR }
 
 const TAU = Math.PI * 2
 const FLOOR = '#051207'
@@ -487,6 +487,18 @@ export function createRenderer (canvas) {
       ctx.lineWidth = 0.13
       ctx.strokeStyle = '#05090a'
       ctx.stroke()
+    } else if (kind === 'repair') {
+      // A green + with a white edge
+      ctx.beginPath()
+      ctx.moveTo(-0.24, -0.82)
+      for (const [x, y] of [[0.24, -0.82], [0.24, -0.24], [0.82, -0.24], [0.82, 0.24], [0.24, 0.24], [0.24, 0.82], [-0.24, 0.82], [-0.24, 0.24], [-0.82, 0.24], [-0.82, -0.24], [-0.24, -0.24]]) ctx.lineTo(x, y)
+      ctx.closePath()
+      ctx.lineJoin = 'round'
+      ctx.lineWidth = 0.2
+      ctx.strokeStyle = '#ffffff'
+      ctx.stroke()
+      ctx.fill()
+      ctx.lineJoin = 'miter'
     } else if (kind === 'speed') {
       ctx.lineWidth = 0.3
       ctx.lineJoin = 'round'
@@ -548,20 +560,38 @@ export function createRenderer (canvas) {
     ctx.fillStyle = rgba(color, 0.2)
     ctx.fill()
     ctx.lineWidth = 0.16
-    ctx.strokeStyle = color
+    // A repair kit is edged in white, with a second ring pulsing out of it, so it shows against
+    // the green arena
+    ctx.strokeStyle = gift.kind === 'repair' ? '#ffffff' : color
     ctx.stroke()
+    if (gift.kind === 'repair') {
+      const pulse = (time * 1.2) % 1
+      hexagon(GIFT_R * (1 + pulse * 0.6))
+      ctx.globalAlpha = alpha * (1 - pulse) * 0.8
+      ctx.lineWidth = 0.1
+      ctx.stroke()
+      ctx.globalAlpha = alpha
+    }
     drawIcon(gift.kind, color)
     ctx.restore()
   }
 
+  // The dotted line from your barrel, in your tank's color: bigger, glowing dots while you have
+  // power shots
   function drawAim (aim) {
     if (!aim?.points.length) return
     const n = aim.points.length
-    ctx.fillStyle = aim.power ? GIFT_COLORS.power : GREEN
+    const r = aim.power ? 0.28 : 0.19
+    if (aim.power) {
+      ctx.globalCompositeOperation = 'lighter'
+      aim.points.forEach((point, i) => blob(aim.color, point.x, point.y, 1.3, (point.bounced ? 0.25 : 0.5) * (1 - i / n)))
+      ctx.globalCompositeOperation = 'source-over'
+    }
+    ctx.fillStyle = aim.color
     aim.points.forEach((point, i) => {
       ctx.globalAlpha = (point.bounced ? 0.35 : 0.85) * (1 - i / n)
       ctx.beginPath()
-      ctx.arc(point.x, point.y, 0.19, 0, TAU)
+      ctx.arc(point.x, point.y, r, 0, TAU)
       ctx.fill()
     })
     ctx.globalAlpha = 1
@@ -816,21 +846,22 @@ export function createRenderer (canvas) {
     if (!shells.length) return
     ctx.globalCompositeOperation = 'lighter'
     ctx.lineCap = 'round'
+    // Shells glow in their tank's color; a power shell is bigger, with a white-hot heart
     for (const s of shells) {
-      const color = s.power ? '#ff7a3d' : s.color
       const points = [...s.trail, s]
       for (let i = 1; i < points.length; i++) {
         const f = i / (points.length - 1)
-        ctx.globalAlpha = 0.55 * f
-        ctx.lineWidth = (s.power ? 0.62 : 0.34) * f
-        ctx.strokeStyle = color
+        ctx.globalAlpha = (s.power ? 0.7 : 0.55) * f
+        ctx.lineWidth = (s.power ? 0.72 : 0.34) * f
+        ctx.strokeStyle = s.color
         ctx.beginPath()
         ctx.moveTo(points[i - 1].x, points[i - 1].y)
         ctx.lineTo(points[i].x, points[i].y)
         ctx.stroke()
       }
       ctx.globalAlpha = 1
-      blob(color, s.x, s.y, s.power ? 3.6 : 2.3, 0.85)
+      blob(s.color, s.x, s.y, s.power ? 4.2 : 2.3, s.power ? 1 : 0.85)
+      if (s.power) blob('#ffffff', s.x, s.y, 1.5, 0.7)
     }
     ctx.globalCompositeOperation = 'source-over'
     ctx.lineCap = 'butt'
@@ -867,7 +898,18 @@ export function createRenderer (canvas) {
       if (p.kind === 'flash') blob(p.color, p.x, p.y, p.size, k * k)
       else if (p.kind === 'fire') blob(p.color, p.x, p.y, p.size * (0.35 + 0.65 * k), Math.min(1, k * 1.6))
       else if (p.kind === 'chunk' && p.glow) blob(p.color, p.x, p.y, p.size * 2.4, k * 0.6)
-      else if (p.kind === 'spark') {
+      else if (p.kind === 'plus') {
+        const s = p.size * 0.5
+        ctx.globalAlpha = Math.min(1, k * 1.5)
+        ctx.strokeStyle = p.color
+        ctx.lineWidth = p.size * 0.3
+        ctx.beginPath()
+        ctx.moveTo(p.x - s, p.y)
+        ctx.lineTo(p.x + s, p.y)
+        ctx.moveTo(p.x, p.y - s)
+        ctx.lineTo(p.x, p.y + s)
+        ctx.stroke()
+      } else if (p.kind === 'spark') {
         ctx.globalAlpha = k
         ctx.strokeStyle = p.color
         ctx.lineWidth = 0.13
@@ -891,19 +933,94 @@ export function createRenderer (canvas) {
 
   // ---------- Text, upright on screen ----------
 
-  function drawLabels (tanks) {
+  // Names over the tanks, and an arrow over your own (with YOU over it as the round starts).
+  // Near the top edge they go under the tank instead.
+  function drawLabels (tanks, time) {
     const px = Math.max(10, unit * 0.95)
-    const offset = (TANK_R + 1.3) * unit + px * 0.4
-    ctx.font = `600 ${px}px ${MONO}`
+    const arrow = Math.max(4, unit * 0.6) // half the arrow's width
     for (const t of tanks) {
+      if (!t.alive || (!t.label && !t.me)) continue
+      const [sx, sy] = toScreen(t.x, t.y)
+      const reach = (TANK_R + 1) * unit
+      const tall = (t.me ? arrow * 1.6 : 0) + (t.label ? px * 1.3 : 0)
+      const side = sy - reach - tall < 0 ? -1 : 1 // 1: above the tank, -1: under it
+      let y = sy - side * reach
+      if (t.me) {
+        const tip = y - side * Math.sin(time * 5) * arrow * 0.3
+        const base = tip - side * arrow * 1.3
+        ctx.beginPath()
+        ctx.moveTo(sx, tip)
+        ctx.lineTo(sx - arrow, base)
+        ctx.lineTo(sx + arrow, base)
+        ctx.closePath()
+        ctx.lineJoin = 'round'
+        ctx.lineWidth = 3
+        ctx.strokeStyle = '#000'
+        ctx.stroke()
+        ctx.fillStyle = t.color
+        ctx.fill()
+        ctx.lineJoin = 'miter'
+        y = base - side * arrow * 0.3
+      }
       if (!t.label) continue
       const label = truncate(t.label, 16)
-      const [sx, sy] = toScreen(t.x, t.y)
+      ctx.font = `600 ${px}px ${MONO}`
       const half = ctx.measureText(label).width / 2 + 4
       const x = Math.min(width - half, Math.max(half, sx))
-      const above = sy - offset
-      drawText(ctx, label, x, above > px ? above : sy + offset, { px, dpr, color: t.color, alpha: t.alpha, glow: false })
+      drawText(ctx, label, x, y - side * px * 0.65, { px, dpr, color: t.color, alpha: t.alpha, glow: false })
     }
+  }
+
+  // Who destroyed whom, in a short list in the top left corner: small outlined words that fade
+  // after a few seconds, so they keep out of the way
+  function drawFeed (feed) {
+    if (!feed?.length) return
+    const px = Math.max(11, Math.min(14, unit * 1.1))
+    const say = (text, x, y, color, alpha) => {
+      if (!text) return 0
+      ctx.globalAlpha = alpha
+      ctx.strokeText(text, x, y)
+      ctx.fillStyle = color
+      ctx.fillText(text, x, y)
+      return ctx.measureText(text).width
+    }
+    ctx.save()
+    ctx.font = `600 ${px}px ${MONO}`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = Math.max(2.5, px * 0.3)
+    ctx.strokeStyle = '#000'
+    const left = px * 0.6 + unit * 0.8
+    let y = px * 0.9 + unit * 0.8
+    for (const item of feed) {
+      let x = left
+      if (item.killer) {
+        x += say(truncate(item.killer.name, 12), x, y, item.killer.color, item.alpha) + px * 0.45
+        // A shell on its way from one to the other
+        const w = px * 1.15
+        const h = px * 0.46
+        ctx.globalAlpha = item.alpha
+        ctx.beginPath()
+        ctx.moveTo(x, y - h / 2)
+        ctx.lineTo(x + w * 0.62, y - h / 2)
+        ctx.quadraticCurveTo(x + w, y, x + w * 0.62, y + h / 2)
+        ctx.lineTo(x, y + h / 2)
+        ctx.closePath()
+        ctx.stroke()
+        ctx.fillStyle = item.killer.color
+        ctx.fill()
+        x += w + px * 0.45
+        say(truncate(item.victim.name, 12), x, y, item.victim.color, item.alpha)
+      } else {
+        // A tank that left the fight
+        x += say(item.before, x, y, '#9aa69a', item.alpha)
+        x += say(truncate(item.victim.name, 12), x, y, item.victim.color, item.alpha)
+        say(item.after, x, y, '#9aa69a', item.alpha)
+      }
+      y += px * 1.55
+    }
+    ctx.restore()
   }
 
   function drawNotes (notes) {
@@ -938,9 +1055,10 @@ export function createRenderer (canvas) {
    *             alpha, shield, fast, moving, power (shots left), diedAge, label }],
    *   shells: [{ x, y, color, power, trail: [{ x, y }] }],
    *   gifts: [{ x, y, kind, age, left }], charges: [0-1 for each teleporter],
-   *   aim: { points: [{ x, y, bounced }], power } | null,
+   *   aim: { points: [{ x, y, bounced }], color, power } | null,
    *   tracks: [{ x, y, a, t }], trackLife, particles,
    *   notes: [{ text, x, y, color, life, ttl }], banners: [{ text, y, size, display, color, alpha, min }],
+   *   feed: [{ killer: { name, color } | null, victim: { name, color }, before, after, alpha }],
    *   clock: { text, blink } | null, flash, shake
    * }
    * Positions are in units.
@@ -968,8 +1086,9 @@ export function createRenderer (canvas) {
     for (const t of scene.tanks) if (t.alive && t.shield) drawShield(t, scene.time)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.globalAlpha = 1
-    drawLabels(scene.tanks)
+    drawLabels(scene.tanks, scene.time)
     drawNotes(scene.notes)
+    drawFeed(scene.feed)
     drawBanners(scene.banners)
     drawClock(scene.clock)
     if (scene.flash > 0) {

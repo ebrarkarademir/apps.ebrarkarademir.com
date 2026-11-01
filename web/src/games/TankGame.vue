@@ -54,10 +54,11 @@ const mode = ref(props.initialCode || props.hostRoom ? 'online' : null)
 //
 // Every device drives its own tank and decides when a shell hits it, then reports the hit.
 // The host keeps the armor, so a hit only ever counts once. It also drops the gifts and says
-// who got each one: a shield that takes the next hit instead of the tank, a spell of speed, or
-// power shots that count as two hits (counters each tank's own device acts on). The host's
-// device also drives the bots and decides their hits; a solo game is a room where this device
-// is the host.
+// who got each one: a shield that takes the next hit instead of the tank, a spell of speed,
+// power shots that count as two hits, or a repair that mends a hit and gives a little speed
+// (counters each tank's own device acts on). It credits each destroyed tank to whoever fired
+// the last shot. The host's device also drives the bots and decides their hits; a solo game is
+// a room where this device is the host.
 
 const live = markRaw({ samples: {}, at: 0 }) // everyone's latest position
 const inbox = markRaw([]) // shots and hits from the others, for the arena to pick up
@@ -74,7 +75,7 @@ function endRound (s, reason) {
   const entries = Object.entries(s.tanks)
   // Survivors first, then the least damaged, then whoever lasted longer, then hits
   s.standings = entries
-    .map(([id, tank]) => ({ id, hp: tank.alive ? tank.hp : 0, hits: tank.hits, alive: tank.alive, out: tank.out }))
+    .map(([id, tank]) => ({ id, hp: tank.alive ? tank.hp : 0, hits: tank.hits, kills: tank.kills || 0, alive: tank.alive, out: tank.out }))
     .sort((a, b) => Number(b.alive) - Number(a.alive) || b.hp - a.hp || b.out - a.out || b.hits - a.hits)
   const [first, second] = s.standings
   const winner = first?.alive && !(second?.alive && second.hp === first.hp) ? first.id : null
@@ -84,11 +85,14 @@ function endRound (s, reason) {
   s.deadline = Date.now() + ENDING_MS
 }
 
-function knockOut (s, id) {
+// Out of the round: destroyed by `by`, or gone quiet or left with nobody to blame
+function knockOut (s, id, by = null) {
   const tank = s.tanks[id]
   if (!tank?.alive) return
   tank.alive = false
   tank.hp = 0
+  tank.by = by && by !== id && s.tanks[by] ? by : null
+  if (tank.by) s.tanks[by].kills = (s.tanks[by].kills || 0) + 1
   tank.out = ++s.knockedOut
   if ((s.phase === 'countdown' || s.phase === 'playing') && Object.values(s.tanks).filter(t => t.alive).length <= 1) {
     endRound(s, 'last')
@@ -110,7 +114,7 @@ function takeHit (s, id, by, dmg) {
   tank.hp = Math.max(0, tank.hp - (dmg === POWER_DAMAGE ? POWER_DAMAGE : 1))
   const shooter = s.tanks[by]
   if (shooter && by !== id) shooter.hits++
-  if (tank.hp <= 0) knockOut(s, id)
+  if (tank.hp <= 0) knockOut(s, id, by)
 }
 
 // Where the tanks are, so a gift doesn't land on one
@@ -118,9 +122,15 @@ const tankSpots = (s) => Object.entries(live.samples)
   .filter(([id, sample]) => s.tanks[id]?.alive && Number.isFinite(sample?.x) && Number.isFinite(sample?.y))
   .map(([, sample]) => ({ x: sample.x, y: sample.y, r: 7 }))
 
+// Shields most often, repairs least, so rounds don't drag on
+const GIFT_ODDS = [['shield', 0.32], ['speed', 0.25], ['power', 0.25], ['repair', 0.18]]
 const pickGift = () => {
-  const r = Math.random()
-  return r < 0.4 ? 'shield' : r < 0.7 ? 'speed' : 'power'
+  let r = Math.random()
+  for (const [kind, odds] of GIFT_ODDS) {
+    r -= odds
+    if (r < 0) return kind
+  }
+  return 'shield'
 }
 
 // Every so often a gift lands in open ground, up to MAX_GIFTS at a time, and each fades after
@@ -163,7 +173,9 @@ function onAction (s, playerId, action) {
       const slots = shuffle(Array.from({ length: fighters.length }, (_, i) => i))
       s.round++
       s.map = Math.floor(Math.random() * MAPS.length)
-      s.tanks = Object.fromEntries(fighters.map((f, i) => [f.id, { slot: slots[i], hp: ARMOR, alive: true, hits: 0, out: 0, bot: f.bot, shield: false, speed: 0, power: 0 }]))
+      // Each tank's color comes from its place in the list (people in the order they came,
+      // then bots), so a player keeps the same one from round to round
+      s.tanks = Object.fromEntries(fighters.map((f, i) => [f.id, { slot: slots[i], color: i, hp: ARMOR, alive: true, hits: 0, kills: 0, by: null, out: 0, bot: f.bot, shield: false, speed: 0, power: 0, repair: 0 }]))
       s.gifts = []
       s.knockedOut = 0
       s.standings = []
@@ -192,9 +204,16 @@ function onAction (s, playerId, action) {
       const index = s.gifts.findIndex(g => g.id === action.gift)
       if (!tank?.alive || index < 0) return
       const [gift] = s.gifts.splice(index, 1)
-      if (gift.kind === 'shield') tank.shield = true
-      else if (gift.kind === 'speed') tank.speed++
-      else tank.power++
+      if (gift.kind === 'shield') {
+        tank.shield = true
+      } else if (gift.kind === 'speed') {
+        tank.speed++
+      } else if (gift.kind === 'power') {
+        tank.power++
+      } else {
+        tank.hp = Math.min(ARMOR, tank.hp + 1)
+        tank.repair++
+      }
       break
     }
     case 'lobby':

@@ -2,11 +2,11 @@
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   W, H, STEP, ARMOR, TANK_SPEED, FIRE_COOLDOWN, MAX_SHELLS, INVULNERABLE, SLOW,
-  POWER_DAMAGE, SPEED_TIME, SPEED_BOOST, POWER_SHOTS, POWER_MAX, PAD_WAIT, GIFT_LIFE,
+  POWER_DAMAGE, SPEED_TIME, SPEED_BOOST, POWER_SHOTS, POWER_MAX, REPAIR_TIME, REPAIR_BOOST, PAD_WAIT, GIFT_LIFE,
   mapOf, spawnTank, moveTank, fireShell, shellSpeed, stepShell, touches, touchesGift, padAt,
   aimPath, tankAt, turnRate, wrapAngle, angleDiff
 } from './engine'
-import { createRenderer, MY_COLOR, TANK_COLORS, GIFT_COLORS } from './renderer'
+import { createRenderer, TANK_COLORS, GIFT_COLORS } from './renderer'
 import * as fx from './effects'
 import { LEVELS, newBrain, botHeld } from './bots'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
@@ -27,7 +27,8 @@ import { haptics } from '../ascii/haptics'
 // A tank shows its own damage, so there are no hearts to count: scorched after one hit,
 // battered after two, burning and slow after three, and the fourth destroys it. Gifts the host
 // drops in the open go to whoever shoots them, and a tank that waits on a teleporter for three
-// seconds jumps to another.
+// seconds jumps to another. Every tank has its own color, the same on every screen, and so do
+// its shells; a short list in the corner says who destroyed whom.
 //
 // This device moves its own tank and decides when a shell hits it. Positions go out as live
 // samples, shots and hits as events, and the host keeps the armor, the gifts and who has
@@ -67,7 +68,11 @@ const TRACK_GAP = 0.6 // units driven between tread marks
 const TRACK_LIFE = 9 // seconds a tread mark takes to fade
 const MAX_TRACKS = 480
 const WRECK_FIRE = 7 // seconds a wreck burns, then it smoulders
-const GIFT_NAMES = { shield: 'tankGiftShield', speed: 'tankGiftSpeed', power: 'tankGiftPower' }
+const GIFT_NAMES = { shield: 'tankGiftShield', speed: 'tankGiftSpeed', power: 'tankGiftPower', repair: 'tankGiftRepair' }
+const FEED_LIFE = 4.5 // seconds a line stays in the list of who destroyed whom
+const FEED_MAX = 4
+const POP_LIFE = 1.8 // seconds "You destroyed ..." shows
+const YOU_SECONDS = 2 // YOU shows over your tank until this long into the fight
 
 const area = ref(null)
 const canvas = ref(null)
@@ -109,6 +114,8 @@ const notes = [] // words floating up off a tank: { text, id, x, y, color, life,
 const tracks = [] // tread marks: { x, y, a, t }
 const taken = new Map() // gift id -> when a shell popped it on this screen
 const seenGifts = new Set()
+const feed = [] // who destroyed whom: { killer, victim, at }
+let pop = null // this player's last kill, for a moment: { text, color, at }
 let gifts = [] // this frame's gifts still to be shot: { id, kind, x, y, age, left }
 const pointers = new Set()
 let keyDown = false
@@ -121,7 +128,10 @@ const fighting = () => Date.now() >= props.startAt && props.phase !== 'ending'
 
 const armorOf = (id) => props.tanks[id]?.hp ?? ARMOR
 const damageOf = (id) => Math.max(0, Math.min(3, ARMOR - armorOf(id)))
-const colorOf = (id) => (id === props.myId ? MY_COLOR : TANK_COLORS[(props.tanks[id]?.slot ?? 0) % TANK_COLORS.length])
+const colorOf = (id) => {
+  const info = props.tanks[id]
+  return TANK_COLORS[(info?.color ?? info?.slot ?? 0) % TANK_COLORS.length]
+}
 const bodyOf = (id) => (id === props.myId ? me : drones.get(id) || ghosts.get(id))
 const shielded = (id, body) => !!props.tanks[id]?.shield && !body.shieldGone
 
@@ -141,8 +151,9 @@ const lastSeconds = computed(() => props.endsAt && props.endsAt - now.value < 10
  *   portPad, portTime, portLock  the teleporter it's on, how long it's waited there, and the
  *              one it arrived on (no going back until it has driven off)
  *   tp         teleports so far, so the others can show them
- *   speedLeft, powerLeft  seconds of speed and power shots left (own tanks); fast, power
- *              the same as last heard (other players' tanks)
+ *   speedLeft, boostLeft, powerLeft  seconds of speed (from a speed gift, and the little bit
+ *              from a repair) and power shots left (own tanks); fast, power the same as last
+ *              heard (other players' tanks)
  */
 function newBody (slot, alive, own) {
   const tank = spawnTank(props.map, slot)
@@ -164,6 +175,7 @@ function newBody (slot, alive, own) {
     portLock: -1,
     tp: 0,
     speedLeft: 0,
+    boostLeft: 0,
     powerLeft: 0,
     fast: false,
     power: 0,
@@ -190,6 +202,8 @@ function newRound () {
   known.clear()
   taken.clear()
   seenGifts.clear()
+  feed.length = 0
+  pop = null
   particles.length = 0
   notes.length = 0
   tracks.length = 0
@@ -289,10 +303,10 @@ function canFire (owner, last) {
 }
 
 // A shot leaving a barrel: the bang, the barrel's kick and the muzzle flash
-function fired (body, shot) {
+function fired (body, shot, color) {
   sound.play(shot.p === 1 ? 'heavy' : 'fire')
   if (body) body.recoil = 1
-  if (!reduceMotion) fx.muzzle(particles, shot.x, shot.y, shot.dx, shot.dy, shot.p === 1)
+  if (!reduceMotion) fx.muzzle(particles, shot.x, shot.y, shot.dx, shot.dy, shot.p === 1, color)
 }
 
 // A tank driven here fires, a power shot while it has any
@@ -302,7 +316,7 @@ function shoot (id, body) {
   const shot = { id: `${props.round}.${id}.${++shotSeq}`, ...fireShell(body, walls), ...(power ? { p: 1 } : {}) }
   addShell(shot, id)
   emit('shot', { k: 'shot', ...(id === props.myId ? {} : { o: id }), ...shot })
-  fired(body, shot)
+  fired(body, shot, colorOf(id))
 }
 
 function fire () {
@@ -327,21 +341,23 @@ function readInbox () {
       // A bot's shot comes from the host's device, with the bot as its owner
       const owner = typeof data.o === 'string' && props.tanks[data.o]?.bot ? data.o : from
       addShell(data, owner)
-      fired(bodyOf(owner), data)
+      fired(bodyOf(owner), data, colorOf(owner))
     } else if (data.k === 'hit' && typeof data.sid === 'string') {
+      const shell = shells.get(data.sid)
       shells.delete(data.sid)
       // A shield that took the hit shows when the host says it's gone
-      if (isNumber(data.x) && isNumber(data.y) && !data.b) struck(data.x, data.y)
+      if (isNumber(data.x) && isNumber(data.y) && !data.b) struck(data.x, data.y, shell && colorOf(shell.owner))
     }
   }
 }
 
 // ---------- Hits, gifts and wrecks ----------
 
-// A shell striking a tank: the bang, sparks, and a scorch mark left on the ground
-function struck (x, y) {
+// A shell striking a tank: the bang, sparks in the shooter's color, and a scorch mark left on
+// the ground
+function struck (x, y, color) {
   sound.play('hit')
-  if (!reduceMotion) fx.impact(particles, x, y)
+  if (!reduceMotion) fx.impact(particles, x, y, color)
   renderer?.scorch(x, y, 1.5)
 }
 
@@ -360,7 +376,7 @@ function gotHit (shell) {
     haptics.buzz('tap')
     return
   }
-  struck(shell.x, shell.y)
+  struck(shell.x, shell.y, colorOf(shell.owner))
   me.flash = 1
   haptics.buzz('hit')
   if (!reduceMotion) {
@@ -372,7 +388,20 @@ function gotHit (shell) {
 function gotGift (id, body, kind) {
   notes.push({ text: `+${upper(props.t[GIFT_NAMES[kind]])}`, id, x: body.x, y: body.y, color: GIFT_COLORS[kind], life: 1.5, ttl: 1.5 })
   if (body === me) {
-    sound.play('pickup')
+    sound.play(kind === 'repair' ? 'heal' : 'pickup')
+    haptics.buzz('combo')
+  }
+}
+
+// Someone destroyed: a line in the list, and a moment of glory if this player did it. With no
+// one to blame, the tank left the fight.
+function announce (victim, killer) {
+  const by = typeof killer === 'string' && killer !== victim && props.tanks[killer] ? killer : null
+  feed.push({ killer: by, victim, at: clock })
+  if (feed.length > FEED_MAX) feed.shift()
+  if (by && by === props.myId) {
+    pop = { text: fmt(props.t.tankYouKilled, { name: props.names[victim] || '?' }), color: colorOf(by), at: clock }
+    sound.play('kill')
     haptics.buzz('combo')
   }
 }
@@ -381,9 +410,10 @@ function gotGift (id, body, kind) {
 function watchTanks () {
   for (const [id, info] of Object.entries(props.tanks)) {
     const before = known.get(id)
-    const after = { hp: info.hp, alive: info.alive, shield: !!info.shield, speed: info.speed || 0, power: info.power || 0 }
+    const after = { hp: info.hp, alive: info.alive, shield: !!info.shield, speed: info.speed || 0, power: info.power || 0, repair: info.repair || 0 }
     known.set(id, after)
     if (!before) continue
+    if (before.alive && !after.alive) announce(id, info.by)
     const body = bodyOf(id)
     if (!body) continue
     if (after.hp < before.hp && body !== me) {
@@ -404,6 +434,13 @@ function watchTanks () {
     if (after.power > before.power) {
       if (body.own) body.powerLeft = Math.min(POWER_MAX, body.powerLeft + POWER_SHOTS * (after.power - before.power))
       gotGift(id, body, 'power')
+    }
+    // A repair: the host has already mended a hit; the tank glows green and gets a little speed
+    if (after.repair > before.repair) {
+      if (body.own) body.boostLeft = REPAIR_TIME
+      gotGift(id, body, 'repair')
+      body.flash = 1
+      if (!reduceMotion && body.alive) fx.heal(particles, body.x, body.y)
     }
     if (before.alive && !after.alive && body.alive) explode(id, body)
   }
@@ -528,6 +565,7 @@ function effects (dt) {
     if (notes[i].life <= 0) notes.splice(i, 1)
   }
   while (tracks.length && clock - tracks[0].t > TRACK_LIFE) tracks.shift()
+  while (feed.length && clock - feed[0].at > FEED_LIFE) feed.shift()
 }
 
 // ---------- Teleporters ----------
@@ -601,7 +639,9 @@ function startCheck () {
 // One step for a tank driven here: its pace, the drive or turn, the treads, the teleporters
 function steer (id, body, near) {
   body.speedLeft = Math.max(0, body.speedLeft - STEP)
-  body.pace = (armorOf(id) <= 1 ? SLOW : 1) * (body.speedLeft > 0 ? SPEED_BOOST : 1)
+  body.boostLeft = Math.max(0, body.boostLeft - STEP)
+  const boost = body.speedLeft > 0 ? SPEED_BOOST : body.boostLeft > 0 ? REPAIR_BOOST : 1
+  body.pace = (armorOf(id) <= 1 ? SLOW : 1) * boost
   moveTank(body, walls, near, STEP)
   roll(body, STEP)
   if (fighting()) stepPort(body, body === me)
@@ -629,6 +669,7 @@ function tick () {
       continue
     }
     if (result === 'bounce' && shell.owner === props.myId) sound.play('bounce')
+    if (shell.power && !reduceMotion && Math.random() < 0.3) fx.trail(particles, shell.x, shell.y, colorOf(shell.owner))
     shell.trailClock += STEP
     if (shell.trailClock >= 0.02) {
       shell.trailClock = 0
@@ -656,7 +697,7 @@ function hitDrone (shell) {
     if (blocked) {
       breakShield(drone)
     } else {
-      struck(shell.x, shell.y)
+      struck(shell.x, shell.y, colorOf(shell.owner))
       drone.flash = 1
     }
     return true
@@ -695,7 +736,8 @@ function driveDrones () {
     let down = false
     if (active) {
       const seen = flying.map(s => ({ x: s.x, y: s.y, dx: s.dx, dy: s.dy, mine: s.owner === id }))
-      down = botHeld(drone, drone.brain, { clock, walls, targets: near, shells: seen, gifts: open }, skill)
+      const wanted = armorOf(id) < ARMOR ? open : open.filter(gift => gift.kind !== 'repair')
+      down = botHeld(drone, drone.brain, { clock, walls, targets: near, shells: seen, gifts: wanted }, skill)
     }
     if (down !== drone.held) {
       drone.held = down
@@ -774,7 +816,7 @@ function updateGhosts (dt) {
 function pose (tank) {
   const p = { x: round2(tank.x), y: round2(tank.y), a: Math.round(tank.a * 1000) / 1000, m: tank.moving ? 1 : 0, s: tank.spin }
   if (Math.abs(tank.pace - 1) > 0.01) p.v = round2(tank.pace)
-  if (tank.speedLeft > 0) p.f = 1
+  if (tank.speedLeft > 0 || tank.boostLeft > 0) p.f = 1
   if (tank.powerLeft > 0) p.w = tank.powerLeft
   if (tank.tp) p.t = tank.tp
   return p
@@ -808,6 +850,11 @@ function banners (list) {
   if (fightTimer > 0) {
     banner(props.t.tankFight, 24, 9, { display: true, alpha: Math.min(1, fightTimer / 0.3) })
   }
+  // Small, above the middle, gone in a moment: it shouldn't get in the way of the next fight
+  if (pop && clock - pop.at < POP_LIFE) {
+    const age = clock - pop.at
+    banner(pop.text, 17, 2.3 * (age < 0.15 ? 1.3 - age * 2 : 1), { display: true, color: pop.color, alpha: Math.min(1, (POP_LIFE - age) / 0.5), min: 14 })
+  }
   if (props.phase === 'ending' && props.outcome) {
     const { reason, winner } = props.outcome
     if (reason === 'time') banner(props.t.tankTimeUp, 17.5, 1.4, { min: 13 })
@@ -837,6 +884,7 @@ function render () {
     particles,
     notes: [],
     banners: [],
+    feed: [],
     clock: full.value ? { text: clockText.value, blink: lastSeconds.value } : null,
     flash,
     shake
@@ -860,11 +908,11 @@ function render () {
       flash: body.flash,
       alpha: safe && blinking ? 0.45 : 1,
       shield: body.alive && shielded(id, body),
-      fast: body.own ? body.speedLeft > 0 : body.fast,
+      fast: body.own ? body.speedLeft > 0 || body.boostLeft > 0 : body.fast,
       moving: body.moving,
       power: body.own ? body.powerLeft : body.power,
       diedAge: body.alive ? 0 : clock - body.diedAt,
-      label: !mine && body.alive ? props.names[id] || '?' : ''
+      label: !body.alive ? '' : mine ? (Date.now() < props.startAt + YOU_SECONDS * 1000 ? upper(props.t.gameYou) : '') : props.names[id] || '?'
     }
     scene.tanks.push(tank)
     if (body.alive && body.portPad >= 0 && body.portTime > 0) {
@@ -876,7 +924,7 @@ function render () {
   for (const [id, drone] of drones) add(id, drone, true)
   if (me) {
     const tank = add(props.myId, me, true)
-    if (me.alive && props.phase !== 'ending') scene.aim = { points: aimPath(tank, walls, held.value ? 10 : 30), power: me.powerLeft > 0 }
+    if (me.alive && props.phase !== 'ending') scene.aim = { points: aimPath(tank, walls, held.value ? 10 : 30), color: tank.color, power: me.powerLeft > 0 }
   }
   for (const shell of shells.values()) {
     scene.shells.push({ x: lerp(shell.prevX, shell.x), y: lerp(shell.prevY, shell.y), color: colorOf(shell.owner), power: shell.power, trail: shell.trail })
@@ -889,6 +937,12 @@ function render () {
       note.y = body.y
     }
     scene.notes.push(note)
+  }
+  // The list of who destroyed whom, fading out at the end of each line's time
+  for (const item of feed) {
+    const name = (id) => ({ name: props.names[id] || '?', color: colorOf(id) })
+    const [before, after] = item.killer ? ['', ''] : props.t.tankFeedLeft.split('{name}')
+    scene.feed.push({ killer: item.killer && name(item.killer), victim: name(item.victim), before, after: after ?? '', alpha: Math.min(1, (FEED_LIFE - (clock - item.at)) / 0.6) })
   }
   banners(scene.banners)
   renderer.draw(scene)
@@ -912,7 +966,7 @@ function after (dt) {
   sendSample(dt)
   if (Math.floor(Date.now() / 1000) !== Math.floor(now.value / 1000)) now.value = Date.now()
   const shield = !!(me?.alive && shielded(props.myId, me))
-  const speed = me?.alive ? Math.ceil(me.speedLeft) : 0
+  const speed = me?.alive ? Math.ceil(Math.max(me.speedLeft, me.boostLeft)) : 0
   const power = me?.alive ? me.powerLeft : 0
   if (hud.shield !== shield) hud.shield = shield
   if (hud.speed !== speed) hud.speed = speed

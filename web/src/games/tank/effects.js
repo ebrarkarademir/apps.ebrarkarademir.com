@@ -8,9 +8,11 @@ import { TANK_R, PAD_R, GIFT_R } from './engine'
 //   spark  a bright streak along the way it flies
 //   chunk  a turning scrap of metal
 //   ring   a circle that grows (or shrinks, with a negative grow) and fades
+//   plus   a little + sign drifting off a tank that's been repaired
 // size is in units, grow in units per second.
 
 export const SHIELD_COLOR = '#7fe6ff'
+export const REPAIR_COLOR = '#5cff74'
 export const PAD_COLOR = '#d68cff'
 export const FIRE = ['#fff3b0', '#ffc24d', '#ff7a2a', '#ff4a1a']
 const SMOKE = '#9aa69a'
@@ -29,12 +31,13 @@ function spray (list, x, y, count, { from = 0, to = TAU, speed: [lo, hi], ...res
   }
 }
 
-/** The flash, sparks and smoke at the end of a barrel as it fires along (dx, dy). */
-export function muzzle (list, x, y, dx, dy, power = false) {
+/** The flash, sparks and smoke at the end of a barrel as it fires along (dx, dy), in the tank's color. */
+export function muzzle (list, x, y, dx, dy, power = false, color = '#ffd27a') {
   const a = Math.atan2(dy, dx)
-  list.push({ kind: 'flash', x, y, vx: 0, vy: 0, size: power ? 4.4 : 3, color: power ? '#ff9a50' : '#fff0b8', life: 0.09, ttl: 0.09 })
-  list.push({ kind: 'fire', x: x + dx * 0.5, y: y + dy * 0.5, vx: dx * 8, vy: dy * 8, drag: 12, size: power ? 2 : 1.3, color: power ? '#ff8a3d' : '#ffd27a', life: 0.13, ttl: 0.13 })
-  spray(list, x, y, power ? 9 : 5, { kind: 'spark', from: a - 0.45, to: a + 0.45, speed: [14, power ? 34 : 26], drag: 7, color: ['#ffe9a8', '#ffb347'], life: [0.08, 0.2] })
+  list.push({ kind: 'flash', x, y, vx: 0, vy: 0, size: power ? 5.5 : 3.8, color, life: 0.11, ttl: 0.11 })
+  list.push({ kind: 'flash', x, y, vx: 0, vy: 0, size: power ? 3 : 2, color: '#fff6dc', life: 0.07, ttl: 0.07 })
+  list.push({ kind: 'fire', x: x + dx * 0.5, y: y + dy * 0.5, vx: dx * 8, vy: dy * 8, drag: 12, size: power ? 2.2 : 1.3, color, life: 0.13, ttl: 0.13 })
+  spray(list, x, y, power ? 10 : 5, { kind: 'spark', from: a - 0.45, to: a + 0.45, speed: [14, power ? 34 : 26], drag: 7, color: [color, '#ffffff'], life: [0.08, 0.2] })
   spray(list, x + dx * 0.4, y + dy * 0.4, 3, { kind: 'smoke', from: a - 0.9, to: a + 0.9, speed: [2, 6], drag: 2.5, size: 0.7, grow: 2.4, alpha: 0.3, color: SMOKE, life: [0.45, 0.8] })
 }
 
@@ -81,6 +84,25 @@ export function shieldBreak (list, x, y) {
     list.push({ kind: 'chunk', x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 4, size: rand(0.3, 0.55), spin: rand(-12, 12), angle: a, color: SHIELD_COLOR, glow: true, life, ttl: life })
   }
   spray(list, x, y, 8, { kind: 'spark', speed: [8, 18], drag: 5, color: [SHIELD_COLOR, '#ffffff'], life: [0.15, 0.35] })
+}
+
+/** A tank mended by a repair: a green flash, a ring and + signs drifting off it. */
+export function heal (list, x, y) {
+  list.push({ kind: 'flash', x, y, vx: 0, vy: 0, size: 7.5, color: REPAIR_COLOR, life: 0.3, ttl: 0.3 })
+  list.push({ kind: 'ring', x, y, vx: 0, vy: 0, size: TANK_R + 0.4, grow: 9, color: '#ffffff', life: 0.4, ttl: 0.4 })
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * TAU + rand(-0.3, 0.3)
+    const v = rand(2.5, 5)
+    const life = rand(0.75, 1.15)
+    list.push({ kind: 'plus', x: x + Math.cos(a) * 1.2, y: y + Math.sin(a) * 1.2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.2, size: rand(0.6, 0.9), color: i % 3 ? REPAIR_COLOR : '#ffffff', life, ttl: life })
+  }
+  spray(list, x, y, 10, { kind: 'spark', speed: [5, 12], drag: 4, color: [REPAIR_COLOR, '#ffffff'], life: [0.2, 0.45] })
+}
+
+/** A spark falling behind a power shell in flight. */
+export function trail (list, x, y, color) {
+  const life = rand(0.15, 0.3)
+  list.push({ kind: 'fire', x: x + rand(-0.15, 0.15), y: y + rand(-0.15, 0.15), vx: rand(-1, 1), vy: rand(-1, 1), drag: 3, size: rand(0.5, 0.9), color, life, ttl: life })
 }
 
 /** A puff of smoke rising off a damaged tank; dark ones off a burning one. */

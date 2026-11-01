@@ -153,7 +153,7 @@ export const rules = {
         'There is only one button: hold it anywhere on the screen (or Space) and your tank drives forward and fires.',
         'Let go and the tank stops and turns on the spot — the other way round after every press. Press again when the dotted line points where you want to go.',
         'Every tank takes 4 hits, and you can see each one on it: scorched, then battered and smoking, then burning and slow. The fourth hit destroys it. After a hit the tank blinks and is safe for a moment.',
-        'Gifts turn up here and there; shoot one to get it. A shield blocks the next hit, speed makes you faster for a few seconds, and power shots count as two hits.',
+        'Gifts turn up here and there; shoot one to get it. A shield blocks the next hit, speed makes you faster for a few seconds, power shots count as two hits, and the green + mends one hit and gives you a little speed.',
         'Stay on a teleporter for 3 seconds and you jump to another one.',
         'The last tank standing wins the round. If the clock runs out, the least damaged tank wins.'
       ],
@@ -162,7 +162,8 @@ export const rules = {
         'You can only have 3 shells in the air, so pick your shots.',
         'Short taps fire without driving far; long holds get you out of trouble.',
         'Turned past your target? A quick tap swings the barrel back the other way.',
-        'While you have power shots, your barrel glows red and so does the dotted line.'
+        'While you have power shots, your barrel glows red and your dotted line gets bolder.',
+        'Every tank has its own color, and so do its shells. The list in the corner shows who destroyed whom.'
       ]
     },
     TR: {
@@ -176,7 +177,7 @@ export const rules = {
         'Tek bir tuş var: ekranın herhangi bir yerine basılı tut (ya da Boşluk) — tankın ileri gider ve ateş eder.',
         'Bırakınca tank durur ve olduğu yerde döner — her basıştan sonra ters yöne. Noktalı çizgi istediğin yönü gösterdiğinde tekrar bas.',
         'Her tank 4 isabete dayanır ve her biri üzerinde görünür: önce isli, sonra hırpalanmış ve dumanlı, sonra yanan ve yavaş. Dördüncü isabet onu yok eder. İsabetten sonra tank yanıp söner ve kısa bir süre güvende olur.',
-        'Arada bir hediyeler belirir; almak için vur. Kalkan bir sonraki isabeti engeller, hız birkaç saniye hızlandırır, güçlü atışlar iki isabet sayılır.',
+        'Arada bir hediyeler belirir; almak için vur. Kalkan bir sonraki isabeti engeller, hız birkaç saniye hızlandırır, güçlü atışlar iki isabet sayılır, yeşil + ise bir isabeti onarır ve biraz hız verir.',
         'Bir ışınlayıcının üzerinde 3 saniye kalırsan başka birine geçersin.',
         'Ayakta kalan son tank turu kazanır. Süre dolarsa en az hasar alan tank kazanır.'
       ],
@@ -185,7 +186,8 @@ export const rules = {
         'Havada aynı anda en fazla 3 merminin olabilir, atışlarını seç.',
         'Kısa dokunuşlar fazla ilerlemeden ateş eder; uzun basışlar seni tehlikeden kurtarır.',
         'Hedefi geçtin mi? Kısa bir dokunuş namluyu ters yöne çevirir.',
-        'Güçlü atışın varken namlun kırmızı parlar, noktalı çizgi de kırmızıya döner.'
+        'Güçlü atışın varken namlun kırmızı parlar, noktalı çizgin de kalınlaşır.',
+        'Her tankın kendi rengi var, mermileri de aynı renkte. Köşedeki liste kimin kimi yok ettiğini gösterir.'
       ]
     },
     RU: {
@@ -199,7 +201,7 @@ export const rules = {
         'Кнопка всего одна: держи нажатым любое место экрана (или пробел) — и танк едет вперёд и стреляет.',
         'Отпусти — и танк остановится и начнёт поворачиваться на месте, после каждого нажатия в другую сторону. Нажми снова, когда пунктир смотрит туда, куда нужно.',
         'Каждый танк выдерживает 4 попадания, и каждое видно на нём: сначала копоть, потом вмятины и дым, потом огонь и медленный ход. Четвёртое попадание его уничтожает. После попадания танк мигает и недолго неуязвим.',
-        'То тут, то там появляются подарки — выстрели в подарок, чтобы забрать его. Щит отразит следующее попадание, скорость на несколько секунд ускорит танк, а мощный выстрел засчитывается за два попадания.',
+        'То тут, то там появляются подарки — выстрели в подарок, чтобы забрать его. Щит отразит следующее попадание, скорость на несколько секунд ускорит танк, мощный выстрел засчитывается за два попадания, а зелёный плюс чинит одно попадание и немного ускоряет.',
         'Простой 3 секунды на телепорте — и перенесёшься на другой.',
         'Раунд выигрывает последний уцелевший танк. Если время вышло, побеждает наименее повреждённый танк.'
       ],
@@ -208,7 +210,8 @@ export const rules = {
         'В воздухе может быть не больше 3 твоих снарядов, так что стреляй с умом.',
         'Короткие нажатия стреляют, почти не сдвигая танк; долгие помогают выбраться из передряги.',
         'Ствол ушёл дальше цели? Короткое нажатие повернёт его обратно.',
-        'Пока у тебя есть мощные выстрелы, ствол светится красным, и пунктир тоже красный.'
+        'Пока у тебя есть мощные выстрелы, ствол светится красным, а пунктир становится жирнее.',
+        'У каждого танка свой цвет, и снаряды у него того же цвета. Список в углу показывает, кто кого подбил.'
       ]
     },
     KK: {
@@ -222,7 +225,7 @@ export const rules = {
         'Түйме біреу ғана: экранның кез келген жерін (немесе Бос орынды) басып тұрсаң, танкің алға жүріп, атады.',
         'Жіберсең, танк тоқтап, орнында бұрыла бастайды — әр басқан сайын қарама-қарсы жаққа. Нүктелі сызық керек жаққа қарағанда қайта бас.',
         'Әр танк 4 тигенге шыдайды, әрқайсысы оның өзінен көрінеді: алдымен күйе, сосын мыжылып түтіндейді, сосын жанып баяулайды. Төртінші тигенде ол жойылады. Тигеннен кейін танк жыпылықтап, біраз уақыт қауіпсіз болады.',
-        'Анда-санда сыйлықтар пайда болады; алу үшін оны ат. Қалқан келесі тигенді тосады, жылдамдық бірнеше секундқа үдетеді, қуатты ату екі тиген болып саналады.',
+        'Анда-санда сыйлықтар пайда болады; алу үшін оны ат. Қалқан келесі тигенді тосады, жылдамдық бірнеше секундқа үдетеді, қуатты ату екі тиген болып саналады, ал жасыл плюс бір тигенді жөндеп, сәл жылдамдық береді.',
         'Телепортта 3 секунд тұрсаң, басқа телепортқа өтесің.',
         'Раундты соңғы қалған танк жеңеді. Уақыт бітсе, ең аз зақымдалған танк жеңеді.'
       ],
@@ -231,7 +234,8 @@ export const rules = {
         'Ауада бір мезетте тек 3 снарядың бола алады, сондықтан мұқият ат.',
         'Қысқа басу алысқа жүрмей атады; ұзақ басып тұру қиын жағдайдан шығарады.',
         'Нысанадан асып кеттің бе? Қысқа басу ұңғыны кері бұрады.',
-        'Қуатты атуың барда ұңғың қызыл жанады, нүктелі сызық та қызыл болады.'
+        'Қуатты атуың барда ұңғың қызыл жанады, нүктелі сызығың жуандайды.',
+        'Әр танктің өз түсі бар, снарядтары да сол түсті. Бұрыштағы тізім кім кімді жойғанын көрсетеді.'
       ]
     }
   },

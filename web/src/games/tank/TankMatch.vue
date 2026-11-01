@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti'
 import TermWindow from '../../components/TermWindow.vue'
 import TankStage from './TankStage.vue'
 import { ARMOR } from './engine'
+import { TANK_COLORS } from './renderer'
 
 // A round of Tank and its results, the same for a solo game against bots and an online room.
 // `room` is either room (useOnlineRoom or useLocalRoom); its host-side rules are in TankGame.
@@ -25,6 +26,7 @@ const conditionText = (entry) => props.t[`tankState${entry.alive ? Math.max(0, M
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 
 const view = computed(() => props.room.view)
+const colorOf = (id) => TANK_COLORS[(view.value?.tanks?.[id]?.color ?? 0) % TANK_COLORS.length]
 const inArena = computed(() => ['countdown', 'playing', 'ending'].includes(view.value?.phase))
 // People by their names, bots by a name in this device's language
 const names = computed(() => {
@@ -119,23 +121,32 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
       </div>
 
       <div>
-        <div class="flex items-center gap-3 px-4 pb-2 term-label">
-          <span class="w-8">#</span>
+        <!-- On a phone the condition goes under the name, and hits are left out, so names fit -->
+        <div class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 pb-2 term-label">
+          <span class="w-7 sm:w-8">#</span>
           <span class="flex-1">{{ t.onlinePlayers }}</span>
-          <span class="w-24 text-right">{{ t.tankCondition }}</span>
-          <span class="w-12 text-right">{{ t.tankHits }}</span>
+          <span class="w-24 text-right max-sm:hidden">{{ t.tankCondition }}</span>
+          <span class="w-12 text-right max-sm:hidden">{{ t.tankHits }}</span>
+          <span class="w-14 text-right">{{ t.tankKills }}</span>
           <span class="w-12 text-right">{{ t.tankWins }}</span>
         </div>
         <ol class="border border-term-low divide-y divide-term-low">
           <li
             v-for="entry in standings"
             :key="entry.id"
-            :class="['flex items-center gap-3 px-4 py-3', { 'term-inverse': winner && entry.id === winner.id, 'bg-term-deep': !(winner && entry.id === winner.id) && entry.id === room.myId }]"
+            :class="['flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3', { 'term-inverse': winner && entry.id === winner.id, 'bg-term-deep': !(winner && entry.id === winner.id) && entry.id === room.myId }]"
           >
-            <span class="w-8 tabular-nums font-semibold">#{{ entry.rank }}</span>
-            <span :class="['flex-1 truncate', { 'font-semibold': entry.id === room.myId }]">{{ entry.name }}</span>
-            <span class="w-24 text-right text-xs sm:text-sm font-semibold truncate">{{ conditionText(entry) }}</span>
-            <span class="w-12 text-right tabular-nums">{{ entry.hits }}</span>
+            <span class="w-7 sm:w-8 tabular-nums font-semibold">#{{ entry.rank }}</span>
+            <span class="flex-1 min-w-0">
+              <span :class="['flex items-center gap-2', { 'font-semibold': entry.id === room.myId }]">
+                <span class="swatch" :style="{ background: colorOf(entry.id) }" aria-hidden="true"></span>
+                <span class="truncate">{{ entry.name }}</span>
+              </span>
+              <span class="sm:hidden block truncate text-xs font-semibold opacity-75">{{ conditionText(entry) }}</span>
+            </span>
+            <span class="w-24 text-right text-sm font-semibold truncate max-sm:hidden">{{ conditionText(entry) }}</span>
+            <span class="w-12 text-right tabular-nums max-sm:hidden">{{ entry.hits }}</span>
+            <span class="w-14 text-right tabular-nums">{{ entry.kills }}</span>
             <span class="w-12 text-right font-bold tabular-nums">{{ entry.wins }}</span>
           </li>
         </ol>
@@ -150,3 +161,13 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
     </div>
   </component>
 </template>
+
+<style scoped>
+/* Each tank's color, as it was in the arena */
+.swatch {
+  flex-shrink: 0;
+  width: 0.7rem;
+  height: 0.7rem;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.6);
+}
+</style>

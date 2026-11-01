@@ -164,6 +164,15 @@ const patches = {
     tone(t, { type: 'sine', from: 660, to: 990, duration: 0.18, volume: 0.03 })
     tone(t + 0.09, { type: 'sine', from: 990, to: 1320, duration: 0.2, volume: 0.025 })
   },
+  // Your tank destroying another: a bright two-note blip
+  kill: (t) => {
+    tone(t, { from: 880, duration: 0.07, volume: 0.05 })
+    tone(t + 0.08, { from: 1320, duration: 0.16, volume: 0.05 })
+  },
+  // A repair: a soft rising chord
+  heal: (t) => {
+    ;[523.25, 659.25, 784, 1046.5].forEach((frequency, i) => tone(t + i * 0.05, { type: 'sine', from: frequency, duration: 0.32, volume: 0.04 }))
+  },
   // A shield taking a hit: breaking glass and a ring
   shield: (t) => {
     bell(t, 1320, 0.04)

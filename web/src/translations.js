@@ -352,7 +352,7 @@ export const translations = {
     // Tank
     tankTitle: 'Tank',
     tankDesc: 'One-button tank battle — against bots alone, or with friends online; the last tank standing wins',
-    tankLobbyHint: 'Every tank takes 4 hits, and its damage shows on it: on its last legs it burns and slows down. Shells bounce off a wall once. Shoot a gift for a shield, speed or power shots, and wait 3 seconds on a teleporter to jump to another. The last tank standing wins the round.',
+    tankLobbyHint: 'Every tank takes 4 hits, and its damage shows on it: on its last legs it burns and slows down. Shells bounce off a wall once. Shoot a gift for a shield, speed, power shots or a repair, and wait 3 seconds on a teleporter to jump to another. The last tank standing wins the round.',
     tankControls: 'One button: hold it (touch, click or Space) to drive forward and fire, let go to stop and turn. Every press flips the way it turns.',
     tankSoloDesc: 'You against bot tanks. Pick how many and how good they are.',
     tankOnlineDesc: 'Up to eight tanks, one device each. Bots can fill the empty places.',
@@ -378,6 +378,10 @@ export const translations = {
     tankGiftShield: 'Shield',
     tankGiftSpeed: 'Speed',
     tankGiftPower: 'Power',
+    tankGiftRepair: 'Repair',
+    tankKills: 'Kills',
+    tankYouKilled: 'You destroyed {name}',
+    tankFeedLeft: '{name} left',
     tankHits: 'Hits',
     tankWins: 'Wins',
 
@@ -1247,7 +1251,7 @@ export const translations = {
     // Tank
     tankTitle: 'Tank',
     tankDesc: 'Tek tuşlu tank savaşı — tek başına botlara karşı ya da arkadaşlarınla çevrim içi; ayakta kalan son tank kazanır',
-    tankLobbyHint: 'Her tank 4 isabete dayanır ve hasarı üzerinde görünür: son demlerinde yanar ve yavaşlar. Mermiler duvardan bir kez seker. Kalkan, hız ya da güçlü atış için hediyeleri vur; bir ışınlayıcıda 3 saniye bekle, başka birine geç. Ayakta kalan son tank turu kazanır.',
+    tankLobbyHint: 'Her tank 4 isabete dayanır ve hasarı üzerinde görünür: son demlerinde yanar ve yavaşlar. Mermiler duvardan bir kez seker. Kalkan, hız, güçlü atış ya da onarım için hediyeleri vur; bir ışınlayıcıda 3 saniye bekle, başka birine geç. Ayakta kalan son tank turu kazanır.',
     tankControls: 'Tek tuş: basılı tut (dokun, tıkla ya da Boşluk) ileri sür ve ateş et; bırakınca durur ve döner. Her basış dönüş yönünü değiştirir.',
     tankSoloDesc: 'Sen bot tanklara karşı. Kaç tane olacaklarını ve ne kadar iyi olduklarını seç.',
     tankOnlineDesc: 'Sekiz tanka kadar, herkes kendi cihazında. Boş yerleri botlar doldurabilir.',
@@ -1273,6 +1277,10 @@ export const translations = {
     tankGiftShield: 'Kalkan',
     tankGiftSpeed: 'Hız',
     tankGiftPower: 'Güç',
+    tankGiftRepair: 'Onarım',
+    tankKills: 'İmha',
+    tankYouKilled: 'Yok ettin: {name}',
+    tankFeedLeft: '{name} ayrıldı',
     tankHits: 'İsabet',
     tankWins: 'Galibiyet',
 
@@ -2142,7 +2150,7 @@ export const translations = {
     // Tank
     tankTitle: 'Tank',
     tankDesc: 'Танковый бой на одной кнопке — один против ботов или с друзьями онлайн; побеждает последний уцелевший танк',
-    tankLobbyHint: 'Каждый танк выдерживает 4 попадания, и повреждения видны на нём: под конец он горит и едет медленнее. Снаряды один раз отскакивают от стены. Стреляй по подаркам — щит, скорость или мощные выстрелы; подожди 3 секунды на телепорте, чтобы перенестись на другой. Раунд выигрывает последний уцелевший танк.',
+    tankLobbyHint: 'Каждый танк выдерживает 4 попадания, и повреждения видны на нём: под конец он горит и едет медленнее. Снаряды один раз отскакивают от стены. Стреляй по подаркам — щит, скорость, мощные выстрелы или ремонт; подожди 3 секунды на телепорте, чтобы перенестись на другой. Раунд выигрывает последний уцелевший танк.',
     tankControls: 'Одна кнопка: держи её (касание, клик или пробел), чтобы ехать вперёд и стрелять; отпусти — танк остановится и начнёт поворачиваться. Каждое нажатие меняет направление поворота.',
     tankSoloDesc: 'Ты против танков-ботов. Выбери, сколько их и насколько они сильны.',
     tankOnlineDesc: 'До восьми танков, у каждого своё устройство. Свободные места могут занять боты.',
@@ -2168,6 +2176,10 @@ export const translations = {
     tankGiftShield: 'Щит',
     tankGiftSpeed: 'Скорость',
     tankGiftPower: 'Мощь',
+    tankGiftRepair: 'Ремонт',
+    tankKills: 'Подбито',
+    tankYouKilled: 'Ты подбил: {name}',
+    tankFeedLeft: '{name} вышел',
     tankHits: 'Попадания',
     tankWins: 'Победы',
 
@@ -3038,7 +3050,7 @@ export const translations = {
     // Tank
     tankTitle: 'Tank',
     tankDesc: 'Бір түймелі танк шайқасы — жалғыз боттарға қарсы не достарыңмен онлайн; соңғы қалған танк жеңеді',
-    tankLobbyHint: 'Әр танк 4 тигенге шыдайды, зақымы өзінен көрінеді: соңында жанып, баяулайды. Снарядтар қабырғадан бір рет серпіледі. Қалқан, жылдамдық не қуатты ату үшін сыйлықтарды ат; басқасына өту үшін телепортта 3 секунд күт. Раундты соңғы қалған танк жеңеді.',
+    tankLobbyHint: 'Әр танк 4 тигенге шыдайды, зақымы өзінен көрінеді: соңында жанып, баяулайды. Снарядтар қабырғадан бір рет серпіледі. Қалқан, жылдамдық, қуатты ату не жөндеу үшін сыйлықтарды ат; басқасына өту үшін телепортта 3 секунд күт. Раундты соңғы қалған танк жеңеді.',
     tankControls: 'Бір түйме: алға жүріп, ату үшін басып тұр (түрту, шерту не Бос орын); жіберсең, танк тоқтап, бұрыла бастайды. Әр басқан сайын бұрылу бағыты ауысады.',
     tankSoloDesc: 'Сен бот танктерге қарсы. Олардың санын және қаншалықты мықты екенін таңда.',
     tankOnlineDesc: 'Сегіз танкке дейін, әркім өз құрылғысында. Бос орындарды боттар толтыра алады.',
@@ -3064,6 +3076,10 @@ export const translations = {
     tankGiftShield: 'Қалқан',
     tankGiftSpeed: 'Жылдамдық',
     tankGiftPower: 'Қуат',
+    tankGiftRepair: 'Жөндеу',
+    tankKills: 'Жойды',
+    tankYouKilled: 'Сен жойдың: {name}',
+    tankFeedLeft: '{name} шықты',
     tankHits: 'Тигізу',
     tankWins: 'Жеңіс',
 
