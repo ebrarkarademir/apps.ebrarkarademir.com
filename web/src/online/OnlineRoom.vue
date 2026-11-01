@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import TermWindow from '../components/TermWindow.vue'
 import QrCode from '../components/QrCode.vue'
+import { switchTargets } from './gameSwitch'
 
 // Shared frame for online games: header, name + create/join screen, connecting spinner and
 // the lobby. Games put lobby options in the `lobby` slot and their own screens in the
@@ -80,6 +81,11 @@ async function copyText (text) {
 }
 
 const linkField = ref(null)
+
+// The host can take the whole room to another game; everyone follows with the same code
+const picking = ref(false)
+const otherGames = computed(() => switchTargets.value.filter(game => game.id !== props.room.game))
+const switchingTitle = computed(() => switchTargets.value.find(game => game.id === props.room.switching)?.title || '')
 
 // Not v-model: it waits for the keyboard to finish a "word", which on Android leaves the
 // code empty (and Join disabled) while the player is still typing it
@@ -210,14 +216,36 @@ function onCodeInput (event) {
 
       <slot name="lobby" :view="view" :is-host="room.isHost" />
 
-      <template v-if="room.isHost">
+      <!-- Moving the room to another game -->
+      <div v-if="room.switching" class="term-panel border-term p-4 flex items-center justify-center gap-3" role="status">
+        <span class="term-spinner font-display text-2xl leading-none" aria-hidden="true"></span>
+        <span class="uppercase tracking-widest text-sm">{{ fmt(t.onlineSwitching, { game: switchingTitle }) }}</span>
+      </div>
+      <div v-else-if="room.isHost && otherGames.length">
+        <button type="button" class="term-btn w-full min-h-10" :aria-expanded="picking" @click="picking = !picking">
+          [~] {{ t.onlineChangeGame }}
+        </button>
+        <div v-if="picking" class="mt-3 space-y-3">
+          <p class="term-muted text-sm text-center">{{ t.onlineChangeGameHint }}</p>
+          <ul class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <li v-for="game in otherGames" :key="game.id">
+              <button type="button" class="term-card w-full h-full flex items-center gap-2 px-3 py-2 text-left text-sm" @click="room.switchGame(game.id)">
+                <span class="shrink-0 font-mono text-xs term-muted" aria-hidden="true">{{ game.icon }}</span>
+                <span class="truncate font-medium">{{ game.title }}</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <template v-if="room.isHost && !room.switching">
         <button @click="emit('start')" :disabled="startDisabled" class="term-btn term-btn-primary w-full min-h-12">
           {{ t.onlineStart }}
         </button>
         <p v-if="!enoughPlayers" class="term-muted text-center text-sm">{{ fmt(t.onlineNeedPlayers, { n: minPlayers }) }}</p>
         <p v-else-if="!canStart && startHint" class="term-muted text-center text-sm">{{ startHint }}</p>
       </template>
-      <p v-else class="term-muted text-center text-sm py-2"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
+      <p v-else-if="!room.switching" class="term-muted text-center text-sm py-2"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
     </div>
 
     <!-- The game itself -->

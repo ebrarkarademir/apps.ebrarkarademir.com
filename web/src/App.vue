@@ -29,6 +29,7 @@ import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
 import { useUsers } from './online/useUsers'
 import { currentRoom } from './online/useOnlineRoom'
+import { switchTargets, switchRequest } from './online/gameSwitch'
 
 // The language menu lists every language in translations.js, each by its own name
 const languages = Object.entries(translations).map(([code, text]) => ({ code, name: text.languageName }))
@@ -386,11 +387,22 @@ watch([page, selectedUser], () => {
 
 const inviting = ref(null) // { to, game } until the room is open
 
-function launchGame (next) {
+function launchGame (next, options) {
   launch.value = next
   launches.value++
-  navigate(`/${next.game}`)
+  navigate(`/${next.game}`, options)
 }
+
+// A lobby moved to another game: open it, and its room reopens or rejoins the same code.
+// It takes the old game's place in the history, so Back still goes to the list.
+switchTargets.value = onlineGames.value
+watch(onlineGames, (list) => { switchTargets.value = list })
+watch(switchRequest, (next) => {
+  if (!next || !ONLINE_GAMES.includes(next.game)) return
+  switchRequest.value = null
+  toast.value = null
+  launchGame(next.host ? { game: next.game, host: true } : { game: next.game, code: next.code }, { replace: true })
+})
 
 function inviteToGame ({ to, game }) {
   const person = users.people.get(to)
@@ -444,10 +456,12 @@ const applyRoute = ({ category, game, page: pageName }) => {
   flippedGame.value = null
 }
 
-const navigate = (path) => {
+const navigate = (path, { replace = false } = {}) => {
   if (path === window.location.pathname) return
-  // inApp marks entries opened from inside the app, so a game's Back can use history.back()
-  window.history.pushState({ inApp: true }, '', path)
+  // inApp marks entries opened from inside the app, so a game's Back can use history.back().
+  // A replaced entry keeps the mark of the one it replaces.
+  if (replace) window.history.replaceState({ inApp: !!window.history.state?.inApp }, '', path)
+  else window.history.pushState({ inApp: true }, '', path)
   applyRoute(parsePath(path))
   window.scrollTo({ top: 0 })
 }

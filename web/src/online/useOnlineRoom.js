@@ -2,6 +2,7 @@ import { ref, shallowRef, reactive, computed, watch, onMounted, onUnmounted } fr
 import Peer from 'peerjs'
 import { iceServers } from './iceServers'
 import { RELAY_BROKERS, connectRelay, relayTopic } from './relay'
+import { switchTargets, requestSwitch, takeHandoff } from './gameSwitch'
 
 // Peer-to-peer rooms shared by every online game.
 //
@@ -36,6 +37,8 @@ const RECONNECT_MS = 1000
 const TICK_MS = 250
 const LIVE_MS = 100 // how often the host passes on the players' live data
 const RTT_MS = 1000 // how often a guest times the way to the host and back
+const SWITCH_MS = 700 // host: time for the "switch" message to reach the guests before leaving
+const PATIENCE_MS = 25000 // guest after a switch: how long to keep trying while the host reopens the room
 const NAME_KEY = 'onlineName'
 const CLIENT_KEY = 'onlineClientId'
 
@@ -112,6 +115,12 @@ export function useOnlineRoom (options) {
   const joinCode = ref((options.initialCode || '').toUpperCase())
   const now = ref(Date.now())
   const myId = getClientId()
+  // Set while the host moves the room to another game: the game it's going to
+  const switching = ref('')
+  // After a switch: the host reopens this code, and a guest keeps trying it until then
+  let hostCode = ''
+  let hostCodeTries = 0
+  let patientUntil = 0
 
   const state = ref(null) // full state, host only
   const remote = ref(null) // projected state received by a guest
@@ -171,7 +180,7 @@ export function useOnlineRoom (options) {
     resetConnection()
     role.value = 'host'
     screen.value = 'connecting'
-    openHostPeer(randomCode())
+    openHostPeer(hostCode || randomCode())
   }
 
   function openHostPeer (code) {
@@ -201,7 +210,9 @@ export function useOnlineRoom (options) {
       if (peer !== hostPeer) return
       if (err.type === 'unavailable-id' && !state.value) {
         hostPeer.destroy()
-        openHostPeer(randomCode())
+        // After a switch the code is the one the guests are waiting on: try it a few more times
+        if (hostCode && hostCodeTries++ < 3) setTimeout(() => { if (peer === hostPeer) openHostPeer(code) }, RECONNECT_MS * 1.5)
+        else openHostPeer(randomCode())
       } else if (screen.value === 'connecting') {
         fail('onlineErrConnection')
       }
@@ -411,6 +422,11 @@ export function useOnlineRoom (options) {
     guestPeer.on('error', (err) => {
       if (peer !== guestPeer) return
       if (err.type === 'peer-unavailable') status.notFound = true
+      // After a switch the host may not have reopened the room yet: try again shortly
+      if (err.type === 'peer-unavailable' && Date.now() < patientUntil) {
+        setTimeout(() => { if (attempt === myAttempt) joinRoom() }, RECONNECT_MS)
+        return
+      }
       // Once in the room, the data connection survives broker hiccups
       if (screen.value === 'connecting') toRelay()
     })
@@ -437,7 +453,18 @@ export function useOnlineRoom (options) {
       if (msg.data && typeof msg.data === 'object') onEvent?.(msg.data, msg.from)
       return
     }
+    if (msg?.type === 'switch') {
+      // The host is moving the room to another game: follow it there with the same code
+      if (switchTargets.value.some(target => target.id === msg.game) && msg.game !== game) {
+        const code = roomCode.value
+        resetConnection()
+        switching.value = msg.game
+        requestSwitch({ game: msg.game, code, host: false })
+      }
+      return
+    }
     if (msg?.type !== 'state') return
+    patientUntil = 0
     clearTimeout(connectTimer)
     clearTimeout(directTimer)
     const next = msg.state
@@ -553,7 +580,23 @@ export function useOnlineRoom (options) {
     })
   }
 
+  /** Host, in the lobby: take everyone in the room to another game, keeping the room code. */
+  function switchGame (next) {
+    if (role.value !== 'host' || !state.value || switching.value || next === game) return
+    if (!switchTargets.value.some(target => target.id === next)) return
+    switching.value = next
+    const code = roomCode.value
+    guests.forEach(guest => guest.send({ type: 'switch', game: next }))
+    setTimeout(() => requestSwitch({ game: next, code, host: true }), SWITCH_MS)
+  }
+
   function fail (key) {
+    // After a switch, keep trying until the host has the room open again
+    if (role.value === 'guest' && Date.now() < patientUntil && roomCode.value) {
+      const myAttempt = attempt
+      setTimeout(() => { if (attempt === myAttempt) joinRoom() }, RECONNECT_MS)
+      return
+    }
     resetConnection()
     errorKey.value = key
     screen.value = 'home'
@@ -587,6 +630,9 @@ export function useOnlineRoom (options) {
   }
 
   function leave () {
+    hostCode = ''
+    patientUntil = 0
+    switching.value = ''
     resetConnection()
     role.value = null
     screen.value = 'home'
@@ -608,6 +654,20 @@ export function useOnlineRoom (options) {
       onTick?.(state.value, now.value)
     }, TICK_MS)
     liveTimer = setInterval(flushLive, liveMs)
+    // Arriving from another game's lobby: the host reopens the same code, guests join it
+    const handoff = takeHandoff(game)
+    if (handoff && playerName.value) {
+      joinCode.value = handoff.code
+      if (handoff.host) {
+        hostCode = handoff.code
+        createRoom()
+      } else {
+        patientUntil = Date.now() + PATIENCE_MS
+        screen.value = 'connecting'
+        setTimeout(() => { if (screen.value === 'connecting' && !role.value) joinRoom() }, RECONNECT_MS * 1.5)
+      }
+      return
+    }
     // Without a name the player picks one first, then creates or joins as usual
     if (joinCode.value.length === 4 && playerName.value) joinRoom()
     else if (options.hostRoom && playerName.value) createRoom()
@@ -622,9 +682,9 @@ export function useOnlineRoom (options) {
   })
 
   return reactive({
-    screen, role, isHost, roomCode, errorKey, playerName, joinCode, now, myId,
-    view, me, shareLink, connection, pings,
+    game, screen, role, isHost, roomCode, errorKey, playerName, joinCode, now, myId,
+    view, me, shareLink, connection, pings, switching,
 
-    createRoom, joinRoom, leave, act, sendLive, sendEvent, sendEventTo
+    createRoom, joinRoom, leave, act, sendLive, sendEvent, sendEventTo, switchGame
   })
 }
