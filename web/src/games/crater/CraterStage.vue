@@ -1,6 +1,8 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
+import FullscreenButton from '../ascii/FullscreenButton.vue'
+import { useFullscreen } from '../ascii/fullscreen'
 import { GREEN, DIM, watchFonts } from '../ascii/paint'
 import { startLoop } from '../ascii/loop'
 import { stepParticles } from '../ascii/physics'
@@ -15,7 +17,8 @@ import { createRenderer, SIDE_COLORS } from './renderer'
 // aims by dragging (pull back, like a slingshot) and fires; the shot goes to the host, which
 // plays the turn out once every side has fired or the clock runs out. Then everyone plays back
 // the host's recording: shots flying, craters opening, units thrown about. There are two to six
-// sides, each a person or a bot, every side for itself.
+// sides, each a person or a bot, every side for itself. The full-screen switch leaves the
+// battlefield, the scores over it and the controls under it, and nothing else.
 
 const props = defineProps({
   t: { type: Object, required: true },
@@ -63,6 +66,14 @@ const ui = reactive({
   seconds: 0,
   walked: 0
 })
+
+// The battlefield with the scores and the controls, filling the screen; the way out joins the scores
+const { full, toggle: toggleFull } = useFullscreen(() => arena.value?.closest('.arena'))
+
+function onFullClick (event) {
+  sound.unlock()
+  toggleFull(event)
+}
 
 let renderer = null
 let observer = null
@@ -683,10 +694,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" @exit="emit('exit')" @contextmenu.prevent>
+  <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" :bare="full" @exit="emit('exit')" @contextmenu.prevent>
+    <template #actions>
+      <FullscreenButton :t="t" @toggle="onFullClick" />
+    </template>
+
     <div class="relative flex-1 min-h-0 flex flex-col">
-      <!-- Every side's health, the clock and the wind -->
-      <div class="hud">
+      <!-- Every side's health, the clock and the wind; in full screen, the way out too -->
+      <div :class="['hud', { 'is-full': full }]">
         <div v-for="(half, h) in halves" :key="h" :class="['group', h ? 'side-1 items-end' : 'side-0 items-start']">
           <div v-for="team in half" :key="team.side" :class="['team', h ? 'text-right items-end' : 'items-start', { 'is-me': team.me, compact }]" :style="{ color: SIDE_COLORS[team.side] }">
             <span class="name truncate">{{ team.name }}<span v-if="team.fired && phase === 'aim'" class="ok"> [ok]</span></span>
@@ -701,6 +716,7 @@ onUnmounted(() => {
           <span :class="['font-display text-3xl leading-none tabular-nums', { 'term-blink': phase === 'aim' && ui.seconds <= 5 }]">{{ phase === 'aim' ? ui.seconds : '--' }}</span>
           <span class="wind" :title="t.craterWind"><span class="term-muted">{{ t.craterWind }}</span> <span class="gauge">[{{ windGauge }}]</span></span>
         </div>
+        <FullscreenButton v-if="full" :t="t" full class="exit-full" @toggle="onFullClick" />
       </div>
 
       <!-- The battlefield: drag to aim; the strip at the top shows the whole map on narrow screens -->
@@ -718,12 +734,12 @@ onUnmounted(() => {
 
       <!-- Walk, weapon, aim and fire -->
       <div v-if="showControls" class="controls">
-        <div class="flex gap-1.5">
+        <div class="walk flex gap-1.5">
           <button type="button" class="term-icon-btn ctl" :aria-label="t.craterWalkLeft" @pointerdown="holdWalk(-1)" @pointerup="walk.dir = 0" @pointerleave="walk.dir = 0" @pointercancel="walk.dir = 0">&lt;</button>
           <button type="button" class="term-icon-btn ctl" :aria-label="t.craterWalkRight" @pointerdown="holdWalk(1)" @pointerup="walk.dir = 0" @pointerleave="walk.dir = 0" @pointercancel="walk.dir = 0">&gt;</button>
           <button v-if="mine.length > 1" type="button" class="term-icon-btn ctl" :aria-label="t.craterNextUnit" :title="`${t.craterNextUnit} (Tab)`" @click="press($event, nextUnit)">&#8635;</button>
         </div>
-        <div class="flex gap-1.5 flex-1 min-w-0" role="group" :aria-label="t.craterWeapons">
+        <div class="weapons flex gap-1.5 flex-1 min-w-0" role="group" :aria-label="t.craterWeapons">
           <button
             v-for="(id, index) in WEAPON_IDS"
             :key="id"
@@ -763,6 +779,14 @@ onUnmounted(() => {
   padding: 0.35rem 0.75rem;
   border-bottom: 1px solid var(--color-term-low);
   min-height: 3rem;
+}
+.hud.is-full {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  padding-right: 0.5rem;
+}
+.hud .exit-full {
+  grid-column: 4;
+  grid-row: 1;
 }
 .hud .group {
   display: flex;
@@ -964,9 +988,39 @@ onUnmounted(() => {
   padding: 0 0.9rem;
   font-size: 0.9rem;
 }
+/* A phone held upright: walking and the aim readout on one row, the weapons and fire under
+   them, so each weapon gets a button a thumb can hit */
 @media (max-width: 520px) {
+  .controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "walk readout" "weapons fire";
+  }
+  .controls .walk {
+    grid-area: walk;
+  }
+  .controls .readout {
+    grid-area: readout;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .controls .weapons {
+    grid-area: weapons;
+  }
   .controls .fire {
-    flex: 1 1 100%;
+    grid-area: fire;
+  }
+}
+/* Four or more sides on a narrow phone: slimmer health bars leave room for the names */
+@media (max-width: 400px) {
+  .hud .compact .pip {
+    width: 0.9rem;
+  }
+  .hud {
+    gap: 0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 }
 </style>

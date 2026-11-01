@@ -364,7 +364,8 @@ const traceBar = computed(() => {
 })
 const alarm = computed(() => run && s.trace >= TRACE_ALARM && s.phase !== 'over')
 // Tiles as big as the screen's width allows for this many letters, up to 3.25rem
-const tileStyle = computed(() => ({ '--tile': `min(3.25rem, calc((100vw - 2.5rem) / ${s.length} - 0.4rem))` }))
+// The tiles fill the width, a letter each (see .hack in the styles)
+const tileStyle = computed(() => ({ '--len': s.length }))
 
 const markWord = (result) => ({ hit: props.t.hackHit, near: props.t.hackNear, miss: props.t.hackMiss })[result]
 const rowLabel = (row) => row.letters.map((ch, i) => `${up(ch)}: ${markWord(row.marks[i])}`).join(', ')
@@ -401,8 +402,8 @@ onUnmounted(() => {
       </button>
     </template>
 
-    <div class="relative flex-1 min-h-0 flex flex-col items-center px-2 pt-2 pb-2 sm:px-4 sm:pt-4 touch-manipulation" :style="tileStyle">
-      <div class="w-full max-w-lg flex-1 min-h-0 flex flex-col gap-2">
+    <div class="hack relative flex-1 min-h-0 flex flex-col items-center px-2 pt-2 pb-2 sm:px-4 sm:pt-4 touch-manipulation" :style="tileStyle">
+      <div class="deck w-full max-w-lg flex-1 min-h-0 flex flex-col gap-2">
         <!-- Layer, score and the trace meter; practice counts tries -->
         <div v-if="run" class="hud">
           <span class="term-chip tabular-nums">{{ fmt(t.hackLayer, { n: s.layer }) }}</span>
@@ -421,7 +422,7 @@ onUnmounted(() => {
         </div>
 
         <!-- What's known of the password so far -->
-        <div class="flex items-center justify-center gap-2">
+        <div class="slots-row flex items-center justify-center gap-2">
           <span class="term-label shrink-0 max-[379px]:hidden">{{ t.hackPassword }}</span>
           <div class="row" :aria-label="t.hackPassword">
             <span
@@ -460,7 +461,7 @@ onUnmounted(() => {
         </p>
 
         <!-- Scan, and give up in practice -->
-        <div class="flex gap-2">
+        <div class="actions-row flex gap-2">
           <button type="button" class="term-btn act flex-1" :disabled="!canScan" @click="press($event, scan)">
             [?] {{ t.hackScan }}<span v-if="run" class="cost">{{ fmt(t.hackScanCost, { n: TRACE_PER_SCAN }) }}</span>
           </button>
@@ -539,6 +540,33 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.hack {
+  --tile: min(3.25rem, calc((100vw - 2.5rem) / var(--len) - 0.4rem));
+}
+
+/* A phone on its side: too short for the attempts over the keyboard, so they sit side by
+   side, the password and the attempts on the left, the keyboard on the right */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hack {
+    --tile: min(2.5rem, calc((50vw - 3rem) / var(--len) - 0.4rem));
+  }
+  .deck {
+    max-width: 60rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas: "hud message" "trace message" "slots actions" "log keys";
+    column-gap: 1.25rem;
+  }
+  .deck > .hud { grid-area: hud; }
+  .deck > .trace { grid-area: trace; }
+  .deck > .slots-row { grid-area: slots; }
+  .deck > .log { grid-area: log; }
+  .deck > .message { grid-area: message; align-self: end; }
+  .deck > .actions-row { grid-area: actions; }
+  .deck > .keyboard { grid-area: keys; align-self: end; }
+}
+
 .hud {
   display: flex;
   align-items: center;

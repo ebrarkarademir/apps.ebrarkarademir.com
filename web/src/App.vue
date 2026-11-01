@@ -66,14 +66,14 @@ const games = computed(() => [
     : []),
   {
     id: 'flappy',
-    category: ['solo', 'online', 'party'],
+    category: 'solo',
     title: t.value.flappyTitle,
     description: t.value.flappyDesc,
     icon: '[^]',
     art: cardArt.flappy,
-    players: '1+',
+    players: '1',
     duration: minutes('1–5'),
-    mode: t.value.cardModeSoloOnline
+    mode: t.value.cardModeSolo
   },
   {
     id: 'tanks',
@@ -268,7 +268,7 @@ const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
 
 // An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
 // Older links used /?join=CODE&game=quiz-race.
-const ONLINE_GAMES = ['flappy', 'tanks', 'crater', 'futsal', 'doodle', 'sudoku', 'chess', 'dama', 'quiz-race', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['tanks', 'crater', 'futsal', 'doodle', 'sudoku', 'chess', 'dama', 'quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const initialRoute = parsePath(window.location.pathname)
 const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
@@ -582,11 +582,11 @@ onUnmounted(() => {
 <template>
   <div class="crt min-h-screen bg-black text-term font-mono">
     <nav :aria-label="t.navLabel" class="sticky top-0 z-30 bg-black/90 border-b border-term-low">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap md:flex-nowrap items-center gap-x-6 gap-y-3">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap lg:flex-nowrap items-center gap-x-6 gap-y-3">
         <span v-if="isDevSite" class="order-1 -mr-3 term-inverse px-1.5 text-xs font-bold tracking-widest" title="Development site">DEV</span>
 
         <!-- Shell prompt -->
-        <p class="order-1 flex-1 basis-0 md:flex-none md:basis-auto min-w-0 truncate text-sm font-semibold">
+        <p class="order-1 flex-1 basis-0 lg:flex-none lg:basis-auto min-w-0 truncate text-sm font-semibold">
           <span aria-hidden="true"><span class="term-muted">{{ visitor }}@apps</span>:</span>
           <template v-for="(crumb, index) in crumbs" :key="crumb.text">
             <span v-if="index" aria-hidden="true">/</span>
@@ -596,8 +596,8 @@ onUnmounted(() => {
           <span class="term-cursor" aria-hidden="true">$</span>
         </p>
 
-        <!-- Category items: own scrollable row on phones, middle on desktop -->
-        <ul class="order-3 md:order-2 w-full md:w-auto md:flex-1 flex gap-1 overflow-x-auto no-scrollbar">
+        <!-- Category items: their own scrollable row on phones and tablets, in the middle on a wide screen -->
+        <ul class="order-3 lg:order-2 w-full lg:w-auto lg:flex-1 flex gap-1 overflow-x-auto no-scrollbar">
           <li v-for="category in categories" :key="category.key" class="shrink-0">
             <button
               @click="selectCategory(category.key)"
@@ -626,7 +626,7 @@ onUnmounted(() => {
           </li>
         </ul>
 
-        <div class="order-2 md:order-3 ml-auto flex items-center gap-2">
+        <div class="order-2 lg:order-3 ml-auto flex items-center gap-2">
           <button
             @click="showRules = true"
             class="term-icon-btn"
@@ -674,8 +674,6 @@ onUnmounted(() => {
       <FlappyGame
         v-else-if="selectedGame === 'flappy'"
         :t="t"
-        :initialCode="inviteCodeFor('flappy')"
-        :hostRoom="hostRoomFor('flappy')"
         @go-back="closeGame"
       />
 

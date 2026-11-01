@@ -1,5 +1,5 @@
 import { COLS, ROWS, GROUND_Y, CAP_OVER, CAP_H, pipesInView, gapAt } from './engine'
-import { GREEN, DIM, LOW, MONO, tileOut, truncate, paint, drawSprite, drawText } from '../ascii/paint'
+import { GREEN, DIM, LOW, tileOut, paint, drawSprite, drawText } from '../ascii/paint'
 import { mulberry32 } from '../ascii/random'
 
 // Draws Flappy on a canvas, from sprites painted with the shared ASCII look.
@@ -79,7 +79,6 @@ function buildSprites (row, col, dpr) {
   const pipeColor = (ch, x, y, line) => (x === 0 || x === line.length - 1 || ch === '#' ? GREEN : DIM)
   return {
     bird: BIRD_FRAMES.map(lines => paint(lines, () => GREEN, { ...hero, halo: 0.2 })),
-    ghost: BIRD_FRAMES.map(lines => paint(lines, () => DIM, { ...hero, glow: glow / 2 })),
     body: paint(Array(ROWS + 2).fill(PIPE_BODY), pipeColor, lit),
     cap: paint(PIPE_CAP, (ch, x, y, line) => (y === 1 ? pipeColor(ch, x, y, line) : GREEN), lit),
     ground: paint(tileOut(groundTile(), COLS + GROUND_TILE), (ch, x, y) => (y === 0 ? GREEN : y === 1 ? DIM : LOW), soft),
@@ -145,34 +144,9 @@ export function createRenderer (canvas) {
     drawText(ctx, str, x * col, y * row, { px: size * row, dpr, ...style })
   }
 
-  // Live standings in the top-left corner: > marks you, x marks a crashed bird
-  function hud (entries) {
-    const px = Math.max(11, row * 1.05)
-    const lineHeight = px * 1.45
-    const shown = entries.slice(0, 8)
-    ctx.save()
-    ctx.font = `600 ${px}px ${MONO}`
-    ctx.textBaseline = 'middle'
-    const lines = shown.map(e => `${e.me ? '>' : ' '}${e.alive ? ' ' : 'x'} ${truncate(e.name, 9).padEnd(9)} ${String(e.score).padStart(3)}`)
-    const boxW = Math.max(...lines.map(line => ctx.measureText(line).width)) + px
-    const boxH = lineHeight * lines.length + px * 0.5
-    const x0 = Math.round(col)
-    const y0 = Math.round(row)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.72)'
-    ctx.fillRect(x0, y0, boxW, boxH)
-    ctx.strokeStyle = LOW
-    ctx.lineWidth = 1
-    ctx.strokeRect(x0 + 0.5, y0 + 0.5, boxW - 1, boxH - 1)
-    lines.forEach((line, i) => {
-      ctx.fillStyle = !shown[i].alive ? LOW : shown[i].me ? GREEN : DIM
-      ctx.fillText(line, x0 + px * 0.5, y0 + px * 0.25 + lineHeight * (i + 0.5))
-    })
-    ctx.restore()
-  }
-
   /**
-   * scene: { course, camera, ground, bird, ghosts, particles, score, pop, hud, texts, flash, shake }
-   * camera and ground are scroll positions in columns; birds are { x, y, tilt, frame } in cells.
+   * scene: { course, camera, ground, bird, particles, score, pop, texts, flash, shake }
+   * camera and ground are scroll positions in columns; the bird is { x, y, tilt, frame } in cells.
    */
   function draw (scene) {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -195,11 +169,6 @@ export function createRenderer (canvas) {
     ctx.fillRect(-col * 4, GROUND_Y * row, width + col * 8, height)
     strip(sprites.ground, GROUND_TILE, scene.ground, (GROUND_Y - 0.5) * row)
 
-    const ghosts = scene.ghosts.filter(g => g.x > -6 && g.x < COLS + 6)
-    for (const g of ghosts) bird(sprites.ghost[g.frame], g.x, g.y, g.tilt, 0.8)
-    for (const g of ghosts) {
-      if (g.name) text(truncate(g.name, 12), { x: g.x, y: g.y - 2.4, size: 0.95, color: DIM, glow: false })
-    }
     if (scene.bird) bird(sprites.bird[scene.bird.frame], scene.bird.x, scene.bird.y, scene.bird.tilt)
     for (const p of scene.particles) {
       text(p.ch, { x: p.x, y: p.y, color: p.color, alpha: Math.max(0, p.life / p.ttl), glow: false, outline: false })
@@ -207,7 +176,6 @@ export function createRenderer (canvas) {
     ctx.restore()
 
     if (scene.score !== null) text(String(scene.score), { y: 6.5, size: 7 * (1 + scene.pop * 0.18), display: true })
-    if (scene.hud) hud(scene.hud)
     for (const item of scene.texts) text(item.text, item)
     if (scene.flash > 0) {
       ctx.fillStyle = `rgba(0, 255, 0, ${0.28 * scene.flash})`

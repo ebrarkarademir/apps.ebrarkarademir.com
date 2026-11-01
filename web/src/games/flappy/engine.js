@@ -1,8 +1,6 @@
 import { mulberry32 } from '../ascii/random'
 
-// Flappy simulation, kept free of drawing and timing so it plays the same everywhere.
-// A seed fixes the whole course, which is how every player in an online race flies through
-// the same pipes on their own device.
+// Flappy simulation, kept free of drawing and timing. A seed fixes the whole course.
 //
 // Positions are in character cells: x in columns, y in rows. A column is 0.6 rows wide, the
 // shape of a JetBrains Mono glyph. Time is in seconds, advanced in fixed steps.
@@ -36,37 +34,59 @@ const EDGE = 0.5
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
-// The courses, from slow with wide gaps to fast with gaps that slide up and down. Each value
-// pair goes from the first pipe to the `ramp`th, where the course is at its hardest.
-// speed: columns/s · gap: height of the gaps · shift: how far one gap can move from the last
-// one · moving: the share of pipes whose gap slides · swing: how far a sliding gap goes each way
-export const LEVELS = {
-  easy: { speed: 20, gap: [19, 15.5], shift: [9, 15], ramp: 60, moving: [0, 0], swing: 0 },
-  normal: { speed: 24, gap: [16, 12.5], shift: [12, 20], ramp: 45, moving: [0, 0], swing: 0 },
-  hard: { speed: 27, gap: [15, 12], shift: [12, 18], ramp: 40, moving: [0.1, 0.45], swing: 3 },
-  insane: { speed: 31, gap: [13.5, 11.5], shift: [13, 18], ramp: 30, moving: [0.35, 0.8], swing: 3.5 }
+// One course that gets harder the further the bird flies. It starts slow with wide gaps; at
+// each level the bird flies faster and the gaps narrow, and from level 3 some gaps slide up and
+// down, more of them every level. Between two levels everything changes little by little.
+// pipe: the pipe the level starts at · speed: columns/s · gap: height of the gaps · shift: how
+// far one gap can move from the last one · moving: the share of pipes whose gap slides ·
+// swing: how far a sliding gap goes each way
+export const LEVELS = [
+  { pipe: 0, speed: 20, gap: 19, shift: 9, moving: 0, swing: 0 },
+  { pipe: 10, speed: 22.5, gap: 16, shift: 12, moving: 0, swing: 0 },
+  { pipe: 25, speed: 25, gap: 14.5, shift: 14, moving: 0.15, swing: 3 },
+  { pipe: 40, speed: 27.5, gap: 13, shift: 16, moving: 0.4, swing: 3.2 },
+  { pipe: 60, speed: 30, gap: 12, shift: 17, moving: 0.65, swing: 3.5 },
+  { pipe: 85, speed: 31, gap: 11.5, shift: 18, moving: 0.8, swing: 3.5 }
+]
+const mix = (from, to, f) => from + (to - from) * f
+
+/** The level (1 and up) the bird is on once it has passed `score` pipes. */
+export function levelAt (score) {
+  let level = 1
+  while (level < LEVELS.length && score >= LEVELS[level].pipe) level++
+  return level
 }
-export const LEVEL_NAMES = Object.keys(LEVELS)
-export const levelOf = (name) => LEVELS[name] || LEVELS.normal
-const lerp = ([from, to], ramp) => from + (to - from) * ramp
+
+/** How the course is at pipe `n` (which can be part way between two pipes). */
+export function settingsAt (n) {
+  const next = LEVELS.findIndex(stage => stage.pipe > n)
+  if (next < 0) return LEVELS[LEVELS.length - 1]
+  const a = LEVELS[next - 1]
+  const b = LEVELS[next]
+  const f = (n - a.pipe) / (b.pipe - a.pipe)
+  const out = {}
+  for (const key of Object.keys(a)) out[key] = mix(a[key], b[key], f)
+  // Gaps start to slide at the first level that has any sliding, not on the way to it
+  if (!a.moving) out.moving = out.swing = 0
+  return out
+}
+
+/** How fast the bird flies once it has flown `dist` columns: it speeds up between pipes. */
+export const speedAt = (dist) => settingsAt(Math.max(0, (dist + BIRD_X - FIRST_PIPE) / SPACING)).speed
 
 /**
- * The pipes for one seed and level, made on demand: pipe(i) -> { x, top, bottom, swing, phase },
- * where x is the left edge of the pipe and top/bottom are the edges of its gap at rest.
+ * The pipes for one seed, made on demand: pipe(i) -> { x, top, bottom, swing, phase }, where x
+ * is the left edge of the pipe and top/bottom are the edges of its gap at rest.
  */
-export function createCourse (seed, level = 'normal') {
-  const settings = levelOf(level)
+export function createCourse (seed) {
   const random = mulberry32(seed)
   const pipes = []
   let center = READY_Y
   return (i) => {
     while (pipes.length <= i) {
       const n = pipes.length
-      const ramp = Math.min(1, n / settings.ramp)
-      const gap = lerp(settings.gap, ramp)
-      const shift = lerp(settings.shift, ramp)
-      // Levels without sliding gaps draw no extra numbers, so a seed gives the same pipes as before
-      const swing = settings.swing && random() < lerp(settings.moving, ramp) ? settings.swing : 0
+      const { gap, shift, moving, swing: reachOf } = settingsAt(n)
+      const swing = moving && random() < moving ? reachOf : 0
       const phase = swing ? random() * Math.PI * 2 : 0
       const x = FIRST_PIPE + n * SPACING
       // `center` is where the gap is as the bird flies through it. A sliding gap keeps a little
@@ -86,7 +106,7 @@ export function createCourse (seed, level = 'normal') {
 
 /**
  * The edges of a pipe's gap once the view has scrolled to `dist`. A sliding gap moves with the
- * distance flown rather than the clock, so it is in the same place for everyone who gets there.
+ * distance flown rather than the clock, so where it is doesn't depend on how fast the bird got there.
  */
 export function gapAt (p, dist) {
   if (!p.swing) return p
@@ -135,9 +155,9 @@ export const tiltFor = (vy, down = false) => (down ? 85 : vy < 8 ? -20 : Math.mi
  * One flight. phase: ready (hovering until the first flap) -> play -> dead (hit a pipe and
  * falling) -> over (lying on the ground).
  */
-export const createRun = (course, speed = LEVELS.normal.speed) => ({
+export const createRun = (course) => ({
   course,
-  speed,
+  speed: speedAt(0),
   phase: 'ready',
   time: 0,
   y: READY_Y,
@@ -157,14 +177,6 @@ export function flap (run) {
   return true
 }
 
-/** Ends a flight from outside, e.g. when the host counts a silent player out. */
-export function knockOut (run) {
-  if (run.phase !== 'ready' && run.phase !== 'play') return false
-  run.phase = 'dead'
-  run.vy = Math.max(run.vy, 0)
-  return true
-}
-
 /** Advances a run by dt seconds. Returns what happened: 'score', 'hit' (crashed) and 'over'. */
 export function stepRun (run, dt) {
   const events = []
@@ -175,6 +187,7 @@ export function stepRun (run, dt) {
     run.vy = Math.min(MAX_FALL, run.vy + GRAVITY * dt)
     run.y += run.vy * dt
     if (run.phase === 'play') {
+      run.speed = speedAt(run.dist)
       run.dist += run.speed * dt
       if (run.y < HALF_H) {
         run.y = HALF_H
@@ -203,23 +216,4 @@ export function stepRun (run, dt) {
   const target = run.phase === 'ready' ? 0 : tiltFor(run.vy, down)
   run.tilt += (target - run.tilt) * Math.min(1, dt * 12)
   return events
-}
-
-/**
- * Where another player's bird probably is now, from their last live sample and how many
- * seconds ago it arrived: gravity keeps acting and a flying bird keeps moving forward.
- * sample: { p: 0 ready | 1 flying | 2 down, y, v, d }
- */
-export function ghostAt (sample, age, alive, speed) {
-  if (sample.p === 0) return { d: sample.d, y: sample.y, vy: 0, down: false }
-  const t = clamp(age, 0, 0.4)
-  const flying = alive && sample.p === 1
-  const vy = Math.min(MAX_FALL, sample.v + GRAVITY * t)
-  const y = clamp(sample.y + ((sample.v + vy) / 2) * t, HALF_H, GROUND_Y - HALF_H)
-  return {
-    d: flying ? sample.d + speed * clamp(age, 0, 1) : sample.d,
-    y,
-    vy: y >= GROUND_Y - HALF_H ? 0 : vy,
-    down: !flying
-  }
 }

@@ -7,6 +7,8 @@ import {
 import { LEVELS, newBrain, botControls } from './bots'
 import { createRenderer, VIEW_W, VIEW_H } from './renderer'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
+import FullscreenButton from '../ascii/FullscreenButton.vue'
+import { useFullscreen } from '../ascii/fullscreen'
 import { GREEN, DIM, HOT, watchFonts } from '../ascii/paint'
 import { startLoop } from '../ascii/loop'
 import { stepParticles, burst } from '../ascii/physics'
@@ -77,7 +79,6 @@ const CONFETTI = ['*', '+', 'o', '.', "'", '*']
 const area = ref(null)
 const canvas = ref(null)
 const box = reactive({ w: 0, h: 0, top: TOP_BAR, bottom: 0 })
-const full = ref(false) // just the court, filling the screen
 const hud = reactive({ score: [0, 0], clock: '', status: '', golden: false, hurry: false })
 const stick = reactive({ on: false, x: 0, y: 0, kx: 0, ky: 0 })
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -327,40 +328,12 @@ function guardTouch (event) {
 
 // ---------- Full screen ----------
 
-// Where the browser can, the court takes the whole screen, browser bars and all. An iPhone can't
-// do that for a page, so there it fills the browser window, which is as much as it gets.
-const arena = () => area.value?.closest('.arena')
-const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement
-
-async function enterFull () {
-  full.value = true
-  sound.unlock()
-  const el = arena()
-  const request = el?.requestFullscreen || el?.webkitRequestFullscreen
-  if (!request) return
-  try {
-    await request.call(el, { navigationUI: 'hide' })
-  } catch {
-    // Refused: the court still fills the window
-  }
-}
-
-function leaveFull () {
-  full.value = false
-  if (!fullscreenElement()) return
-  const exit = document.exitFullscreen || document.webkitExitFullscreen
-  exit?.call(document)?.catch?.(() => {})
-}
+// Just the court, filling the screen
+const { full, toggle: toggleFull } = useFullscreen(() => area.value?.closest('.arena'))
 
 function onFullClick (event) {
-  if (full.value) leaveFull()
-  else enterFull()
-  if (event.detail) event.currentTarget.blur()
-}
-
-// The browser's own way out (Esc, the back gesture) leaves the court-only view too
-const onFullscreenChange = () => {
-  if (!fullscreenElement()) full.value = false
+  sound.unlock()
+  toggleFull(event)
 }
 
 watch(full, () => nextTick(fit))
@@ -775,8 +748,6 @@ onMounted(() => {
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('blur', releaseAll)
   document.addEventListener('visibilitychange', onVisibility)
-  document.addEventListener('fullscreenchange', onFullscreenChange)
-  document.addEventListener('webkitfullscreenchange', onFullscreenChange)
   for (const type of ['touchstart', 'touchmove', 'touchend']) area.value.addEventListener(type, guardTouch, { passive: false })
   stopLoop = startLoop({ step: STEP, tick, after, draw: frame, paused: () => props.paused })
   // Development builds expose the match, for scripted play-testing
@@ -794,9 +765,6 @@ onUnmounted(() => {
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('blur', releaseAll)
   document.removeEventListener('visibilitychange', onVisibility)
-  document.removeEventListener('fullscreenchange', onFullscreenChange)
-  document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
-  leaveFull()
   if (import.meta.env.DEV) delete window.__futsal
 })
 </script>
@@ -805,15 +773,7 @@ onUnmounted(() => {
   <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" :bare="full" @exit="emit('exit')">
     <template #actions>
       <slot name="actions" />
-      <button
-        type="button"
-        class="term-icon-btn shrink-0 h-9 text-xs"
-        :aria-label="t.futsalFullscreen"
-        :title="t.futsalFullscreen"
-        @click="onFullClick"
-      >
-        [FULL]
-      </button>
+      <FullscreenButton :t="t" @toggle="onFullClick" />
     </template>
 
     <div
@@ -857,15 +817,7 @@ onUnmounted(() => {
         <p class="mini-score absolute left-2 top-2 z-10 pointer-events-none font-display text-xl leading-none tabular-nums whitespace-nowrap" aria-hidden="true">
           (#) {{ hud.score[0] }} : {{ hud.score[1] }} ( ) <span :class="['term-muted', { 'term-blink': hud.hurry }]">{{ hud.clock }}</span>
         </p>
-        <button
-          type="button"
-          class="term-icon-btn absolute right-2 top-2 z-10 h-9 text-xs bg-black/70"
-          :aria-label="t.futsalExitFullscreen"
-          :title="t.futsalExitFullscreen"
-          @click="onFullClick"
-        >
-          [X]
-        </button>
+        <FullscreenButton :t="t" full class="absolute right-2 top-2 z-10 bg-black/70" @toggle="onFullClick" />
       </template>
 
       <!-- The stick, under the finger that's steering -->

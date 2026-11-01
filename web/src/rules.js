@@ -67,81 +67,77 @@ export const rules = {
     EN: {
       icon: '[^]',
       title: 'Flappy',
-      players: '1 player solo, or a race on any devices',
+      players: '1 player',
       duration: '1–5 min',
       goal: 'Keep the bird in the air and fly through as many gaps between the pipes as you can.',
       steps: [
         'Tap, click, or press Space, ↑ or W to flap. Stop flapping and the bird falls.',
         'Every pair of pipes you pass is a point. Touching a pipe or the ground ends your flight.',
-        'Pick a level first: Easy, Normal, Hard or Insane. Each level keeps its own best score.',
-        'Solo: beat your best score and earn a medal at 10, 20, 30 and 40 points.',
-        'Online race: one person creates a room and the others join with the code. Everyone flies the same pipes at the same time.',
-        'Other players show up as faint birds. Crash and you watch the rest — the last bird flying wins the round.'
+        'The flight gets harder as you go: level 2 starts at 10 pipes, then 25, 40, 60 and 85. Each level is faster, with narrower gaps.',
+        'From level 3 some gaps slide up and down, and more of them every level after that.',
+        'Beat your best score and earn a medal at 10, 20, 30 and 40 points.'
       ],
       tips: [
         'Short, steady taps work better than big panicked ones.',
-        'The gaps get a little narrower the further you fly. On Hard and Insane some pipes slide up and down: watch where the gap will be, not where it is.',
-        'P or Esc pauses a solo game, and M turns the sound on or off.'
+        'On a sliding pipe, watch where the gap will be, not where it is.',
+        'P or Esc pauses, and M turns the sound on or off.'
       ]
     },
     TR: {
       icon: '[^]',
       title: 'Flappy',
-      players: 'Tek kişilik ya da her cihazdan yarış',
+      players: 'Tek kişilik',
       duration: '1–5 dk',
       goal: 'Kuşu havada tut ve boruların arasındaki boşluklardan olabildiğince çok geç.',
       steps: [
         'Kanat çırpmak için dokun, tıkla ya da Boşluk, ↑ veya W tuşuna bas. Durursan kuş düşer.',
         'Geçtiğin her boru çifti bir puan. Boruya ya da yere değersen uçuşun biter.',
-        'Önce bir seviye seç: Kolay, Normal, Zor ya da Çılgın. Her seviyenin kendi rekoru vardır.',
-        'Tek kişilik: en iyi skorunu geç; 10, 20, 30 ve 40 puanda madalya kazan.',
-        'Çevrim içi yarış: bir kişi oda oluşturur, diğerleri kodla katılır. Herkes aynı anda aynı borulardan geçer.',
-        'Diğer oyuncular soluk kuşlar olarak görünür. Düşersen diğerlerini izlersin — son uçan kuş turu kazanır.'
+        'İlerledikçe oyun zorlaşır: 2. seviye 10 boruda başlar, sonra 25, 40, 60 ve 85. Her seviye daha hızlıdır ve boşluklar daha dardır.',
+        '3. seviyeden itibaren bazı boşluklar aşağı yukarı kayar; sonraki her seviyede bunların sayısı artar.',
+        'En iyi skorunu geç; 10, 20, 30 ve 40 puanda madalya kazan.'
       ],
       tips: [
         'Kısa ve düzenli dokunuşlar, panikle yapılan büyük dokunuşlardan daha iyi işler.',
-        'İlerledikçe boşluklar biraz daralır. Zor ve Çılgın seviyelerde bazı borular aşağı yukarı kayar: boşluğun şu an nerede olduğuna değil, nereye geleceğine bak.',
-        'P veya Esc tek kişilik oyunu duraklatır, M sesi açıp kapatır.'
+        'Kayan bir boruda boşluğun şu an nerede olduğuna değil, nereye geleceğine bak.',
+        'P veya Esc oyunu duraklatır, M sesi açıp kapatır.'
       ]
     },
     RU: {
       icon: '[^]',
       title: 'Flappy',
-      players: 'Соло или гонка на любых устройствах',
+      players: '1 игрок',
       duration: '1–5 мин',
       goal: 'Держи птицу в воздухе и пролети через как можно больше просветов между трубами.',
       steps: [
         'Чтобы взмахнуть крыльями, коснись экрана, кликни или нажми пробел, ↑ или W. Перестанешь — и птица начнёт падать.',
         'Каждая пройденная пара труб — очко. Касание трубы или земли заканчивает полёт.',
-        'Сначала выбери уровень: лёгкий, обычный, сложный или безумный. У каждого уровня свой рекорд.',
-        'Соло: побей свой рекорд и получи медаль за 10, 20, 30 и 40 очков.',
-        'Онлайн-гонка: один создаёт комнату, остальные входят по коду. Все летят через одни и те же трубы одновременно.',
-        'Других игроков видно как бледных птиц. Кто разобьётся, смотрит за остальными — раунд выигрывает последняя птица в воздухе.'
+        'Чем дальше, тем сложнее: уровень 2 начинается на 10-й трубе, затем на 25-й, 40-й, 60-й и 85-й. Каждый уровень быстрее, а просветы уже.',
+        'С уровня 3 некоторые просветы ездят вверх и вниз, и с каждым уровнем таких всё больше.',
+        'Побей свой рекорд и получи медаль за 10, 20, 30 и 40 очков.'
       ],
       tips: [
         'Короткие ровные нажатия работают лучше, чем частые панические.',
-        'Чем дальше летишь, тем чуть уже становятся просветы. На сложном и безумном уровнях некоторые трубы ездят вверх и вниз: смотри, где просвет будет, а не где он сейчас.',
-        'P или Esc ставит соло-игру на паузу, а M включает и выключает звук.'
+        'На движущейся трубе смотри, где просвет будет, а не где он сейчас.',
+        'P или Esc ставит игру на паузу, а M включает и выключает звук.'
       ]
     },
     KK: {
       icon: '[^]',
       title: 'Flappy',
-      players: 'Жеке немесе кез келген құрылғыда жарыс',
+      players: '1 ойыншы',
       duration: '1–5 мин',
       goal: 'Құсты ауада ұстап, құбырлар арасындағы саңылаулардан барынша көп өт.',
       steps: [
         'Қанат қағу үшін экранды түрт, шерт немесе Бос орын, ↑ не W пернесін бас. Қағуды тоқтатсаң, құс құлайды.',
         'Өткен әр жұп құбыр — бір ұпай. Құбырға не жерге тисең, ұшу аяқталады.',
-        'Алдымен деңгей таңда: оңай, қалыпты, қиын немесе ессіз. Әр деңгейдің өз рекорды бар.',
-        'Жеке: рекордыңды жаңартып, 10, 20, 30 және 40 ұпай үшін медаль ал.',
-        'Онлайн жарыс: бір адам бөлме ашады, қалғандары кодпен кіреді. Барлығы бір уақытта бірдей құбырлардың арасымен ұшады.',
-        'Басқа ойыншылар бозғылт құс болып көрінеді. Құлаған ойыншы қалғандарды бақылайды — раундты соңғы ұшып жүрген құс жеңеді.'
+        'Алға жылжыған сайын қиындай түседі: 2-деңгей 10-құбырдан басталады, кейін 25, 40, 60 және 85. Әр деңгей жылдамырақ, ал саңылаулар тарырақ.',
+        '3-деңгейден бастап кейбір саңылаулар жоғары-төмен жылжиды, әр келесі деңгейде олар көбейеді.',
+        'Рекордыңды жаңартып, 10, 20, 30 және 40 ұпай үшін медаль ал.'
       ],
       tips: [
         'Қысқа әрі бірқалыпты түрту абыржып жиі басқаннан жақсырақ.',
-        'Неғұрлым алыс ұшсаң, саңылаулар соғұрлым тарыла түседі. Қиын және ессіз деңгейлерде кейбір құбырлар жоғары-төмен жылжиды: саңылаудың қазір қайда екеніне емес, қайда болатынына қара.',
-        'P не Esc жеке ойынды кідіртеді, ал M дыбысты қосады не өшіреді.'
+        'Жылжымалы құбырда саңылаудың қазір қайда екеніне емес, қайда болатынына қара.',
+        'P не Esc ойынды кідіртеді, ал M дыбысты қосады не өшіреді.'
       ]
     }
   },

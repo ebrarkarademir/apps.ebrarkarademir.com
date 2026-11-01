@@ -8,6 +8,8 @@ import { createSketch, COLORS, START_COLOR, ERASER, SIZES } from './doodle/sketc
 import { WORDS, LANGS, shownWord, isRightGuess, isCloseGuess, hintFor, pickChoices } from './doodle/words'
 import { sound } from './ascii/sound'
 import { haptics } from './ascii/haptics'
+import FullscreenButton from './ascii/FullscreenButton.vue'
+import { useFullscreen } from './ascii/fullscreen'
 
 const props = defineProps({
   t: { type: Object, required: true },
@@ -512,6 +514,26 @@ watch(() => view.value?.turn, async (turn, before) => {
   if (Math.abs(offset) > 4) window.scrollTo({ top: window.scrollY + offset, behavior: 'smooth' })
 })
 
+// ---------- Full screen ----------
+// The drawer can give the drawing the whole screen: the word and the clock over the board, the
+// tools beside or under it, and nothing else. It ends with the drawing time.
+
+const { full, leave: leaveFull, toggle: toggleFull } = useFullscreen(() => turnEl.value)
+const canFull = computed(() => amDrawer.value && phase.value === 'draw')
+watch(canFull, (can) => {
+  if (!can) leaveFull()
+})
+// The page behind stays put while the drawing has the screen
+let savedOverflow = ''
+watch(full, (on) => {
+  if (on) {
+    savedOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = savedOverflow
+  }
+})
+
 // ---------- Chat ----------
 
 const text = ref('')
@@ -673,11 +695,12 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
     </div>
 
     <!-- A turn: picking a word, drawing it, seeing it -->
-    <div v-else ref="turnEl" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start" @pointerdown="sound.unlock()">
-      <div class="min-w-0 space-y-2">
-        <!-- Round and drawer, the word or its hint, the clock -->
+    <div v-else ref="turnEl" :class="['turn grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start', { 'is-full': full }]" @pointerdown="sound.unlock()">
+      <div class="drawing min-w-0 space-y-2">
+        <!-- Round and drawer, the word or its hint, the clock; for the drawer, the full-screen switch -->
         <div class="flex items-center gap-3 min-h-12">
-          <div class="shrink-0 w-24 sm:w-32 min-w-0 leading-tight">
+          <!-- The drawer's own turn on a phone: the word needs the room more -->
+          <div v-show="!full" :class="['shrink-0 w-24 sm:w-32 min-w-0 leading-tight', { 'max-sm:hidden': canFull }]">
             <p class="term-label">{{ fmt(t.doodleRound, { n: view.round, total: view.rounds }) }}</p>
             <p class="text-xs term-muted truncate"><span aria-hidden="true">[/] </span>{{ nameOf(view.drawer) }}</p>
           </div>
@@ -704,9 +727,11 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
           <div :class="['shrink-0 font-display text-4xl leading-none tabular-nums w-14 text-right', { 'term-blink': phase === 'draw' && secondsLeft <= 10 }]">
             {{ secondsLeft }}
           </div>
+          <FullscreenButton v-if="canFull" :t="t" :full="full" @toggle="toggleFull" />
         </div>
         <p class="text-xs whitespace-pre overflow-hidden term-muted" aria-hidden="true">[{{ timerBar }}]</p>
 
+        <div class="board-room">
         <div class="board-wrap mx-auto w-full" :style="{ maxWidth: 'max(20rem, calc((100dvh - 17rem) * 4 / 3))' }">
           <DoodleBoard
             :sketch="sketch"
@@ -758,13 +783,14 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
             </div>
           </DoodleBoard>
         </div>
+        </div>
 
       </div>
 
       <!-- Tools, guesses, chat and scores. On a phone the tools, or the box to type in, come
            first, right under the drawing -->
-      <div class="min-w-0 flex flex-col gap-3">
-        <div v-if="amDrawer && phase === 'draw'" class="order-first space-y-2">
+      <div class="side min-w-0 flex flex-col gap-3">
+        <div v-if="amDrawer && phase === 'draw'" class="tools order-first space-y-2">
           <!-- Pen, fill and eraser, then the three brush sizes -->
           <div class="grid grid-cols-[repeat(3,minmax(0,1fr))_repeat(3,2.25rem)] gap-1">
             <button
@@ -900,6 +926,66 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
   border-color: var(--color-term);
   outline: 1px solid var(--color-term);
   outline-offset: 2px;
+}
+
+/* Full screen: the word and the clock over the board, the tools under it on a phone held
+   upright and beside it otherwise. The board is as big as the room left allows. */
+.turn.is-full {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+  background: var(--color-black);
+  overflow: hidden;
+}
+.turn.is-full .drawing {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.turn.is-full .board-room {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+.turn.is-full .board-wrap {
+  width: min(100cqw, 100cqh * 4 / 3);
+  max-width: none !important;
+  margin: 0;
+}
+.turn.is-full .board-wrap :deep(.board) {
+  border-left-width: 1px;
+  border-right-width: 1px;
+}
+.turn.is-full .side {
+  flex: 0 0 auto;
+}
+.turn.is-full .side > :not(.tools) {
+  display: none;
+}
+@media (orientation: landscape) {
+  .turn.is-full {
+    flex-direction: row;
+  }
+  .turn.is-full .side {
+    width: min(18rem, 38%);
+    overflow-y: auto;
+  }
+  /* The tool column is narrow: names only, without the little icons, and the brush sizes on
+     a row of their own under the tools */
+  .turn.is-full .tool > [aria-hidden="true"] {
+    display: none;
+  }
+  .turn.is-full .tools > .grid:first-child {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 /* On a phone the drawing goes edge to edge, out through the page's and the window's side

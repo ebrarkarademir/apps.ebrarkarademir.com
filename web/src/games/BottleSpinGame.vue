@@ -182,7 +182,8 @@ onUnmounted(() => clearTimeout(spinTimeout))
     <!-- Game Phase -->
     <div v-else class="space-y-6">
       <!-- Table: a wireframe radar scope -->
-      <div class="relative mx-auto w-full max-w-sm aspect-square">
+      <!-- As wide as the window allows, but on a phone held sideways no taller than the screen leaves room for -->
+      <div class="relative mx-auto w-full max-w-[max(13rem,min(24rem,calc(100dvh-11rem)))] aspect-square">
         <div class="absolute inset-[9%] rounded-full border border-term scope-glow"></div>
         <div class="absolute inset-[24%] rounded-full border border-dashed border-term-low"></div>
         <div class="absolute inset-[39%] rounded-full border border-dashed border-term-low"></div>

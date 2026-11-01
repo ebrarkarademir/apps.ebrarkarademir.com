@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   SIZE, STEP, HEARTS, TANK_SPEED, TURN_SPEED, FIRE_COOLDOWN, MAX_SHELLS, INVULNERABLE,
   mapWalls, spawnTank, moveTank, fireShell, stepShell, touches, aimPath, tankAt, wrapAngle, angleDiff
@@ -7,6 +7,8 @@ import {
 import { createRenderer } from './renderer'
 import { LEVELS, newBrain, botHeld } from './bots'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
+import FullscreenButton from '../ascii/FullscreenButton.vue'
+import { useFullscreen } from '../ascii/fullscreen'
 import { GREEN, DIM, watchFonts } from '../ascii/paint'
 import { startLoop } from '../ascii/loop'
 import { stepParticles, burst } from '../ascii/physics'
@@ -14,9 +16,11 @@ import { SPARKS, sparks as throwSparks } from '../ascii/fx'
 import { sound } from '../ascii/sound'
 import { haptics } from '../ascii/haptics'
 
-// The full-screen battle: a square arena as large as the screen allows, one big button under
-// it, the game loop, input and sound. Holding the button (anywhere on screen, or Space) drives
-// the tank forward and fires on the press; letting go stops it and it turns on the spot.
+// The full-screen battle: a square arena as large as the screen allows with the hearts and the
+// clock beside it, the game loop, input and sound. The whole screen is one button: holding it
+// (or Space) drives the tank forward and fires on the press; letting go stops it and it turns
+// on the spot. The full-screen switch leaves nothing on screen but the arena, the hearts and
+// the clock.
 //
 // This device moves its own tank and decides when a shell hits it. Positions go out as live
 // samples, shots and hits as events, and the host keeps the hearts. The host's device (or a
@@ -47,14 +51,15 @@ const emit = defineEmits(['exit', 'sample', 'shot', 'hit'])
 
 const SAMPLE_MS = 50
 const FIGHT_SECONDS = 0.9
-const BAR_MIN = 56
+const INFO = 44 // the hearts and the clock, in a row with the arena
+const SIDE = 140 // full screen on a wide screen: room either side of the arena for them instead
 const GAP = 8
 const BUTTON_KEYS = new Set(['Space', 'Enter', 'ArrowUp', 'KeyW'])
 const DEBRIS = ['#', '*', '@', '%', '+', 'x', '=', '"']
 
 const area = ref(null)
 const canvas = ref(null)
-const box = reactive({ size: 0, bar: BAR_MIN })
+const box = reactive({ size: 0, beside: false })
 const held = ref(false)
 const now = ref(Date.now()) // for the clock in the bar; updated once a second at most
 
@@ -99,18 +104,6 @@ const HEART = '<3'
 const BROKEN_HEART = '</3'
 const heartList = computed(() => (props.fighter ? Array.from({ length: HEARTS }, (_, i) => i < myHearts.value) : []))
 
-// Under the arena: hearts, the button and the clock in one row, or on a tall screen the
-// hearts and clock above a big button that takes the rest of the room
-const barStyle = computed(() => {
-  const tall = box.bar >= 110
-  return {
-    maxWidth: `${box.size}px`,
-    height: `${box.bar}px`,
-    gridTemplateColumns: tall ? '1fr auto' : 'auto 1fr auto',
-    gridTemplateRows: tall ? 'auto 1fr' : '1fr',
-    gridTemplateAreas: tall ? '"hearts clock" "button button"' : '"hearts button clock"'
-  }
-})
 const clockText = computed(() => {
   if (!props.endsAt) return '-:--'
   const seconds = Math.max(0, Math.ceil((props.endsAt - now.value) / 1000))
@@ -200,6 +193,17 @@ function releaseAll () {
 const onVisibility = () => {
   if (document.hidden) releaseAll()
 }
+
+// ---------- Full screen ----------
+
+const { full, toggle: toggleFull } = useFullscreen(() => area.value?.closest('.arena'))
+
+function onFullClick (event) {
+  sound.unlock()
+  toggleFull(event)
+}
+
+watch(full, () => nextTick(fit))
 
 // ---------- Shells and hits ----------
 
@@ -481,6 +485,7 @@ function banners (texts) {
   if (nowMs < props.startAt) {
     banner(props.t.tankGetReady, 15, 5, { display: true })
     banner(String(Math.ceil((props.startAt - nowMs) / 1000)), 26, 13, { display: true })
+    if (props.fighter) banner(props.t.tankHold, 33, 1.3, { min: 12, color: DIM })
   }
   if (fightTimer > 0) {
     banner(props.t.tankFight, 24, 9, { display: true, alpha: Math.min(1, fightTimer / 0.3) })
@@ -566,15 +571,19 @@ function after (dt) {
   if (Math.floor(Date.now() / 1000) !== Math.floor(now.value / 1000)) now.value = Date.now()
 }
 
-// The arena stays square; the button below it gets the room that's left, within limits
+// The arena stays square and gets all the room it can, with the hearts and the clock in a row
+// under it, or above it in full screen. On a wide screen in full screen they go in the corners
+// instead, either side of the arena, when that leaves it bigger.
 function fit () {
   const el = area.value
   if (!el || !renderer) return
   const style = getComputedStyle(el)
   const w = el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
   const h = el.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
-  box.size = Math.floor(Math.max(0, Math.min(w, h - BAR_MIN - GAP)))
-  box.bar = Math.floor(Math.max(BAR_MIN, h - box.size - GAP))
+  const stacked = Math.min(w, h - INFO - GAP)
+  const beside = full.value ? Math.min(w - SIDE * 2, h) : 0
+  box.beside = beside > stacked
+  box.size = Math.floor(Math.max(0, box.beside ? beside : stacked))
   renderer.resize(box.size, Math.min(window.devicePixelRatio || 1, 3))
 }
 
@@ -620,37 +629,37 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" @exit="emit('exit')">
+  <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" :bare="full" @exit="emit('exit')">
+    <template #actions>
+      <FullscreenButton :t="t" @toggle="onFullClick" />
+    </template>
+
     <!-- The whole area is the button -->
     <div
       ref="area"
-      class="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 p-2 sm:p-4 touch-none"
+      :class="['relative flex-1 min-h-0 flex flex-col items-center justify-center gap-2 touch-none', full ? 'p-1' : 'p-2 sm:p-4']"
       @pointerdown="onPointerDown"
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
       @contextmenu.prevent
     >
-      <div class="stage relative" :style="{ width: `${box.size}px`, height: `${box.size}px` }">
+      <div class="stage relative shrink-0" :style="{ width: `${box.size}px`, height: `${box.size}px` }">
         <canvas ref="canvas" class="block" role="img" :aria-label="title"></canvas>
       </div>
 
-      <div class="grid w-full gap-x-3 gap-y-2" :style="barStyle">
-        <div class="flex items-center gap-2 font-display text-3xl leading-none whitespace-nowrap" style="grid-area: hearts" :aria-label="`${myHearts} / ${HEARTS}`">
-          <span v-for="(full, i) in heartList" :key="i" :class="{ 'term-muted opacity-50': !full }">{{ full ? HEART : BROKEN_HEART }}</span>
+      <!-- Hearts and the clock: under the arena, above it in full screen, or in the corners
+           either side of it on a wide screen -->
+      <div
+        :class="['info flex items-center gap-3', full && box.beside ? 'absolute inset-x-2 top-2 z-10 items-start' : 'w-full shrink-0', { 'order-first': full && !box.beside }]"
+        :style="full && box.beside ? {} : { maxWidth: `${box.size}px`, height: `${INFO}px` }"
+      >
+        <div class="flex items-center gap-2 font-display text-3xl leading-none whitespace-nowrap" :aria-label="`${myHearts} / ${HEARTS}`">
+          <span v-for="(whole, i) in heartList" :key="i" :class="{ 'term-muted opacity-50': !whole }">{{ whole ? HEART : BROKEN_HEART }}</span>
         </div>
-        <div
-          :class="[
-            'flex items-center justify-center border px-2 text-center text-xs sm:text-sm font-semibold uppercase tracking-widest',
-            held ? 'term-inverse border-term' : 'border-term-low term-muted'
-          ]"
-          style="grid-area: button"
-          aria-hidden="true"
-        >
-          {{ held ? t.tankHolding : t.tankHold }}
-        </div>
-        <div :class="['flex items-center justify-end font-display text-3xl leading-none tabular-nums', { 'term-blink': lastSeconds }]" style="grid-area: clock">
+        <div :class="['ml-auto flex items-center font-display text-3xl leading-none tabular-nums', { 'term-blink': lastSeconds }]">
           {{ clockText }}
         </div>
+        <FullscreenButton v-if="full" :t="t" full class="bg-black/70" @toggle="onFullClick" />
       </div>
     </div>
   </ArcadeStage>

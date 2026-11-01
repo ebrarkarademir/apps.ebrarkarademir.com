@@ -47,6 +47,23 @@
     touch-action: pan-x pan-y;
   }
 
+  /* Nothing on the site selects as text: a long press, a double tap or a drag in a game or on
+     the menu bar doesn't highlight words or bring up the copy menu. What's typed into a box
+     still selects, so it can be edited. */
+  html {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable="false"]) {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
   body {
     background: var(--color-black);
     color: var(--color-term);
