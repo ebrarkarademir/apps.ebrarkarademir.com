@@ -5,6 +5,7 @@ import TermWindow from '../../components/TermWindow.vue'
 import TankStage from './TankStage.vue'
 import { ARMOR } from './engine'
 import { TANK_COLORS } from './renderer'
+import { recordWin } from '../../online/profile'
 
 // A round of Tank and its results, the same for a solo game against bots and an online room.
 // `room` is either room (useOnlineRoom or useLocalRoom); its host-side rules are in TankGame.
@@ -75,6 +76,7 @@ const winner = computed(() => (view.value?.outcome?.winner ? standings.value.fin
 
 watch(() => (view.value?.phase === 'results' ? view.value.round : 0), (round) => {
   if (round && winner.value?.id === props.room.myId) {
+    recordWin('tanks')
     confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
   }
 })

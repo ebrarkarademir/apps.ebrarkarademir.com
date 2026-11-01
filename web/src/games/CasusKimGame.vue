@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
 import confetti from 'canvas-confetti'
+import { recordWin } from '../online/profile'
 import { useOnlineRoom } from '../online/useOnlineRoom'
 import OnlineRoom from '../online/OnlineRoom.vue'
 
@@ -380,6 +381,8 @@ const guessCorrect = computed(() => view.value?.guessed !== null && view.value?.
 // Result
 const spyTeamWon = computed(() => view.value?.outcome === 'spy' || view.value?.outcome === 'spyGuess')
 watch(() => view.value?.phase, (phase) => {
+  // A win for whoever was on the side that won: the spies, or everyone else
+  if (phase === 'result' && view.value.me?.inRound && spyTeamWon.value === !!view.value.me.isSpy) recordWin('casus-kim')
   if (phase === 'result' && view.value.outcome === 'group' && !prefersReducedMotion()) {
     confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
   }

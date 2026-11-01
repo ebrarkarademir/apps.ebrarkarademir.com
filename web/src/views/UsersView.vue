@@ -1,26 +1,36 @@
 <script setup>
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import TermWindow from '../components/TermWindow.vue'
-import { lookUpIp, flagEmoji, flagPng } from '../online/ipInfo'
+import AsciiAvatar from '../components/AsciiAvatar.vue'
+import MedalBadge from '../components/MedalBadge.vue'
+import { flagPng } from '../online/ipInfo'
 import { MAX_TEXT } from '../online/useUsers'
+import { profile, autoCountry, cleanName, cleanBio, randomName, faceLine, MAX_NAME, MAX_BIO, MEDALS, medalProgress } from '../online/profile'
+import { banner } from '../online/asciiFont'
+import { COUNTRY_CODES } from '../online/countries'
+import { currentRoom } from '../online/session'
 
-// The Users page: everyone with the site open, what their IP address gives away, and a chat with
-// whoever is picked, where they can also be invited to an online game. The list and the chats
-// themselves live in App (see useUsers.js), so messages reach the visitor anywhere on the site.
+// The Users page: everyone with the site open, each as a little Linux user: a name and user
+// number, an ASCII face, nationality, a few words, medals named like groups, and what they're
+// doing right now. Pick someone to chat, invite them to a game or ask to join their lobby.
+// Your own entry is where you change your name, face, words and nationality. The list and the
+// chats live in App (see useUsers.js), so messages reach the visitor anywhere on the site.
 
 const props = defineProps({
   users: { type: Object, required: true },
-  // The online games someone can be invited to
+  // The online games someone can be invited to, and every game, for what people are doing
   games: { type: Array, required: true },
+  allGames: { type: Array, required: true },
   t: { type: Object, required: true },
   // Id of the person picked
-  selected: { type: String, default: null }
+  selected: { type: String, default: null },
+  // Ids of the people this tab asked to join, still waiting for an answer
+  asked: { type: Array, default: () => [] }
 })
 
-// invite: { to, game } opens a room to invite someone into; join: { game, code } joins one
-const emit = defineEmits(['back', 'update:selected', 'invite', 'join'])
-
-const LANGUAGE_CODE = /^[a-z]{2,3}(-[A-Z]{2})?$/
+// invite: { to, game } opens a room to invite someone into; join: { game, code } joins one;
+// ask: an id, to ask that person to let you in; answer: { id, messageId, ok } to a request
+const emit = defineEmits(['back', 'update:selected', 'invite', 'join', 'ask', 'answer'])
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 
@@ -28,26 +38,14 @@ const locale = computed(() => props.t.langCode.toLowerCase())
 const now = ref(Date.now())
 let clockTimer = null
 
-// A country, language or currency name in the page language, or the code if Intl can't name it
-const nameOf = (type, code) => {
+const regionName = (code) => {
   try {
-    return new Intl.DisplayNames([locale.value], { type }).of(code) || code
+    return new Intl.DisplayNames([locale.value], { type: 'region' }).of(code) || code
   } catch {
     return code
   }
 }
-const nameWithCode = (type, code) => {
-  const name = nameOf(type, code)
-  return name === code ? code : `${name} (${code})`
-}
-// Languages Intl has no name for come back as codes; they're left out unless none has a name
-const languageNames = (codes) => {
-  const names = codes.slice(0, 6).map(code => nameOf('language', code))
-  const named = names.filter(name => !LANGUAGE_CODE.test(name))
-  return (named.length ? named : names).join(', ')
-}
 
-const number = (value) => Number(value).toLocaleString(locale.value)
 const clock = (at) => new Date(at).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })
 
 const onlineFor = (since) => {
@@ -56,25 +54,18 @@ const onlineFor = (since) => {
   return fmt(props.t.cardMinutes, { n: minutes < 1 ? '<1' : minutes })
 }
 
-// ---------- IP lookups ----------
+const titleOf = (id) => props.allGames.find(game => game.id === id)?.title || id
+const nameOf = (person) => person?.name || props.t.usersGuest
 
-// By IP: { status: 'loading' | 'done' | 'failed', info }
-const lookups = reactive({})
-
-async function load (ip) {
-  if (!ip || ['loading', 'done'].includes(lookups[ip]?.status)) return
-  lookups[ip] = { status: 'loading', info: null }
-  try {
-    lookups[ip] = { status: 'done', info: await lookUpIp(ip) }
-  } catch {
-    lookups[ip] = { status: 'failed', info: null }
-  }
+// What someone is doing: the lobby they're in, or the page they have open
+function activity (person) {
+  const room = person.room
+  if (room) return fmt(room.phase === 'lobby' ? props.t.usersInLobby : props.t.usersPlaying, { game: titleOf(room.game), code: room.code })
+  if (!person.act || person.act === 'menu') return props.t.usersActivityMenu
+  if (person.act === 'users') return props.t.usersActivityUsers
+  if (person.act === 'lobby') return props.t.usersActivityLobby
+  return fmt(props.t.usersActivityGame, { game: titleOf(person.act) })
 }
-
-// The list shows everyone's flag, so everyone is looked up as they arrive
-watch(() => props.users.list.map(person => person.ip), ips => ips.forEach(load), { immediate: true })
-
-const countryOf = (person) => lookups[person.ip]?.info?.countryCode || null
 
 // ---------- Who is picked ----------
 
@@ -95,89 +86,78 @@ function select (id) {
   emit('update:selected', id)
 }
 
-// People behind the same address (or none) get a short tag to tell them apart
-const sharedIps = computed(() => {
-  const seen = new Set()
-  const shared = new Set()
-  props.users.list.forEach(({ ip }) => (seen.has(ip) ? shared.add(ip) : seen.add(ip)))
-  return shared
-})
-const showTag = (item) => !item.ip || sharedIps.value.has(item.ip)
-
 const unreadFrom = (item) => props.users.chats.get(item.id)?.unread || 0
 
-// ---------- What the IP gives away ----------
+// ---------- Their profile ----------
 
-const lookup = computed(() => (person.value?.ip ? lookups[person.value.ip] : null))
-const info = computed(() => (lookup.value?.status === 'done' ? lookup.value.info : null))
-const countryName = computed(() => (info.value?.countryCode ? nameOf('region', info.value.countryCode) : info.value?.country))
-
-const placeLine = computed(() => {
-  const found = info.value
-  return found ? [found.city, found.region, countryName.value].filter(Boolean).join(', ') : ''
+const nameBanner = computed(() => (person.value ? banner(person.value.name) : null))
+const medals = computed(() => {
+  const have = new Set(person.value?.md || [])
+  return MEDALS.map(medal => ({ medal, earned: have.has(medal.id) }))
 })
-
-const localTime = (timeZone) => {
-  try {
-    return new Intl.DateTimeFormat(locale.value, { timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(now.value)
-  } catch {
-    return null
-  }
+const pickedMedal = ref(null)
+watch(() => person.value?.id, () => { pickedMedal.value = null })
+const medalShown = computed(() => medals.value.find(item => item.medal.id === pickedMedal.value) || null)
+const medalBanner = computed(() => (medalShown.value ? banner(medalShown.value.medal.id) : null))
+const medalStatus = (item) => {
+  if (item.earned) return props.t.usersMedalEarned
+  if (!person.value?.self) return props.t.usersMedalLocked
+  const { have, goal } = medalProgress(item.medal)
+  return item.medal.id === 'sys' ? props.t.usersMedalLocked : fmt(props.t.usersMedalProgress, { have, goal })
 }
 
-const groups = computed(() => {
-  const found = info.value
-  if (!found) return []
-  const t = props.t
-  const code = found.countryCode
-  const hasPlace = found.latitude !== null && found.longitude !== null
-  const lat = hasPlace && Number(found.latitude).toFixed(4)
-  const lon = hasPlace && Number(found.longitude).toFixed(4)
-  const list = [
-    {
-      title: t.usersLocation,
-      rows: [
-        { label: t.usersAddress, value: [found.city, [found.region, found.postal].filter(Boolean).join(' '), countryName.value].filter(Boolean).join(', ') },
-        { label: t.usersContinent, value: found.continentCode && (t.usersContinents[found.continentCode] || found.continentCode) },
-        hasPlace && { label: t.usersCoordinates, value: `${lat}, ${lon}`, href: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=11/${lat}/${lon}` },
-        { label: t.usersTimezone, value: found.timezone && (found.utcOffset ? `${found.timezone} (UTC${found.utcOffset})` : found.timezone) },
-        { label: t.usersLocalTime, value: found.timezone && localTime(found.timezone) }
-      ]
-    },
-    {
-      title: t.usersNetwork,
-      rows: [
-        { label: t.usersVersion, value: found.version },
-        { label: t.usersHostname, value: found.hostname },
-        { label: t.usersIsp, value: found.isp },
-        { label: t.usersOrg, value: found.org !== found.isp && found.org },
-        { label: t.usersAsn, value: found.asn },
-        { label: t.usersDomain, value: found.domain },
-        { label: t.usersNetworkBlock, value: found.network }
-      ]
-    },
-    {
-      title: t.usersCountry,
-      rows: [
-        { label: t.usersCountry, value: code ? [countryName.value, code, found.countryCode3].filter(Boolean).join(' · ') : found.country },
-        code && { label: t.usersFlag, value: flagEmoji(code) },
-        code && { label: t.usersFlagPng, value: `${code.toLowerCase()}.png`, href: flagPng(code, 1280) },
-        { label: t.usersCapital, value: found.capital },
-        { label: t.usersCallingCode, value: found.callingCode },
-        { label: t.usersCurrency, value: found.currency && nameWithCode('currency', found.currency) },
-        { label: t.usersLanguages, value: found.languages && languageNames(found.languages) },
-        { label: t.usersPopulation, value: found.population && number(found.population) },
-        { label: t.usersArea, value: found.area && `${number(found.area)} km²` },
-        { label: t.usersTld, value: found.tld },
-        { label: t.usersEu, value: typeof found.inEu === 'boolean' ? (found.inEu ? t.usersYes : t.usersNo) : null },
-        { label: t.usersNeighbours, value: found.borders?.map(border => nameOf('region', border)).join(', ') }
-      ]
-    }
-  ]
-  return list
-    .map(group => ({ ...group, rows: group.rows.filter(row => row && row.value) }))
-    .filter(group => group.rows.length)
+// The "id" command's answer, with the medals as groups
+const idLine = computed(() => {
+  const p = person.value
+  if (!p) return ''
+  const name = p.name || 'guest'
+  const groups = ['100(users)', ...medals.value.filter(item => item.earned).map(item => `${item.medal.gid}(${item.medal.id})`)]
+  return `uid=${p.uid || '?'}(${name}) gid=100(users) groups=${groups.join(',')}`
 })
+
+// Asking to join their lobby only makes sense when they're in one and you aren't
+const canAsk = computed(() => {
+  const p = person.value
+  return !!(p && !p.self && p.room && currentRoom.value?.code !== p.room.code && props.users.canChatWith(p))
+})
+const sameLobby = computed(() => !!(person.value?.room && currentRoom.value?.code === person.value.room.code && !person.value.self))
+const askedAlready = computed(() => props.asked.includes(person.value?.id))
+
+// ---------- Your own profile ----------
+
+const edit = reactive({ name: '', bio: '', country: '' })
+const saved = ref(false)
+let savedTimer = null
+
+function loadEdit () {
+  edit.name = profile.name
+  edit.bio = profile.bio
+  edit.country = profile.country
+}
+watch(() => person.value?.self, (self) => { if (self) loadEdit() }, { immediate: true })
+
+const countries = computed(() => COUNTRY_CODES
+  .map(code => ({ code, name: regionName(code) }))
+  .sort((a, b) => a.name.localeCompare(b.name, locale.value)))
+
+const editDirty = computed(() => cleanName(edit.name) !== profile.name || cleanBio(edit.bio) !== profile.bio || edit.country !== profile.country)
+
+function saveProfile () {
+  const name = cleanName(edit.name)
+  if (name && name !== profile.name) {
+    profile.name = name
+    profile.custom = true
+  }
+  profile.bio = cleanBio(edit.bio)
+  profile.country = edit.country
+  loadEdit()
+  saved.value = true
+  clearTimeout(savedTimer)
+  savedTimer = setTimeout(() => { saved.value = false }, 1800)
+}
+
+const newFace = () => { profile.avatar = Math.floor(Math.random() * 2 ** 31) }
+const newName = () => { edit.name = randomName(profile.uid || 1 + Math.floor(Math.random() * 999)) }
 
 // ---------- Chat ----------
 
@@ -215,7 +195,10 @@ function invite (game) {
 onMounted(() => {
   clockTimer = setInterval(() => { now.value = Date.now() }, 1000)
 })
-onUnmounted(() => clearInterval(clockTimer))
+onUnmounted(() => {
+  clearInterval(clockTimer)
+  clearTimeout(savedTimer)
+})
 </script>
 
 <template>
@@ -233,7 +216,7 @@ onUnmounted(() => clearInterval(clockTimer))
       <span class="term-muted leading-relaxed">{{ t.usersNotice }}</span>
     </p>
 
-    <div class="grid gap-6 md:grid-cols-[16rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)]">
+    <div class="grid gap-6 md:grid-cols-[17rem_minmax(0,1fr)] lg:grid-cols-[19rem_minmax(0,1fr)]">
       <!-- Everyone here -->
       <section :class="{ 'hidden md:block': showingDetail }" aria-labelledby="users-list-title">
         <h2 id="users-list-title" class="term-label mb-3">{{ t.usersOnlineNow }} [{{ users.list.length }}]</h2>
@@ -248,23 +231,21 @@ onUnmounted(() => clearInterval(clockTimer))
               ]"
               @click="select(item.id)"
             >
-              <span class="term-dot" aria-hidden="true"></span>
-              <img
-                v-if="countryOf(item)"
-                :src="flagPng(countryOf(item), 40)"
-                :alt="nameOf('region', countryOf(item))"
-                width="20"
-                height="15"
-                class="h-[15px] w-5 shrink-0 object-cover"
-              />
-              <span v-else class="w-5 shrink-0 text-center text-xs term-muted" aria-hidden="true">--</span>
+              <span class="w-12 shrink-0 text-center text-xs whitespace-nowrap" aria-hidden="true">{{ faceLine(item.av) }}</span>
               <span class="min-w-0 flex-1">
-                <span class="flex items-baseline gap-2">
-                  <span class="truncate text-sm font-semibold tabular-nums">{{ item.ip || t.usersUnknownIp }}</span>
-                  <span v-if="showTag(item)" class="shrink-0 text-xs term-muted">#{{ item.id.slice(0, 4) }}</span>
+                <span class="flex items-center gap-2">
+                  <img
+                    v-if="item.cc"
+                    :src="flagPng(item.cc, 40)"
+                    :alt="regionName(item.cc)"
+                    width="16"
+                    height="12"
+                    class="h-3 w-4 shrink-0 object-cover"
+                  />
+                  <span class="truncate text-sm font-semibold">{{ nameOf(item) }}</span>
                 </span>
-                <span class="block text-xs term-muted tabular-nums">
-                  <template v-if="item.self"><span class="text-term">{{ t.usersYou }}</span> · </template>{{ onlineFor(item.since) }}
+                <span class="block truncate text-xs term-muted">
+                  <template v-if="item.self"><span class="text-term">{{ t.usersYou }}</span> · </template>{{ activity(item) }}
                 </span>
               </span>
               <span v-if="unreadFrom(item)" class="shrink-0 term-inverse px-1.5 text-xs font-bold tabular-nums">
@@ -280,7 +261,7 @@ onUnmounted(() => clearInterval(clockTimer))
       <!-- They left while picked -->
       <section v-if="departed" class="term-panel border-term p-6 text-center self-start" role="status">
         <p class="font-display text-5xl leading-none mb-3" aria-hidden="true">[x]</p>
-        <p class="leading-relaxed">{{ fmt(t.usersGone, { name: departed.ip || t.usersUnknownIp }) }}</p>
+        <p class="leading-relaxed">{{ fmt(t.usersGone, { name: nameOf(departed) }) }}</p>
         <button type="button" class="term-btn mt-5" @click="select(null)">{{ t.usersBackToList }}</button>
       </section>
 
@@ -291,39 +272,84 @@ onUnmounted(() => clearInterval(clockTimer))
           <span>{{ t.usersBackToList }}</span>
         </button>
 
-        <header class="flex items-center gap-4">
-          <a
-            v-if="info?.countryCode"
-            :href="flagPng(info.countryCode, 1280)"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="shrink-0"
-          >
-            <img
-              :src="flagPng(info.countryCode, 160)"
-              :srcset="`${flagPng(info.countryCode, 320)} 2x`"
-              :alt="fmt(t.usersFlagOf, { country: countryName })"
-              class="h-14 sm:h-16 w-auto border border-term-low"
-            />
-          </a>
-          <span
-            v-else
-            class="h-14 w-20 sm:h-16 sm:w-24 shrink-0 border border-dashed border-term-low flex items-center justify-center font-display text-3xl term-muted"
-            aria-hidden="true"
-          >??</span>
-          <div class="min-w-0">
-            <h2 id="users-person-title" class="font-display text-4xl sm:text-5xl leading-none truncate">{{ person.ip || t.usersUnknownIp }}</h2>
-            <p v-if="placeLine" class="term-muted text-sm mt-1 truncate">{{ placeLine }}</p>
-            <p class="flex flex-wrap gap-2 mt-2">
+        <!-- On a phone the lettered name goes under the face, where it has the whole width -->
+        <header class="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+          <div class="self-start shrink-0 border border-term-low px-2 py-1.5 text-sm sm:text-base">
+            <AsciiAvatar :seed="person.av" />
+          </div>
+          <div class="min-w-0 flex-1 w-full">
+            <h2 id="users-person-title" class="min-w-0">
+              <span class="sr-only">{{ nameOf(person) }}</span>
+              <pre v-if="nameBanner" class="name-banner overflow-x-auto no-scrollbar text-[10px] sm:text-xs leading-none" aria-hidden="true">{{ nameBanner }}</pre>
+              <span v-else class="block font-display text-4xl sm:text-5xl leading-none truncate" aria-hidden="true">{{ nameOf(person) }}</span>
+            </h2>
+            <p class="flex flex-wrap items-center gap-2 mt-3">
               <span v-if="person.self" class="term-chip text-term">{{ t.usersYou }}</span>
+              <span class="term-chip tabular-nums">{{ fmt(t.usersUid, { n: person.uid || '?' }) }}</span>
+              <span v-if="person.cc" class="term-chip">
+                <img :src="flagPng(person.cc, 40)" alt="" width="16" height="12" class="h-3 w-4 object-cover" />
+                {{ regionName(person.cc) }}
+              </span>
               <span class="term-chip">{{ fmt(t.usersOnlineFor, { time: onlineFor(person.since) }) }}</span>
             </p>
           </div>
         </header>
 
+        <p class="text-sm leading-relaxed border-l-2 border-term pl-3" :class="{ 'term-muted italic': !person.bio }">{{ person.bio || t.usersNoBio }}</p>
+
+        <!-- Right now -->
+        <div class="term-panel p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <p class="flex-1 min-w-0 text-sm">
+            <span class="term-label mr-2">{{ t.usersNow }}</span>
+            <span class="term-cursor">{{ activity(person) }}</span>
+          </p>
+          <button v-if="canAsk" type="button" class="term-btn min-h-9 text-sm shrink-0" :disabled="askedAlready" @click="emit('ask', person.id)">
+            {{ askedAlready ? t.usersAskSent : t.usersAskJoin }}
+          </button>
+          <span v-else-if="sameLobby" class="term-chip shrink-0">{{ t.usersSameLobby }}</span>
+        </div>
+
         <div class="grid gap-5 xl:grid-cols-2 xl:items-start">
+          <div class="space-y-5 min-w-0">
+            <!-- As a Linux box would describe them -->
+            <section class="term-panel p-3 text-xs sm:text-sm overflow-x-auto" aria-labelledby="users-finger-title">
+              <h3 id="users-finger-title" class="sr-only">{{ t.usersAbout }}</h3>
+              <pre class="leading-relaxed whitespace-pre-wrap break-words"><span class="term-muted">$ finger {{ nameOf(person) }}</span>
+{{ t.usersLogin }}: {{ nameOf(person) }}
+{{ t.usersFrom }}: {{ person.cc ? regionName(person.cc) : '?' }}
+{{ t.usersOnSince }}: {{ clock(person.since) }} ({{ onlineFor(person.since) }})
+{{ t.usersNow }}: {{ activity(person) }}
+{{ t.usersPlan }}: {{ person.bio || '-' }}
+<span class="term-muted">$ id {{ nameOf(person) }}</span>
+{{ idLine }}</pre>
+            </section>
+
+            <!-- Medals -->
+            <section aria-labelledby="users-medals-title">
+              <h3 id="users-medals-title" class="term-label mb-3">{{ t.usersMedals }} [{{ medals.filter(item => item.earned).length }}/{{ medals.length }}]</h3>
+              <ul class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                <li v-for="(item, index) in medals" :key="item.medal.id">
+                  <button
+                    type="button"
+                    class="w-full"
+                    :aria-pressed="pickedMedal === item.medal.id"
+                    :aria-label="`${item.medal.id}: ${t['medal_' + item.medal.id]}`"
+                    @click="pickedMedal = pickedMedal === item.medal.id ? null : item.medal.id"
+                  >
+                    <MedalBadge class="w-full" :medal="item.medal" :earned="item.earned" :selected="pickedMedal === item.medal.id" :index="index" />
+                  </button>
+                </li>
+              </ul>
+              <div v-if="medalShown" class="term-panel border-term mt-3 p-3 space-y-2" role="status">
+                <pre v-if="medalBanner" :class="['medal-title overflow-x-auto no-scrollbar text-[10px] sm:text-xs leading-none', { 'is-earned': medalShown.earned }]" aria-hidden="true">{{ medalBanner }}</pre>
+                <p class="text-sm"><span class="font-semibold">{{ medalShown.medal.id }}</span> · {{ t['medal_' + medalShown.medal.id] }}</p>
+                <p class="text-xs term-muted">{{ medalStatus(medalShown) }}</p>
+              </div>
+            </section>
+          </div>
+
           <!-- Chat -->
-          <section v-if="!person.self" class="term-panel flex flex-col xl:order-2" aria-labelledby="users-chat-title">
+          <section v-if="!person.self" class="term-panel flex flex-col" aria-labelledby="users-chat-title">
             <div class="flex items-center gap-2 px-3 py-2 border-b border-term-low">
               <h3 id="users-chat-title" class="term-label">{{ t.usersChat }}</h3>
               <span v-if="theyCanChat" class="term-chip ml-auto">{{ t.usersEncrypted }}</span>
@@ -334,7 +360,7 @@ onUnmounted(() => clearInterval(clockTimer))
               </li>
               <li v-for="message in messages" :key="message.id" class="break-words leading-relaxed">
                 <span class="term-muted tabular-nums mr-2">[{{ clock(message.at) }}]</span>
-                <span :class="['mr-2', message.mine ? 'term-muted' : 'font-semibold']">{{ message.mine ? t.usersYou : person.ip || t.usersGuest }}&gt;</span>
+                <span :class="['mr-2', message.mine ? 'term-muted' : 'font-semibold']">{{ message.mine ? t.usersYou : nameOf(person) }}&gt;</span>
                 <template v-if="message.invite">
                   <span class="mr-2">{{ fmt(message.mine ? t.usersInvitedThem : t.usersInvitedYou, { game: gameTitle(message.invite.game) }) }}</span>
                   <span class="term-chip mr-2 tracking-[0.25em]">{{ message.invite.code }}</span>
@@ -347,6 +373,14 @@ onUnmounted(() => clearInterval(clockTimer))
                     {{ t.onlineJoin }}
                   </button>
                 </template>
+                <template v-else-if="message.request">
+                  <span class="mr-2">{{ message.mine ? t.usersAskedThem : t.usersAskedYou }}</span>
+                  <template v-if="!message.mine && !message.answered">
+                    <button type="button" class="term-btn min-h-8 px-2 py-0.5 text-xs mr-1" @click="emit('answer', { id: person.id, messageId: message.id, ok: true })">{{ t.usersAccept }}</button>
+                    <button type="button" class="term-btn min-h-8 px-2 py-0.5 text-xs" @click="emit('answer', { id: person.id, messageId: message.id, ok: false })">{{ t.usersDecline }}</button>
+                  </template>
+                </template>
+                <span v-else-if="message.reply" class="term-muted">{{ t.usersDeclined }}</span>
                 <span v-else>{{ message.text }}</span>
               </li>
             </ol>
@@ -378,7 +412,7 @@ onUnmounted(() => clearInterval(clockTimer))
                 <span>{{ t.usersInvite }}</span>
               </button>
               <div v-if="picking" class="mt-2 px-1">
-                <p class="term-muted text-xs leading-relaxed mb-2">{{ fmt(t.usersInviteHint, { name: person.ip || t.usersGuest }) }}</p>
+                <p class="term-muted text-xs leading-relaxed mb-2">{{ fmt(t.usersInviteHint, { name: nameOf(person) }) }}</p>
                 <ul class="grid grid-cols-2 gap-2">
                   <li v-for="game in games" :key="game.id">
                     <button type="button" class="term-option w-full min-h-10 justify-start text-left text-sm" @click="invite(game.id)">
@@ -391,44 +425,37 @@ onUnmounted(() => clearInterval(clockTimer))
             </div>
             <p class="px-3 pb-3 term-muted text-xs leading-relaxed">{{ t.usersChatNote }}</p>
           </section>
-          <p v-else class="term-panel p-4 text-sm leading-relaxed term-muted xl:order-2">{{ t.usersThisIsYou }}</p>
 
-          <!-- Everything the IP gives away -->
-          <section class="min-w-0 xl:order-1" aria-labelledby="users-info-title">
-            <h3 id="users-info-title" class="sr-only">{{ t.usersIpInfo }}</h3>
-
-            <p v-if="!person.ip" class="term-panel p-4 text-sm leading-relaxed term-muted">{{ t.usersNoIp }}</p>
-
-            <div v-else-if="!lookup || lookup.status === 'loading'" class="flex items-center gap-3 py-6 text-sm term-muted" role="status">
-              <span class="term-spinner font-display text-2xl leading-none" aria-hidden="true"></span>
-              <span>{{ t.usersLookingUp }}</span>
+          <!-- Your own profile -->
+          <form v-else class="term-panel p-4 space-y-4" aria-labelledby="users-edit-title" @submit.prevent="saveProfile">
+            <h3 id="users-edit-title" class="term-label">{{ t.usersEditProfile }}</h3>
+            <label class="block">
+              <span class="term-label">&gt; {{ t.usersName }}</span>
+              <span class="flex gap-2 mt-2">
+                <input v-model="edit.name" :maxlength="MAX_NAME" autocomplete="off" spellcheck="false" class="term-input h-10 min-w-0" />
+                <button type="button" class="term-btn min-h-10 px-3 text-sm shrink-0" @click="newName">{{ t.usersRandomName }}</button>
+              </span>
+            </label>
+            <label class="block">
+              <span class="term-label">&gt; {{ t.usersBio }}</span>
+              <textarea v-model="edit.bio" :maxlength="MAX_BIO" rows="2" :placeholder="t.usersBioPlaceholder" class="term-input mt-2 h-auto py-2 resize-none"></textarea>
+            </label>
+            <label class="block">
+              <span class="term-label">&gt; {{ t.usersNationality }}</span>
+              <select v-model="edit.country" class="term-input mt-2 h-10">
+                <option value="">{{ autoCountry ? fmt(t.usersNationalityAuto, { country: regionName(autoCountry) }) : t.usersNationalityNone }}</option>
+                <option v-for="country in countries" :key="country.code" :value="country.code">{{ country.name }}</option>
+              </select>
+            </label>
+            <div class="flex items-center gap-4">
+              <div class="border border-term-low px-2 py-1.5 text-sm"><AsciiAvatar :seed="profile.avatar" /></div>
+              <button type="button" class="term-btn min-h-10 text-sm" @click="newFace">{{ t.usersNewFace }}</button>
             </div>
-
-            <div v-else-if="lookup.status === 'failed'" class="term-panel p-4 text-sm space-y-3" role="alert">
-              <p class="flex gap-3">
-                <span class="shrink-0" aria-hidden="true">[!]</span>
-                <span class="leading-relaxed">{{ t.usersLookupFailed }}</span>
-              </p>
-              <button type="button" class="term-btn min-h-9 text-sm" @click="load(person.ip)">{{ t.usersRetry }}</button>
-            </div>
-
-            <template v-else>
-              <div v-for="group in groups" :key="group.title" class="mb-5">
-                <h4 class="term-label mb-2 pb-1 border-b border-term-low">{{ group.title }}</h4>
-                <dl class="grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">
-                  <template v-for="row in group.rows" :key="row.label">
-                    <dt class="term-muted">{{ row.label }}</dt>
-                    <dd class="min-w-0 break-words">
-                      <a v-if="row.href" :href="row.href" target="_blank" rel="noopener noreferrer" class="term-crumb">{{ row.value }}</a>
-                      <template v-else>{{ row.value }}</template>
-                    </dd>
-                  </template>
-                </dl>
-              </div>
-              <p class="term-muted text-xs leading-relaxed">{{ t.usersApprox }}</p>
-              <p class="term-muted text-xs mt-1">{{ t.usersSources }}: {{ info.sources.join(' · ') }}</p>
-            </template>
-          </section>
+            <button type="submit" class="term-btn term-btn-primary w-full min-h-10" :disabled="!editDirty || !cleanName(edit.name)">
+              {{ saved ? t.usersSaved : t.usersSave }}
+            </button>
+            <p class="term-muted text-xs leading-relaxed">{{ t.usersThisIsYou }}</p>
+          </form>
         </div>
       </section>
 
@@ -438,3 +465,37 @@ onUnmounted(() => clearInterval(clockTimer))
     </div>
   </TermWindow>
 </template>
+
+<style scoped>
+/* The name, lettered like a login banner, with a slow glow */
+.name-banner {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre;
+  animation: banner-glow 3s ease-in-out infinite;
+}
+
+.medal-title {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre;
+  color: var(--color-term-low);
+}
+
+.medal-title.is-earned {
+  color: var(--color-term);
+  animation: banner-glow 2s ease-in-out infinite;
+}
+
+@keyframes banner-glow {
+  0%, 100% { text-shadow: 0 0 4px rgb(0 255 0 / 0.35); }
+  50% { text-shadow: 0 0 10px rgb(0 255 0 / 0.9); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .name-banner,
+  .medal-title.is-earned {
+    animation: none;
+  }
+}
+</style>

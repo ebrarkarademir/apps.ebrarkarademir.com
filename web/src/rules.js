@@ -1309,69 +1309,139 @@ export const rules = {
     EN: {
       icon: 'who',
       title: 'Online users',
-      goal: 'See who else has the site open right now, what their IP address gives away, and chat with them.',
+      goal: 'See who else has the site open right now and what they’re up to, chat with them, and play together.',
       steps: [
-        'Everyone with the site open is on the list with their IP address and flag, you included.',
-        'Pick someone to see what public lookup services know about their IP: country and flag, city, time zone, internet provider and more.',
-        'Write in the chat box to message them. They get a pop-up wherever they are on the site.',
-        'Press [+] Invite to a game and pick one: you open a room in it, and they get a Join button that takes them straight in.',
-        'A chat only lasts while you’re both here: when either of you closes the site or loses connection, it’s deleted on both sides.'
+        'Everyone with the site open is on the list by name, with an ASCII face, nationality and what they’re doing, you included. Nobody sees anyone’s IP address.',
+        'New visitors get a name made of coding words and their user number, like cmd_bash_34: the number says when they first came. Pick yourself to change your name, face, a few words about you and your nationality.',
+        'Pick someone to see their profile, written like a Linux user’s: who they are, where from, what they’re doing right now and their medals, which are named like Linux groups.',
+        'Medals come from playing: open a lobby (root), join lobbies (netdev), win games (sudo, wheel), chat in lobbies (staff), spend time in lobbies (daemon) and play every online game (all_admin). Press one to see what it takes.',
+        'When someone is in a lobby, press Can I join?: they get a pop-up, and if they let you in you’re taken straight there.',
+        'Write in the chat box to message someone, or press [+] Invite to a game: you open a lobby in it and they get a Join button.'
       ],
       tips: [
-        'Messages are end-to-end encrypted and never stored, not even by the relay that carries them.',
-        'IP locations are approximate: usually the internet provider’s city, not a street address.',
-        'Everyone here can see your IP address, so think twice before sharing anything private with strangers.'
+        'Messages are end-to-end encrypted and never stored, not even by the relay that carries them. A chat is deleted on both sides as soon as either of you leaves.',
+        'Your nationality comes from your connection until you pick one yourself.',
+        'Medals live in this browser: another browser or device starts from scratch.'
       ]
     },
     TR: {
       icon: 'who',
       title: 'Çevrim içi kullanıcılar',
-      goal: 'Siteyi şu an kimlerin açık tuttuğunu, IP adreslerinin neleri ele verdiğini gör ve onlarla sohbet et.',
+      goal: 'Siteyi şu an kimlerin açık tuttuğunu ve ne yaptıklarını gör, onlarla sohbet et ve birlikte oyna.',
       steps: [
-        'Siteyi açık tutan herkes IP adresi ve bayrağıyla listede görünür, sen de dahil.',
-        'Birini seçerek herkese açık sorgulama servislerinin o IP hakkında bildiklerini gör: ülke ve bayrak, şehir, saat dilimi, internet sağlayıcı ve daha fazlası.',
-        'Mesaj göndermek için sohbet kutusuna yaz. Karşı taraf sitenin neresinde olursa olsun bildirim alır.',
-        '[+] Oyuna davet et’e basıp bir oyun seç: o oyunda bir oda açarsın, karşı taraf da doğrudan katılması için bir Katıl butonu alır.',
-        'Sohbet sadece ikiniz de buradayken sürer: biriniz siteyi kapatır ya da bağlantısı koparsa iki tarafta da silinir.'
+        'Siteyi açık tutan herkes listede adıyla, ASCII yüzüyle, uyruğuyla ve ne yaptığıyla görünür, sen de dahil. Kimse kimsenin IP adresini görmez.',
+        'Yeni gelenlere kodlama kelimelerinden ve kullanıcı numarasından oluşan bir ad verilir, örneğin cmd_bash_34: numara siteye ilk ne zaman geldiğini gösterir. Adını, yüzünü, kendin hakkındaki birkaç kelimeyi ve uyruğunu değiştirmek için kendini seç.',
+        'Bir Linux kullanıcısı gibi yazılmış profilini görmek için birini seç: kim olduğu, nereli olduğu, şu an ne yaptığı ve Linux grupları gibi adlandırılmış madalyaları.',
+        'Madalyalar oynadıkça gelir: lobi aç (root), lobilere katıl (netdev), oyun kazan (sudo, wheel), lobilerde sohbet et (staff), lobilerde vakit geçir (daemon) ve tüm çevrim içi oyunları oyna (all_admin). Ne gerektiğini görmek için birine bas.',
+        'Biri bir lobideyse Katılabilir miyim?’e bas: ona bildirim gider, seni içeri alırsa doğrudan oraya götürülürsün.',
+        'Mesaj göndermek için sohbet kutusuna yaz ya da [+] Oyuna davet et’e bas: o oyunda bir lobi açarsın, karşı taraf da bir Katıl butonu alır.'
       ],
       tips: [
-        'Mesajlar uçtan uca şifrelidir ve hiçbir yerde saklanmaz, onları taşıyan aktarıcıda bile.',
-        'IP konumları yaklaşıktır: genellikle sokak adresi değil, internet sağlayıcısının şehridir.',
-        'Buradaki herkes IP adresini görebilir, yabancılarla özel bir şey paylaşmadan önce iki kez düşün.'
+        'Mesajlar uçtan uca şifrelidir ve hiçbir yerde saklanmaz, onları taşıyan aktarıcıda bile. Biriniz ayrılır ayrılmaz sohbet iki tarafta da silinir.',
+        'Uyruğun, kendin seçene kadar bağlantından belirlenir.',
+        'Madalyalar bu tarayıcıda tutulur: başka bir tarayıcı ya da cihaz sıfırdan başlar.'
       ]
     },
     RU: {
       icon: 'who',
       title: 'Пользователи онлайн',
-      goal: 'Смотри, у кого ещё сейчас открыт сайт, что выдаёт их IP-адрес, и общайся с ними в чате.',
+      goal: 'Смотри, у кого ещё открыт сайт и чем они заняты, общайся с ними и играйте вместе.',
       steps: [
-        'Все, у кого открыт сайт, есть в списке со своим IP-адресом и флагом, включая тебя.',
-        'Выбери кого-нибудь, чтобы увидеть, что публичные сервисы знают о его IP: страну и флаг, город, часовой пояс, интернет-провайдера и многое другое.',
-        'Пиши в поле чата, чтобы отправить сообщение. Его покажут во всплывающем окне, где бы на сайте человек ни находился.',
-        'Нажми [+] Пригласить в игру и выбери игру: ты откроешь в ней комнату, а собеседник получит кнопку «Войти», которая сразу приведёт его туда.',
-        'Чат живёт, только пока вы оба здесь: как только кто-то из вас закроет сайт или потеряет связь, он удаляется у обоих.'
+        'Все, у кого открыт сайт, есть в списке под своим именем, с ASCII-лицом, гражданством и тем, чем они сейчас заняты, включая тебя. IP-адресов не видит никто.',
+        'Новички получают имя из слов программистов и свой номер, например cmd_bash_34: номер показывает, когда человек впервые пришёл. Выбери себя, чтобы сменить имя, лицо, пару слов о себе и гражданство.',
+        'Выбери кого-нибудь, чтобы открыть профиль, написанный как у пользователя Linux: кто это, откуда, чем занят прямо сейчас и его медали, названные как группы Linux.',
+        'Медали дают за игру: открыть лобби (root), заходить в лобби (netdev), выигрывать (sudo, wheel), писать в чатах лобби (staff), проводить время в лобби (daemon) и сыграть во все онлайн-игры (all_admin). Нажми на медаль, чтобы узнать условие.',
+        'Если человек в лобби, нажми «Можно к вам?»: ему придёт уведомление, и если он тебя впустит, ты сразу окажешься там.',
+        'Пиши в поле чата или нажми [+] Пригласить в игру: ты откроешь в ней лобби, а собеседник получит кнопку «Войти».'
       ],
       tips: [
-        'Сообщения защищены сквозным шифрованием и нигде не хранятся, даже на ретрансляторе, который их передаёт.',
-        'Местоположение по IP приблизительное: обычно это город провайдера, а не точный адрес.',
-        'Все здесь видят твой IP-адрес, так что подумай дважды, прежде чем делиться чем-то личным с незнакомцами.'
+        'Сообщения защищены сквозным шифрованием и нигде не хранятся, даже на ретрансляторе. Чат удаляется у обоих, как только кто-то из вас уходит.',
+        'Гражданство определяется по подключению, пока ты не выберешь его сам.',
+        'Медали хранятся в этом браузере: в другом браузере или на другом устройстве всё начинается заново.'
       ]
     },
     KK: {
       icon: 'who',
       title: 'Онлайн пайдаланушылар',
-      goal: 'Сайтты қазір тағы кім ашып отырғанын, олардың IP мекенжайы нені ашып беретінін көр және олармен чаттас.',
+      goal: 'Сайтты қазір тағы кім ашып отырғанын және не істеп жатқанын көр, олармен чаттас және бірге ойна.',
       steps: [
-        'Сайтты ашып отырған әркім тізімде IP мекенжайымен және туымен көрінеді, сен де.',
-        'Жалпыға қолжетімді қызметтер оның IP мекенжайы туралы не білетінін көру үшін біреуді таңда: елі мен туы, қаласы, уақыт белдеуі, интернет провайдері және т.б.',
-        'Хабарлама жіберу үшін чат өрісіне жаз. Ол сайттың қай жерінде болса да, қалқымалы хабарлама алады.',
-        '[+] Ойынға шақыру түймесін басып, ойын таңда: сен онда бөлме ашасың, ал ол тікелей ойынға кіргізетін «Кіру» түймесін алады.',
-        'Чат екеуің де осында болғанда ғана сақталады: біреуің сайтты жапсаң не байланыс үзілсе, ол екі жақта да жойылады.'
+        'Сайтты ашып отырған әркім тізімде атымен, ASCII бетімен, азаматтығымен және не істеп жатқанымен көрінеді, сен де. Ешкім ешкімнің IP мекенжайын көрмейді.',
+        'Жаңадан келгендерге бағдарламашы сөздерінен және пайдаланушы нөмірінен құралған ат беріледі, мысалы cmd_bash_34: нөмір оның алғаш қашан келгенін көрсетеді. Атыңды, бетіңді, өзің туралы бірер сөзді және азаматтығыңды өзгерту үшін өзіңді таңда.',
+        'Linux пайдаланушысындай жазылған профилін көру үшін біреуді таңда: кім екені, қайдан екені, қазір не істеп жатқаны және Linux топтарындай аталған медальдары.',
+        'Медальдар ойнаған сайын келеді: лобби аш (root), лоббилерге кір (netdev), ойын ұт (sudo, wheel), лоббиде чаттас (staff), лоббиде уақыт өткіз (daemon) және барлық онлайн ойындарды ойна (all_admin). Шартын көру үшін медальды бас.',
+        'Біреу лоббиде болса, «Қосылуға бола ма?» түймесін бас: оған хабарлама барады, ал ол сені кіргізсе, бірден сонда барасың.',
+        'Чат өрісіне жаз немесе [+] Ойынға шақыру түймесін бас: сен онда лобби ашасың, ал ол «Кіру» түймесін алады.'
       ],
       tips: [
-        'Хабарламалар ұштан-ұшқа шифрланған және ешқайда сақталмайды, тіпті оларды жеткізетін ретрансляторда да.',
-        'IP бойынша орналасу шамамен ғана: әдетте бұл нақты мекенжай емес, провайдердің қаласы.',
-        'Мұндағы әркім сенің IP мекенжайыңды көреді, сондықтан бейтаныс адамдармен жеке ақпарат бөліспес бұрын жақсылап ойлан.'
+        'Хабарламалар басынан аяғына дейін шифрланған және ешқайда сақталмайды, тіпті ретрансляторда да. Біреуің шыққан бойда чат екі жақта да өшеді.',
+        'Азаматтығың өзің таңдағанша байланысыңнан анықталады.',
+        'Медальдар осы браузерде сақталады: басқа браузерде не құрылғыда бәрі басынан басталады.'
+      ]
+    }
+  },
+  lobby: {
+    EN: {
+      icon: '[#]',
+      title: 'Lobbies',
+      goal: 'Find a lobby to play in, or open your own and keep everyone together from game to game.',
+      steps: [
+        'Every lobby open on the site is listed with its game, code, host, players and the time it has left. Press one to see who’s inside, then Join.',
+        'A lobby lasts an hour from when it opens. You can also join one with its code from any online game, or by scanning its QR code, which takes you straight in.',
+        'In a lobby, the host can press Change game at any time: everyone stays, with the same code, and only the game and its options change.',
+        'The lobby has a chat of its own, here and on the game’s lobby screen. It also says when someone comes or goes, changes their name, or the game changes.',
+        'You stay in your lobby while you look around the site: the [~] button at the top takes you back. Leave takes you out of it.'
+      ],
+      tips: [
+        'If the host leaves, the lobby closes for everyone.',
+        'Joining another lobby, or opening one, takes you out of the one you’re in. A host who opens a new one just switches the game instead.'
+      ]
+    },
+    TR: {
+      icon: '[#]',
+      title: 'Lobiler',
+      goal: 'Oynayacak bir lobi bul ya da kendi lobini aç ve herkesi oyundan oyuna bir arada tut.',
+      steps: [
+        'Sitede açık olan her lobi oyunu, kodu, sunucusu, oyuncuları ve kalan süresiyle listelenir. İçeride kimlerin olduğunu görmek için birine bas, sonra Katıl.',
+        'Bir lobi açıldığı andan itibaren bir saat sürer. Herhangi bir çevrim içi oyunda koduyla ya da QR kodunu okutarak da katılabilirsin; QR kod seni doğrudan içeri alır.',
+        'Lobide sunucu istediği an Oyunu değiştir’e basabilir: herkes aynı kodla lobide kalır, yalnızca oyun ve ayarları değişir.',
+        'Lobinin kendi sohbeti vardır, hem burada hem oyunun lobi ekranında. Biri geldiğinde ya da gittiğinde, adını değiştirdiğinde veya oyun değiştiğinde de yazar.',
+        'Sitede gezinirken lobinde kalırsın: üstteki [~] butonu seni geri götürür. Ayrıl seni lobiden çıkarır.'
+      ],
+      tips: [
+        'Sunucu ayrılırsa lobi herkes için kapanır.',
+        'Başka bir lobiye katılmak ya da yeni lobi açmak seni bulunduğun lobiden çıkarır. Sunucu yeni lobi açarsa bunun yerine sadece oyun değişir.'
+      ]
+    },
+    RU: {
+      icon: '[#]',
+      title: 'Лобби',
+      goal: 'Найди лобби, чтобы поиграть, или открой своё и держи всех вместе от игры к игре.',
+      steps: [
+        'Здесь видны все лобби сайта: игра, код, ведущий, игроки и сколько осталось времени. Нажми на лобби, чтобы увидеть, кто внутри, и войди.',
+        'Лобби живёт час с момента открытия. Войти можно и по коду из любой онлайн-игры или по QR-коду — он сразу приводит внутрь.',
+        'В лобби ведущий может в любой момент нажать «Сменить игру»: все остаются, код тот же, меняются только игра и её настройки.',
+        'У лобби свой чат — здесь и на экране лобби в игре. Там же видно, кто зашёл или вышел, сменил имя и когда сменилась игра.',
+        'Ты остаёшься в лобби, пока ходишь по сайту: кнопка [~] сверху вернёт тебя туда. «Выйти» выводит из лобби.'
+      ],
+      tips: [
+        'Если ведущий уходит, лобби закрывается для всех.',
+        'Если войдёшь в другое лобби или откроешь новое, ты выйдешь из текущего. Если новое открывает ведущий, вместо этого просто меняется игра.'
+      ]
+    },
+    KK: {
+      icon: '[#]',
+      title: 'Лоббилер',
+      goal: 'Ойнайтын лобби тап немесе өзіңдікін ашып, бәрін ойыннан ойынға бірге ұста.',
+      steps: [
+        'Сайттағы әр ашық лобби ойынымен, кодымен, жүргізушісімен, ойыншыларымен және қалған уақытымен көрсетіледі. Ішінде кім барын көру үшін біреуін бас, сосын Кіру.',
+        'Лобби ашылғаннан бастап бір сағат тұрады. Кез келген онлайн ойында код арқылы немесе QR кодын оқытып та кіруге болады — QR код бірден ішке кіргізеді.',
+        'Лоббиде жүргізуші кез келген уақытта «Ойынды ауыстыру» түймесін баса алады: бәрі сол кодпен қалады, тек ойын мен оның баптаулары өзгереді.',
+        'Лоббидің өз чаты бар — осында да, ойынның лобби экранында да. Біреу кіргенде не шыққанда, атын өзгерткенде немесе ойын ауысқанда да жазылады.',
+        'Сайтты аралап жүргенде лоббиіңде қаласың: жоғарыдағы [~] түймесі сені қайтарады. «Шығу» лоббиден шығарады.'
+      ],
+      tips: [
+        'Жүргізуші шықса, лобби бәрі үшін жабылады.',
+        'Басқа лоббиге кірсең не жаңасын ашсаң, қазіргісінен шығасың. Жаңасын жүргізуші ашса, оның орнына тек ойын ауысады.'
       ]
     }
   }

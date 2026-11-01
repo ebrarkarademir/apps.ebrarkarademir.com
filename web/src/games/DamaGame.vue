@@ -2,6 +2,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom } from '../online/useOnlineRoom'
+import { recordWin } from '../online/profile'
 import DamaStage from './dama/DamaStage.vue'
 import ChessPiece from './chess/ChessPiece.vue'
 import { DAMA_PIECES } from './dama/pieces'
@@ -237,6 +238,7 @@ watch(() => (view.value?.phase === 'over' ? view.value.round : 0), (round) => {
   resultShown.value = false
   resultHidden.value = false
   if (round) resultTimer = setTimeout(() => { resultShown.value = true }, RESULT_MS)
+  if (round && myColor.value && view.value.outcome?.winner === myColor.value) recordWin('dama')
 })
 onUnmounted(() => clearTimeout(resultTimer))
 

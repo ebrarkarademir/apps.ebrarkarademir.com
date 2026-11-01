@@ -1,9 +1,10 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import confetti from 'canvas-confetti'
+import { recordWin } from '../online/profile'
 import TermWindow from '../components/TermWindow.vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
-import { useOnlineRoom } from '../online/useOnlineRoom'
+import { useOnlineRoom, currentRoom } from '../online/useOnlineRoom'
 import SudokuStage from './sudoku/SudokuStage.vue'
 import { CELLS, DIFFICULTIES, MAX_MISTAKES, HINTS, generate, isPuzzleText } from './sudoku/engine'
 import { JP, useJapaneseFont } from './ascii/paint'
@@ -51,7 +52,7 @@ const formatTime = (seconds) => {
 }
 
 // null while choosing, then solo or online; an invite link or a chat invite goes straight online
-const mode = ref(props.initialCode || props.hostRoom ? 'online' : null)
+const mode = ref(props.initialCode || props.hostRoom || currentRoom.value?.game === 'sudoku' ? 'online' : null)
 
 // ---------- Kept on this device ----------
 
@@ -290,6 +291,7 @@ const winner = computed(() => (view.value?.outcome?.winner ? standings.value.fin
 
 watch(() => (view.value?.phase === 'results' ? view.value.round : 0), (round) => {
   if (round && winner.value?.id === room.myId) {
+    recordWin('sudoku')
     confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
   }
 })

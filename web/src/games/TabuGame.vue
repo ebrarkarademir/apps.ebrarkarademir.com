@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useOnlineRoom } from '../online/useOnlineRoom'
+import { recordWin } from '../online/profile'
 import OnlineRoom from '../online/OnlineRoom.vue'
 
 const props = defineProps({
@@ -175,6 +176,12 @@ const winnerText = computed(() => {
   const [first, second] = view.value.scores
   if (first === second) return props.t.tabuDraw
   return fmt(props.t.tabuTeamWins, { team: teamName(first > second ? 0 : 1) })
+})
+
+// The team with more points wins, everyone in it, for the medals
+watch(() => view.value?.phase, (phase) => {
+  const scores = view.value?.scores
+  if (phase === 'score' && scores && scores[0] !== scores[1] && myTeam.value === (scores[0] > scores[1] ? 0 : 1)) recordWin('tabu')
 })
 
 const primary = 'term-btn term-btn-primary w-full min-h-14'

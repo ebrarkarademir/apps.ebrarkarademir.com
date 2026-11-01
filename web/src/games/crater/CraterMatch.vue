@@ -1,6 +1,7 @@
 <script setup>
 import { computed, watch, ref, onUnmounted } from 'vue'
 import confetti from 'canvas-confetti'
+import { recordWin } from '../../online/profile'
 import CraterStage from './CraterStage.vue'
 import { SIDE_COLORS } from './renderer'
 
@@ -43,6 +44,7 @@ watch(() => (view.value?.phase === 'over' ? view.value.round : 0), (round) => {
   resultTimer = setTimeout(() => {
     resultShown.value = true
     if (view.value?.outcome?.winner === mySide.value && mySide.value >= 0) {
+      recordWin('crater')
       confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#ffb000', '#f2f6ea'], shapes: ['square'] })
     }
   }, RESULT_MS)

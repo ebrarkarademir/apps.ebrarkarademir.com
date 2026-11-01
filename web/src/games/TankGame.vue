@@ -2,7 +2,7 @@
 import { ref, reactive, computed, watch, markRaw } from 'vue'
 import TermWindow from '../components/TermWindow.vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
-import { useOnlineRoom } from '../online/useOnlineRoom'
+import { useOnlineRoom, currentRoom } from '../online/useOnlineRoom'
 import { useLocalRoom } from '../online/useLocalRoom'
 import TankMatch from './tank/TankMatch.vue'
 import { ARMOR, INVULNERABLE, MAPS, POWER_DAMAGE, GIFT_LIFE, MAX_GIFTS, freeSpot, mapOf } from './tank/engine'
@@ -48,7 +48,7 @@ const shuffle = (list) => {
 const levelName = (level) => props.t[`bot${level[0].toUpperCase()}${level.slice(1)}`]
 
 // null while choosing, then setup (solo options), solo or online; an invite goes straight online
-const mode = ref(props.initialCode || props.hostRoom ? 'online' : null)
+const mode = ref(props.initialCode || props.hostRoom || currentRoom.value?.game === 'tanks' ? 'online' : null)
 
 // ---------- Host-side rules, for an online room and a solo game alike ----------
 //

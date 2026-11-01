@@ -4,6 +4,7 @@ import LanguageMenu from './components/LanguageMenu.vue'
 import TermWindow from './components/TermWindow.vue'
 import GameMenu from './views/GameMenu.vue'
 import UsersView from './views/UsersView.vue'
+import LobbyView from './views/LobbyView.vue'
 import NumberGuessingGame from './games/NumberGuessingGame.vue'
 import BottleSpinGame from './games/BottleSpinGame.vue'
 import CasusKimGame from './games/CasusKimGame.vue'
@@ -28,8 +29,10 @@ const worldOn = import.meta.env.DEV || !!import.meta.env.VITE_WORLD_URL
 import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
 import { useUsers } from './online/useUsers'
-import { currentRoom } from './online/useOnlineRoom'
-import { switchTargets, switchRequest } from './online/gameSwitch'
+import { session, currentRoom, roomInfo } from './online/session'
+import { switchTargets, appNav } from './online/gameSwitch'
+import { profile, autoCountry, earnedMedals, randomName, cleanName, ensureName, MAX_NAME } from './online/profile'
+import { lookUpIp as lookUpIpInfo } from './online/ipInfo'
 
 // The language menu lists every language in translations.js, each by its own name
 const languages = Object.entries(translations).map(([code, text]) => ({ code, name: text.languageName }))
@@ -255,7 +258,7 @@ const games = computed(() => [
 
 const CATEGORY_KEYS = ['all', 'party', 'online', 'solo']
 const GAME_IDS = games.value.map(game => game.id)
-const PAGES = ['users']
+const PAGES = ['users', 'lobby']
 
 const parsePath = (pathname) => {
   const slug = decodeURIComponent(pathname).replace(/^\/+|\/+$/g, '').toLowerCase()
@@ -294,9 +297,10 @@ const showRules = ref(false)
 // so they can't be mistaken for the live site
 const isDevSite = import.meta.env.DEV || window.location.hostname.includes('-dev.')
 
-// The shell prompt shows the visitor's public IPv4 address as the user name. The site has no
-// server of its own, so a public lookup service is asked once per browser session; until it
-// answers, or if it's blocked, the visitor stays "guest".
+// The visitor's public IPv4 address, only to tell the country they're in (the nationality their
+// profile shows unless they pick one). The site has no server of its own, so a public lookup
+// service is asked once per browser session; until it answers, or if it's blocked, it's "guest".
+// The shell prompt shows the visitor's name.
 const IP_KEY = 'publicIp'
 const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/
 
@@ -321,34 +325,129 @@ async function lookUpIp () {
   }
 }
 
+// Where the visitor is, for their nationality
+watch(visitor, async (ip) => {
+  if (!IPV4.test(ip)) return
+  try {
+    const info = await lookUpIpInfo(ip)
+    if (info.countryCode) autoCountry.value = info.countryCode
+  } catch {
+    // No country, then: the profile shows none until they pick one
+  }
+}, { immediate: true })
+
 // ---------- Online users ----------
 // Every visitor shows up on the Users page, whichever page they're on, and can be messaged and
 // invited to online games there. A message whose chat isn't on screen pops up at the bottom for
-// a few seconds.
+// a few seconds. What everyone sees of them is their profile (see profile.js), the page they
+// have open and the lobby they're in.
 
 const TOAST_MS = 7000
+const REQUEST_TOAST_MS = 20000
+const ASK_MS = 5 * 60 * 1000 // a request to join is answered within this, or forgotten
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 const gameTitle = (id) => games.value.find(game => game.id === id)?.title || id
-const personName = (person) => person.ip || t.value.usersGuest
+const personName = (person) => person.name || t.value.usersGuest
 // What the chat's game picker offers
 const onlineGames = computed(() => ONLINE_GAMES.map(id => games.value.find(game => game.id === id)))
 
-const users = useUsers({ ip: visitor, space: isDevSite ? 'dev' : 'live', games: ONLINE_GAMES, onMessage: onChatMessage })
+// What this tab tells everyone: the profile, what's open, and the lobby it's in (its host also
+// lists who's inside, for the Lobby page)
+const roomCard = computed(() => {
+  const room = roomInfo.value
+  if (!room) return null
+  const players = room.host ? room.players.map(({ name, av, host }) => ({ name, av, host })) : []
+  return { code: room.code, game: room.game, host: room.host, phase: room.phase, ends: room.ends, players }
+})
+const status = computed(() => ({
+  name: profile.name,
+  uid: profile.uid,
+  av: profile.avatar,
+  bio: profile.bio,
+  cc: profile.country || autoCountry.value,
+  md: earnedMedals(profile.stats, profile.uid),
+  act: selectedGame.value || page.value || 'menu',
+  room: roomCard.value
+}))
+
+const users = useUsers({ status, space: isDevSite ? 'dev' : 'live', games: ONLINE_GAMES, onMessage: onChatMessage })
 const selectedUser = ref(null)
-// { id, title, text, hint, run }: id is the person it's about, run what clicking it does, if anything
+// { id, title, text, hint, run, actions }: id is the person it's about (it goes when they do), run
+// what clicking it does, and actions buttons of its own ({ label, run })
 const toast = ref(null)
 let toastTimer = null
 
-function showToast (next) {
+function showToast (next, ms = TOAST_MS) {
   toast.value = next
   clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => { toast.value = null }, TOAST_MS)
+  toastTimer = setTimeout(() => { toast.value = null }, ms)
 }
 
-function onChatMessage (person, { text, invite }) {
-  if (users.active === person.id) return
+// People this tab asked to join their lobby: { id, at }
+const asked = ref([])
+const askedIds = computed(() => asked.value.filter(item => Date.now() - item.at < ASK_MS).map(item => item.id))
+const takeAsked = (id) => {
+  const was = askedIds.value.includes(id)
+  asked.value = asked.value.filter(item => item.id !== id)
+  return was
+}
+
+async function askToJoin (id) {
+  const person = users.people.get(id)
+  if (!person || askedIds.value.includes(id)) return
+  // A visitor who just arrived gets their name first, so the request shows who's asking
+  if (!profile.name) {
+    await ensureName()
+    await new Promise(resolve => setTimeout(resolve, 600))
+  }
+  if (await users.sendRequest(id)) {
+    asked.value = [...asked.value.filter(item => item.id !== id), { id, at: Date.now() }]
+    showToast({ id, title: fmt(t.value.usersAskWaiting, { name: personName(person) }), text: `${gameTitle(person.room.game)} · ${t.value.onlineRoomLabel}: ${person.room.code}` })
+  }
+}
+
+// Someone asked to join: let them in with an invite to the lobby this tab is in, or say not now
+async function answerRequest ({ id, messageId, ok }) {
+  users.markAnswered(id, messageId)
+  if (toast.value?.messageId === messageId) toast.value = null
+  const room = currentRoom.value
+  if (ok && room) await users.sendInvite(id, room.game, room.code)
+  else await users.sendDecline(id)
+}
+
+function onChatMessage (person, message) {
   const name = personName(person)
+  const { text, invite, request, reply } = message
+  // The answer to a request to join: in they go, or they hear why not
+  if (invite && takeAsked(person.id)) {
+    showToast({ id: person.id, title: fmt(t.value.usersLetIn, { name }), text: `${gameTitle(invite.game)} · ${t.value.onlineRoomLabel}: ${invite.code}` })
+    launchGame(invite)
+    return
+  }
+  if (reply) {
+    if (takeAsked(person.id)) showToast({ id: person.id, title: fmt(t.value.usersSaidNo, { name }), text: '' })
+    return
+  }
+  if (request) {
+    // Asked to join a lobby this tab has since left: nothing to let them into
+    if (!currentRoom.value) {
+      answerRequest({ id: person.id, messageId: message.id, ok: false })
+      return
+    }
+    showToast({
+      id: person.id,
+      messageId: message.id,
+      title: fmt(t.value.usersRequestFrom, { name }),
+      text: `${gameTitle(currentRoom.value.game)} · ${t.value.onlineRoomLabel}: ${currentRoom.value.code}`,
+      actions: [
+        { label: t.value.usersAccept, run: () => answerRequest({ id: person.id, messageId: message.id, ok: true }) },
+        { label: t.value.usersDecline, run: () => answerRequest({ id: person.id, messageId: message.id, ok: false }) }
+      ]
+    }, REQUEST_TOAST_MS)
+    return
+  }
+  if (users.active === person.id) return
   if (invite) {
     showToast({
       id: person.id,
@@ -359,14 +458,13 @@ function onChatMessage (person, { text, invite }) {
     })
     return
   }
-  // Opening the chat leaves the page, and with it any online room this tab is in
-  const inRoom = !!currentRoom.value
+  // A lobby stays open while the visitor reads the chat
   showToast({
     id: person.id,
     title: fmt(t.value.usersNewMessage, { name }),
     text,
-    hint: inRoom ? t.value.usersReplyLater : t.value.usersOpenChat,
-    run: inRoom ? null : () => openChat(person.id)
+    hint: t.value.usersOpenChat,
+    run: () => openChat(person.id)
   })
 }
 
@@ -382,8 +480,9 @@ watch([page, selectedUser], () => {
 }, { immediate: true })
 
 // ---------- Game invites ----------
-// Inviting someone opens a room in that game on this device, and the invite with the room code
-// goes out as soon as the room is open. Joining opens the game with the code filled in.
+// Inviting someone opens a room in that game on this device (or moves the one it hosts there),
+// and the invite with the room code goes out as soon as it's ready. Joining opens the game with
+// the code filled in.
 
 const inviting = ref(null) // { to, game } until the room is open
 
@@ -393,16 +492,45 @@ function launchGame (next, options) {
   navigate(`/${next.game}`, options)
 }
 
-// A lobby moved to another game: open it, and its room reopens or rejoins the same code.
-// It takes the old game's place in the history, so Back still goes to the list.
+// ---------- The lobby this tab is in ----------
+// It stays open whatever page is on screen (see session.js). When it opens, or its host switches
+// the game, a visitor looking at an online game's page is taken to the lobby's game; it replaces
+// that page in the history, so Back still goes to the list.
+
 switchTargets.value = onlineGames.value
 watch(onlineGames, (list) => { switchTargets.value = list })
-watch(switchRequest, (next) => {
-  if (!next || !ONLINE_GAMES.includes(next.game)) return
-  switchRequest.value = null
-  toast.value = null
-  launchGame(next.host ? { game: next.game, host: true } : { game: next.game, code: next.code }, { replace: true })
+
+watch(() => (currentRoom.value ? `${currentRoom.value.code}|${currentRoom.value.game}` : ''), () => {
+  const room = currentRoom.value
+  if (room && ONLINE_GAMES.includes(selectedGame.value) && selectedGame.value !== room.game) navigate(`/${room.game}`, { replace: true })
 })
+
+// Away from the lobby's game page: the nav shows a way back
+const roomAway = computed(() => !!currentRoom.value && selectedGame.value !== currentRoom.value.game)
+
+// A made-up name (a QR code took them straight in) can be changed: offered once a visit
+const renaming = ref(false)
+const renameDraft = ref('')
+let renameOffered = false
+
+function openRename () {
+  toast.value = null
+  renameDraft.value = profile.name
+  renaming.value = true
+}
+
+function saveRename () {
+  if (session.rename(renameDraft.value)) renaming.value = false
+}
+
+watch(() => currentRoom.value?.code, (code) => {
+  if (!code || currentRoom.value.isHost || profile.custom || renameOffered) return
+  renameOffered = true
+  showToast({ title: fmt(t.value.renameToastTitle, { name: profile.name }), text: t.value.renameToastText, run: openRename }, REQUEST_TOAST_MS)
+})
+
+appNav.openGame = (game) => navigate(`/${game}`)
+appNav.renameSelf = openRename
 
 function inviteToGame ({ to, game }) {
   const person = users.people.get(to)
@@ -418,9 +546,8 @@ function joinGame ({ game, code }) {
   launchGame({ game, code })
 }
 
-watch(currentRoom, async (room) => {
-  const pending = inviting.value
-  if (!room?.isHost || room.game !== pending?.game) return
+watch([currentRoom, inviting], async ([room, pending]) => {
+  if (!pending || !room?.isHost || room.game !== pending.game) return
   inviting.value = null
   const person = users.people.get(pending.to)
   if (person && await users.sendInvite(pending.to, room.game, room.code)) {
@@ -529,7 +656,7 @@ const crumbs = computed(() => {
 const selectCategory = (key) => navigate(categoryPath(key))
 
 // Tab title follows the page, with the number of unread chat messages in front
-const pageTitle = computed(() => (page.value === 'users' ? t.value.usersTitle : selectedGameTitle.value))
+const pageTitle = computed(() => (page.value === 'users' ? t.value.usersTitle : page.value === 'lobby' ? t.value.lobbyTitle : selectedGameTitle.value))
 
 watch([pageTitle, () => users.unread], () => {
   let title = pageTitle.value ? `${pageTitle.value} | Games & Tools` : 'Games & Tools'
@@ -601,7 +728,7 @@ onUnmounted(() => {
 
         <!-- Shell prompt -->
         <p class="order-1 flex-1 basis-0 lg:flex-none lg:basis-auto min-w-0 truncate text-sm font-semibold">
-          <span aria-hidden="true"><span class="term-muted">{{ visitor }}@apps</span>:</span>
+          <span aria-hidden="true"><span class="term-muted">{{ profile.name || t.usersGuest }}@apps</span>:</span>
           <template v-for="(crumb, index) in crumbs" :key="crumb.text">
             <span v-if="index" aria-hidden="true">/</span>
             <button v-if="crumb.path" type="button" class="term-crumb" :aria-label="crumb.label" @click="navigate(crumb.path)">{{ crumb.text }}</button>
@@ -625,6 +752,21 @@ onUnmounted(() => {
           <li class="shrink-0 flex items-center px-1 text-term-low" aria-hidden="true">|</li>
           <li class="shrink-0">
             <button
+              @click="navigate('/lobby')"
+              :aria-current="page === 'lobby' ? 'page' : undefined"
+              :class="['term-tab px-2 sm:px-3 text-xs sm:text-sm', { 'is-active': page === 'lobby' }]"
+            >
+              <span aria-hidden="true">{{ page === 'lobby' ? '(*)' : '( )' }}</span>
+              <span>{{ t.navLobby }}</span>
+              <span class="tabular-nums">[{{ users.online ? users.lobbies.length : '-' }}]</span>
+              <span v-if="session.chatUnread" :class="['px-1 tabular-nums', page === 'lobby' ? 'bg-black text-term' : 'term-inverse']">
+                <span aria-hidden="true">{{ session.chatUnread }}</span>
+                <span class="sr-only">{{ t.usersUnread.replace('{n}', session.chatUnread) }}</span>
+              </span>
+            </button>
+          </li>
+          <li class="shrink-0">
+            <button
               @click="navigate('/users')"
               :aria-current="page === 'users' ? 'page' : undefined"
               :class="['term-tab px-2 sm:px-3 text-xs sm:text-sm', { 'is-active': page === 'users' }]"
@@ -641,6 +783,16 @@ onUnmounted(() => {
         </ul>
 
         <div class="order-2 lg:order-3 ml-auto flex items-center gap-2">
+          <button
+            v-if="roomAway"
+            type="button"
+            class="term-icon-btn w-auto px-2 text-xs tracking-widest"
+            :title="fmt(t.onlineBackToRoom, { code: currentRoom.code })"
+            :aria-label="fmt(t.onlineBackToRoom, { code: currentRoom.code })"
+            @click="navigate('/' + currentRoom.game)"
+          >
+            [~] {{ currentRoom.code }}
+          </button>
           <button
             @click="showRules = true"
             class="term-icon-btn"
@@ -665,10 +817,25 @@ onUnmounted(() => {
         v-model:selected="selectedUser"
         :users="users"
         :games="onlineGames"
+        :allGames="games"
+        :asked="askedIds"
         :t="t"
         @back="closeGame"
         @invite="inviteToGame"
         @join="joinGame"
+        @ask="askToJoin"
+        @answer="answerRequest"
+      />
+
+      <LobbyView
+        v-else-if="page === 'lobby'"
+        :users="users"
+        :games="onlineGames"
+        :t="t"
+        @back="closeGame"
+        @join="joinGame"
+        @open="openGame"
+        @create="(game) => launchGame({ game, host: true })"
       />
 
       <GameMenu
@@ -911,10 +1078,38 @@ onUnmounted(() => {
       </div>
     </Transition>
 
+    <!-- A new name, for someone who got a made-up one -->
+    <Transition name="rules">
+      <div
+        v-if="renaming"
+        class="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4"
+        @click.self="renaming = false"
+      >
+        <form
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rename-title"
+          class="rules-panel term-window w-full sm:max-w-md p-5 space-y-4"
+          @submit.prevent="saveRename"
+        >
+          <h2 id="rename-title" class="font-display text-3xl leading-none uppercase">{{ t.renameTitle }}</h2>
+          <p class="term-muted text-sm leading-relaxed">{{ t.renameHint }}</p>
+          <div class="flex gap-2">
+            <input v-model="renameDraft" :maxlength="MAX_NAME" autocomplete="off" spellcheck="false" :aria-label="t.usersName" class="term-input h-11 min-w-0" />
+            <button type="button" class="term-btn min-h-11 px-3 text-sm shrink-0" @click="renameDraft = randomName(profile.uid || 1 + Math.floor(Math.random() * 999))">{{ t.usersRandomName }}</button>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" class="term-btn term-btn-primary flex-1 min-h-11" :disabled="!cleanName(renameDraft)">{{ t.usersSave }}</button>
+            <button type="button" class="term-btn min-h-11" @click="renaming = false">{{ t.renameCancel }}</button>
+          </div>
+        </form>
+      </div>
+    </Transition>
+
     <!-- A chat message or game invite from someone whose chat isn't on screen, or how an invite is going -->
     <Transition name="toast">
       <div
-        v-if="toast && users.people.has(toast.id)"
+        v-if="toast && (!toast.id || users.people.has(toast.id))"
         role="status"
         class="term-window fixed z-30 bottom-4 left-4 right-4 sm:left-auto sm:w-96 flex items-start gap-2 p-3"
       >
@@ -925,8 +1120,13 @@ onUnmounted(() => {
           @click="toast.run?.()"
         >
           <span class="term-label block">[&gt;] {{ toast.title }}</span>
-          <span class="block truncate mt-1">{{ toast.text }}</span>
+          <span v-if="toast.text" class="block truncate mt-1">{{ toast.text }}</span>
           <span v-if="toast.hint" class="block text-xs term-muted mt-1 uppercase tracking-wider">{{ toast.hint }}</span>
+          <span v-if="toast.actions" class="flex flex-wrap gap-2 mt-2">
+            <button v-for="action in toast.actions" :key="action.label" type="button" class="term-btn min-h-8 px-2 py-0.5 text-xs" @click.stop="action.run()">
+              {{ action.label }}
+            </button>
+          </span>
         </component>
         <button type="button" class="term-icon-btn shrink-0 h-8 min-w-8" :aria-label="t.usersDismiss" @click="toast = null">
           [x]

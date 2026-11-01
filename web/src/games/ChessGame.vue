@@ -2,6 +2,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom } from '../online/useOnlineRoom'
+import { recordWin } from '../online/profile'
 import ChessStage from './chess/ChessStage.vue'
 import ChessPiece from './chess/ChessPiece.vue'
 import { START_FEN, parseFen, toFen, findMove, toSan, applyMove, positionKey, gameOver, canMate, other } from './chess/engine'
@@ -242,6 +243,7 @@ watch(() => (view.value?.phase === 'over' ? view.value.round : 0), (round) => {
   resultShown.value = false
   resultHidden.value = false
   if (round) resultTimer = setTimeout(() => { resultShown.value = true }, RESULT_MS)
+  if (round && myColor.value && view.value.outcome?.winner === myColor.value) recordWin('chess')
 })
 onUnmounted(() => clearTimeout(resultTimer))
 

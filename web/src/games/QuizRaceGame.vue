@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { quizQuestions } from './quizQuestions'
 import { useOnlineRoom } from '../online/useOnlineRoom'
+import { recordWin } from '../online/profile'
 import OnlineRoom from '../online/OnlineRoom.vue'
 
 const props = defineProps({
@@ -119,6 +120,11 @@ const onlinePlayers = computed(() => (view.value?.players || []).filter(p => p.o
 const answeredCount = computed(() => onlinePlayers.value.filter(p => view.value.results[p.id]?.answered).length)
 const isTie = computed(() => leaderboard.value.length > 1 && leaderboard.value[0].score === leaderboard.value[1].score)
 const hasAnswered = computed(() => myChoice.value !== null || myResult.value.answered)
+
+// First place on its own counts as a win, for the medals
+watch(() => view.value?.phase, (phase) => {
+  if (phase === 'final' && leaderboard.value[0]?.id === room.myId && !isTie.value) recordWin('quiz-race')
+})
 
 const currentQuestion = computed(() => {
   const q = view.value?.question

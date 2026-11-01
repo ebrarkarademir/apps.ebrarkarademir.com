@@ -1,9 +1,10 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted, markRaw } from 'vue'
 import confetti from 'canvas-confetti'
+import { recordWin } from '../online/profile'
 import TermWindow from '../components/TermWindow.vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
-import { useOnlineRoom } from '../online/useOnlineRoom'
+import { useOnlineRoom, currentRoom } from '../online/useOnlineRoom'
 import FutsalStage from './futsal/FutsalStage.vue'
 import { MAX_TEAM, MINUTES, GOAL_LIMITS } from './futsal/engine'
 import { LEVELS } from './futsal/bots'
@@ -54,7 +55,7 @@ const levelName = (level) => props.t[`futsal${level[0].toUpperCase()}${level.sli
 const goalsName = (n) => (n ? String(n) : props.t.futsalNoLimit)
 
 // null while choosing, then setup (solo options), solo or online; an invite goes straight online
-const mode = ref(props.initialCode || props.hostRoom ? 'online' : null)
+const mode = ref(props.initialCode || props.hostRoom || currentRoom.value?.game === 'futsal' ? 'online' : null)
 
 // ---------- Solo ----------
 
@@ -110,6 +111,7 @@ function kickOffSolo () {
 
 function onSoloEnd (result) {
   solo.result = result
+  if (result.winner === 0) recordWin('futsal')
   if (result.winner === 0) confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
 }
 
@@ -303,6 +305,7 @@ const resultText = computed(() => {
 
 watch(() => (view.value?.phase === 'results' ? view.value.round : 0), (round) => {
   if (round && result.value?.winner !== null && result.value?.winner === view.value.roster.find(e => e.id === room.myId)?.team) {
+    recordWin('futsal')
     confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
   }
 })

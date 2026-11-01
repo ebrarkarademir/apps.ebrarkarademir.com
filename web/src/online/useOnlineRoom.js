@@ -1,96 +1,20 @@
-import { ref, shallowRef, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
-import Peer from 'peerjs'
-import { iceServers } from './iceServers'
-import { RELAY_BROKERS, connectRelay, relayTopic } from './relay'
-import { switchTargets, requestSwitch, takeHandoff } from './gameSwitch'
+import { computed, reactive, onMounted, onUnmounted } from 'vue'
+import { session, currentRoom, registerRules, registerRender, unregisterRender } from './session'
+import { profile, cleanName } from './profile'
 
-// Peer-to-peer rooms shared by every online game.
+export { currentRoom, cleanName }
+
+// A game page's view of the online room (see session.js): the room this tab is in, shown on
+// this page when it plays this game. On any other game's page the room stays open in the
+// background, and that page shows its usual "create or join" screen with a way back to it.
 //
-// One device hosts: it owns the full game state, applies every player's actions and pushes
-// each guest a snapshot of what that guest may see (`project`). Guests only render what they
-// receive and send actions back. No server of our own is involved; PeerJS's public broker
-// just introduces the devices to each other.
-//
-// Guests first try a direct WebRTC link. Many routers block that even between devices on the
-// same Wi-Fi, so when it doesn't come up quickly the same messages go through a public MQTT
-// relay instead (see relay.js). The host listens on both from the start.
-//
-// A top-level `deadline` (host clock, ms) is sent as time remaining and turned back into a
-// deadline on the guest's clock, so timers line up even when device clocks disagree.
-//
-// Real-time games also send "live" data (positions and the like) many times a second. That
-// stays out of the game state: the host keeps each player's latest and passes everyone's on
-// in one small message, ten times a second by default. One-off "events" (a shot fired) are
-// passed on to everyone straight away instead; the host can also send one to a single player.
-//
-// A guest times a small echo from the host once a second: `connection` says how it reaches the
-// host (direct or relay) and the round trip in ms, and the host keeps every guest's in `pings`.
-
-const PEER_PREFIX = 'ebrarkarademir-'
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-const CONNECT_TIMEOUT_MS = 25000
-const DIRECT_MS = 7000 // how long a guest tries the direct link before switching to the relay
-const RELAY_ANSWER_MS = 5000 // per relay broker, how long a guest waits for the host to answer
-const RELAY_PING_MS = 4000
-const RELAY_TIMEOUT_MS = 15000 // silence after which a relayed player counts as gone
-const RECONNECT_MS = 1000
-const TICK_MS = 250
-const LIVE_MS = 100 // how often the host passes on the players' live data
-const RTT_MS = 1000 // how often a guest times the way to the host and back
-const SWITCH_MS = 700 // host: time for the "switch" message to reach the guests before leaving
-const PATIENCE_MS = 25000 // guest after a switch: how long to keep trying while the host reopens the room
-const NAME_KEY = 'onlineName'
-const CLIENT_KEY = 'onlineClientId'
-
-const peerOptions = { config: { iceServers } }
-
-const randomCode = () =>
-  Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('')
-
-const randomId = () => Math.random().toString(36).slice(2, 12)
-
-const waitFor = (check, ms) => new Promise((resolve) => {
-  const started = Date.now()
-  const timer = setInterval(() => {
-    if (check() || Date.now() - started > ms) {
-      clearInterval(timer)
-      resolve(check())
-    }
-  }, 100)
-})
-
-export const cleanName = (name) => String(name || '').trim().slice(0, 18)
-
-// The room this tab is in, for the rest of the app: { game, code, isHost }, or null.
-// A chat invite goes out with its code once the room is open.
-export const currentRoom = shallowRef(null)
-
-// Stable per-tab id, so a player who drops out (phone locked, page reloaded) rejoins as themselves
-const getClientId = () => {
-  try {
-    let id = sessionStorage.getItem(CLIENT_KEY)
-    if (!id) {
-      id = randomId()
-      sessionStorage.setItem(CLIENT_KEY, id)
-    }
-    return id
-  } catch {
-    return randomId()
-  }
-}
-
-const loadName = () => {
-  try {
-    return localStorage.getItem(NAME_KEY) || localStorage.getItem('quizName') || ''
-  } catch {
-    return ''
-  }
-}
+// The page hands its host-side rules to the room when it opens. They keep running after the
+// page closes (the round goes on while the host looks around) until the page opens again.
 
 /**
  * @param {object} options
- * @param {string} options.game         Game id; rooms are separate per game.
- * @param {() => object} options.initialState  Game fields merged into a fresh room state.
+ * @param {string} options.game         Game id.
+ * @param {() => object} options.initialState  Game fields merged into the room state when this game starts.
  * @param {(state, playerId) => object} [options.project]  What one player may see.
  * @param {(state, playerId, action) => void} options.onAction  Host: apply a player's action.
  * @param {(state, player) => void} [options.onJoin]   Host: a player joined or came back.
@@ -101,590 +25,91 @@ const loadName = () => {
  * @param {number} [options.liveMs]          How often the host passes on live data.
  * @param {(data, from) => void} [options.onEvent]  Everyone: another player's one-off event.
  * @param {string} [options.initialCode] Room code from an invite link; joins straight away.
- * @param {boolean} [options.hostRoom]   Creates a room straight away, for a chat invite.
+ * @param {boolean} [options.hostRoom]   Opens a room straight away (or moves this tab's room here), for a chat invite.
  */
 export function useOnlineRoom (options) {
-  const { game, initialState, project = (state) => state, onAction, onJoin, onLeave, onTick, onLive, onGuestLive, onEvent } = options
-  const liveMs = options.liveMs || LIVE_MS
+  const { game } = options
 
-  const screen = ref('home') // home | connecting | room
-  const role = ref(null) // host | guest
-  const roomCode = ref('')
-  const errorKey = ref('')
-  const playerName = ref(loadName())
-  const joinCode = ref((options.initialCode || '').toUpperCase())
-  const now = ref(Date.now())
-  const myId = getClientId()
-  // Set while the host moves the room to another game: the game it's going to
-  const switching = ref('')
-  // After a switch: the host reopens this code, and a guest keeps trying it until then
-  let hostCode = ''
-  let hostCodeTries = 0
-  let patientUntil = 0
-
-  const state = ref(null) // full state, host only
-  const remote = ref(null) // projected state received by a guest
-
-  let attempt = 0 // bumped on every reset, so callbacks from an abandoned connection do nothing
-  let peer = null
-  let connectTimer = null
-  let directTimer = null
-  let tickTimer = null
-  // Host: guests by link key (PeerJS peer id or 'relay:' + relay id) -> { playerId, send, relay, lastSeen }
-  const guests = new Map()
-  const hostRelays = [] // host: one connection per relay broker
-  // Guest: the way to the host, direct or relayed -> { send, close }
-  let hostLink = null
-  let guestRelay = null
-  let relayTimer = null
-  let lastHostMessage = 0
-  // Host: each player's latest live data, by player id; sent on when something changed
-  const liveData = new Map()
-  let liveChanged = false
-  let liveTimer = null
-  let rttTimer = null
-  // Guest: how it reaches the host and how long a message takes there and back
-  const connection = reactive({ kind: null, ms: null })
-  // Host: the same for every guest, by player id: { ms, relay }
-  const pings = reactive({})
-
-  const freshState = () => ({ phase: 'lobby', hostId: myId, players: [], ...initialState() })
-
-  const view = computed(() => {
-    if (role.value === 'host') return state.value ? project(state.value, myId) : null
-    return remote.value
+  registerRules(game, {
+    initialState: options.initialState,
+    project: options.project,
+    onAction: options.onAction,
+    onJoin: options.onJoin,
+    onLeave: options.onLeave,
+    onTick: options.onTick,
+    onGuestLive: options.onGuestLive,
+    liveMs: options.liveMs
   })
-  const me = computed(() => view.value?.players.find(p => p.id === myId) || null)
-  const isHost = computed(() => role.value === 'host')
-  const shareLink = computed(() => `${window.location.origin}/${game}?join=${roomCode.value}`)
+  const token = registerRender(game, { onLive: options.onLive, onEvent: options.onEvent })
 
-  const peerId = (code) => `${PEER_PREFIX}${game}-${code}`
-  const hostTopic = (code) => relayTopic(game, code, 'host')
-  const guestTopic = (code, relayId) => relayTopic(game, code, 'guest', relayId)
-
-  function rememberName () {
-    playerName.value = cleanName(playerName.value)
-    try {
-      localStorage.setItem(NAME_KEY, playerName.value)
-    } catch {
-      // Remembering the name is a convenience only
+  // The room is on this page while it plays this game
+  const here = computed(() => session.screen === 'room' && session.game === game)
+  // In a room playing something else
+  const elsewhere = computed(() => (session.screen === 'room' && session.game && session.game !== game ? { game: session.game, code: session.roomCode } : null))
+  const screen = computed(() => (elsewhere.value ? 'home' : session.screen))
+  // A game's screens only show once its part of the state is there
+  const view = computed(() => (here.value && session.view?.ready ? session.view : null))
+  const me = computed(() => view.value?.players.find(p => p.id === session.myId) || null)
+  const shareLink = computed(() => `${window.location.origin}/${session.game || game}?join=${session.roomCode}`)
+  const playerName = computed({
+    get: () => profile.name,
+    set: (name) => {
+      profile.name = String(name).slice(0, 18)
+      profile.custom = true
     }
-    errorKey.value = ''
-    return playerName.value !== ''
-  }
-
-  // ---------- Host ----------
-
-  function createRoom () {
-    if (!rememberName()) return
-    resetConnection()
-    role.value = 'host'
-    screen.value = 'connecting'
-    openHostPeer(hostCode || randomCode())
-  }
-
-  function openHostPeer (code) {
-    const hostPeer = new Peer(peerId(code), peerOptions)
-    peer = hostPeer
-    hostPeer.on('open', () => {
-      // 'open' fires again after a reconnect; the room must survive that
-      if (state.value) return
-      roomCode.value = code
-      state.value = freshState()
-      addPlayer(myId, playerName.value)
-      screen.value = 'room'
-      RELAY_BROKERS.forEach(url => openHostRelay(url, code, attempt))
-    })
-    hostPeer.on('connection', (conn) => {
-      const link = { send: (msg) => conn.open && conn.send(msg) }
-      conn.on('data', (msg) => handleGuestMessage(conn.peer, link, msg))
-      conn.on('close', () => dropGuest(conn.peer))
-      conn.on('error', () => dropGuest(conn.peer))
-    })
-    // Phones drop the broker connection when the host switches apps (e.g. to send the code).
-    // Without it new guests get "room not found", so get the same code back.
-    hostPeer.on('disconnected', () => {
-      if (peer === hostPeer && !hostPeer.destroyed) setTimeout(() => reconnectHost(hostPeer), RECONNECT_MS)
-    })
-    hostPeer.on('error', (err) => {
-      if (peer !== hostPeer) return
-      if (err.type === 'unavailable-id' && !state.value) {
-        hostPeer.destroy()
-        // After a switch the code is the one the guests are waiting on: try it a few more times
-        if (hostCode && hostCodeTries++ < 3) setTimeout(() => { if (peer === hostPeer) openHostPeer(code) }, RECONNECT_MS * 1.5)
-        else openHostPeer(randomCode())
-      } else if (screen.value === 'connecting') {
-        fail('onlineErrConnection')
-      }
-    })
-  }
-
-  function reconnectHost (hostPeer) {
-    if (peer === hostPeer && hostPeer.disconnected && !hostPeer.destroyed) hostPeer.reconnect()
-  }
-
-  // Listen for relayed guests on one broker, and keep trying if it is unreachable or drops
-  async function openHostRelay (url, code, myAttempt) {
-    const retry = (ms) => setTimeout(() => {
-      if (attempt === myAttempt) openHostRelay(url, code, myAttempt)
-    }, ms)
-    let relay
-    try {
-      relay = await connectRelay(url, {
-        onMessage: (topic, envelope) => onRelayedMessage(relay, code, envelope),
-        onClose: () => {
-          const index = hostRelays.indexOf(relay)
-          if (index >= 0) hostRelays.splice(index, 1)
-          retry(RECONNECT_MS * 3)
-        }
-      })
-    } catch {
-      retry(RECONNECT_MS * 10)
-      return
-    }
-    if (attempt !== myAttempt) {
-      relay.close()
-      return
-    }
-    hostRelays.push(relay)
-    await relay.subscribe(hostTopic(code))
-  }
-
-  function onRelayedMessage (relay, code, envelope) {
-    const { from, msg } = envelope || {}
-    if (typeof from !== 'string' || !msg || typeof msg !== 'object') return
-    const key = 'relay:' + from
-    const send = (reply) => relay.publish(guestTopic(code, from), reply)
-    if (msg.type === 'join') {
-      handleGuestMessage(key, { relay: true, send }, msg)
-    } else if (msg.type === 'leave') {
-      dropGuest(key)
-    } else if (msg.type === 'ping') {
-      const guest = guests.get(key)
-      if (guest) guest.lastSeen = Date.now()
-      // A guest we already dropped for silence is still there: have it join again
-      send({ type: guest ? 'pong' : 'rejoin' })
-    } else {
-      handleGuestMessage(key, null, msg)
-    }
-  }
-
-  function addPlayer (id, rawName) {
-    const s = state.value
-    const name = cleanName(rawName) || 'Player'
-    const existing = s.players.find(p => p.id === id)
-    if (existing) {
-      existing.online = true
-      onJoin?.(s, existing)
-      return
-    }
-    const taken = new Set(s.players.map(p => p.name))
-    let unique = name
-    for (let n = 2; taken.has(unique); n++) unique = `${name} ${n}`
-    const player = { id, name: unique, online: true }
-    s.players.push(player)
-    onJoin?.(s, player)
-  }
-
-  function handleGuestMessage (key, link, msg) {
-    if (!state.value || typeof msg !== 'object' || !msg) return
-    const known = guests.get(key)
-    if (known) known.lastSeen = Date.now()
-    if (msg.type === 'join' && typeof msg.clientId === 'string' && link) {
-      // The same tab reconnecting (or switching to the relay) replaces its old connection
-      guests.forEach((guest, other) => {
-        if (guest.playerId === msg.clientId && other !== key) guests.delete(other)
-      })
-      guests.set(key, { ...link, playerId: msg.clientId, lastSeen: Date.now() })
-      addPlayer(msg.clientId, msg.name)
-      sendTo(guests.get(key))
-    } else if (msg.type === 'action' && known) {
-      onAction(state.value, known.playerId, msg.action || {})
-    } else if (msg.type === 'live' && known) {
-      liveData.set(known.playerId, msg.data)
-      liveChanged = true
-      onGuestLive?.(known.playerId, msg.data)
-    } else if (msg.type === 'event' && known && msg.data && typeof msg.data === 'object') {
-      passOnEvent(known.playerId, msg.data)
-    } else if (msg.type === 'rtt' && known) {
-      // Echo it straight back, and keep the round trip the guest last measured
-      known.send({ type: 'rtt', t: msg.t })
-      if (Number.isFinite(msg.last)) pings[known.playerId] = { ms: Math.round(msg.last), relay: !!known.relay }
-    }
-  }
-
-  // Host: an event goes to every other player at once
-  function passOnEvent (from, data) {
-    guests.forEach(guest => {
-      if (guest.playerId !== from) guest.send({ type: 'event', from, data })
-    })
-    if (from !== myId) onEvent?.(data, from)
-  }
-
-  function dropGuest (key) {
-    const guest = guests.get(key)
-    if (!guest || !state.value) return
-    guests.delete(key)
-    liveData.delete(guest.playerId)
-    delete pings[guest.playerId]
-    liveChanged = true
-    const s = state.value
-    const player = s.players.find(p => p.id === guest.playerId)
-    if (!player) return
-    if (s.phase === 'lobby') s.players = s.players.filter(p => p !== player)
-    else player.online = false
-    onLeave?.(s, player)
-  }
-
-  function serialize (snapshot) {
-    const data = JSON.parse(JSON.stringify(snapshot))
-    if (typeof data.deadline === 'number') {
-      data.msLeft = Math.max(0, data.deadline - Date.now())
-      delete data.deadline
-    }
-    return data
-  }
-
-  function sendTo (guest) {
-    if (guest && state.value) guest.send({ type: 'state', state: serialize(project(state.value, guest.playerId)) })
-  }
-
-  // Any change to the host's state reaches every guest on the next tick
-  watch(state, () => guests.forEach(sendTo), { deep: true })
-
-  // Let the rest of the app know while this room is open
-  const owner = Symbol(game)
-  watch([screen, roomCode, role], () => {
-    if (screen.value === 'room') currentRoom.value = { game, code: roomCode.value, isHost: role.value === 'host', owner }
-    else if (currentRoom.value?.owner === owner) currentRoom.value = null
   })
-
-  function flushLive () {
-    if (role.value !== 'host' || !state.value || !liveChanged) return
-    liveChanged = false
-    const data = Object.fromEntries(liveData)
-    guests.forEach(guest => guest.send({ type: 'live', data }))
-    onLive?.(data)
-  }
-
-  // ---------- Guest ----------
-
-  function joinRoom () {
-    if (!rememberName()) return
-    const code = joinCode.value.trim().toUpperCase()
-    if (code.length !== 4) {
-      errorKey.value = 'onlineErrCode'
-      return
-    }
-    resetConnection()
-    role.value = 'guest'
-    roomCode.value = code
-    screen.value = 'connecting'
-    const myAttempt = attempt
-    const status = { reachedBroker: false, notFound: false, relayStarted: false }
-    connectTimer = setTimeout(() => {
-      fail(status.notFound ? 'onlineErrNotFound' : status.reachedBroker ? 'onlineErrNoRoute' : 'onlineErrConnection')
-    }, CONNECT_TIMEOUT_MS)
-
-    // Direct link didn't come up: drop it and go through the relay
-    const toRelay = () => {
-      if (attempt !== myAttempt || status.relayStarted || screen.value !== 'connecting') return
-      status.relayStarted = true
-      clearTimeout(directTimer)
-      const directPeer = peer
-      peer = null
-      hostLink = null
-      directPeer?.destroy()
-      joinViaRelay(code, myAttempt, randomId())
-    }
-    directTimer = setTimeout(toRelay, DIRECT_MS)
-
-    const guestPeer = new Peer(peerOptions)
-    peer = guestPeer
-    guestPeer.on('open', () => {
-      status.reachedBroker = true
-      const conn = guestPeer.connect(peerId(code), { reliable: true })
-      const link = { send: (msg) => conn.open && conn.send(msg), close: () => conn.close() }
-      hostLink = link
-      connection.kind = 'direct'
-      conn.on('open', () => conn.send(joinMessage()))
-      conn.on('iceStateChanged', (iceState) => {
-        if (hostLink === link && iceState === 'failed') toRelay()
-      })
-      conn.on('data', (msg) => {
-        if (hostLink === link) receiveFromHost(msg)
-      })
-      // Events from a connection we already left are ignored
-      conn.on('close', () => {
-        if (hostLink === link) fail('onlineErrDisconnected')
-      })
-    })
-    guestPeer.on('error', (err) => {
-      if (peer !== guestPeer) return
-      if (err.type === 'peer-unavailable') status.notFound = true
-      // After a switch the host may not have reopened the room yet: try again shortly
-      if (err.type === 'peer-unavailable' && Date.now() < patientUntil) {
-        setTimeout(() => { if (attempt === myAttempt) joinRoom() }, RECONNECT_MS)
-        return
-      }
-      // Once in the room, the data connection survives broker hiccups
-      if (screen.value === 'connecting') toRelay()
-    })
-  }
-
-  const joinMessage = () => ({ type: 'join', name: playerName.value, clientId: myId })
-
-  function receiveFromHost (msg) {
-    lastHostMessage = Date.now()
-    if (msg?.type === 'rejoin') hostLink?.send(joinMessage())
-    if (msg?.type === 'rtt') {
-      if (Number.isFinite(msg.t)) {
-        const ms = performance.now() - msg.t
-        // Eased a little, so one slow message doesn't make the number jump
-        connection.ms = connection.ms === null ? ms : connection.ms * 0.6 + ms * 0.4
-      }
-      return
-    }
-    if (msg?.type === 'live') {
-      if (msg.data && typeof msg.data === 'object') onLive?.(msg.data)
-      return
-    }
-    if (msg?.type === 'event') {
-      if (msg.data && typeof msg.data === 'object') onEvent?.(msg.data, msg.from)
-      return
-    }
-    if (msg?.type === 'switch') {
-      // The host is moving the room to another game: follow it there with the same code
-      if (switchTargets.value.some(target => target.id === msg.game) && msg.game !== game) {
-        const code = roomCode.value
-        resetConnection()
-        switching.value = msg.game
-        requestSwitch({ game: msg.game, code, host: false })
-      }
-      return
-    }
-    if (msg?.type !== 'state') return
-    patientUntil = 0
-    clearTimeout(connectTimer)
-    clearTimeout(directTimer)
-    const next = msg.state
-    if (typeof next.msLeft === 'number') {
-      next.deadline = Date.now() + next.msLeft
-      delete next.msLeft
-    }
-    remote.value = next
-    screen.value = 'room'
-    startTiming()
-  }
-
-  // Once a second the guest sends the time and the host sends it straight back
-  function startTiming () {
-    if (rttTimer) return
-    const send = () => hostLink?.send({ type: 'rtt', t: performance.now(), last: connection.ms })
-    send()
-    rttTimer = setInterval(send, RTT_MS)
-  }
-
-  // Try each broker until the host answers there. Also used to get back in after the relay drops.
-  async function joinViaRelay (code, myAttempt, relayId) {
-    for (const url of RELAY_BROKERS) {
-      if (attempt !== myAttempt) return
-      let relay
-      try {
-        relay = await connectRelay(url, {
-          onMessage: (topic, msg) => {
-            if (guestRelay === relay) receiveFromHost(msg)
-          },
-          onClose: () => {
-            if (guestRelay !== relay || attempt !== myAttempt) return
-            guestRelay = null
-            hostLink = null
-            joinViaRelay(code, myAttempt, relayId)
-          }
-        })
-      } catch {
-        continue
-      }
-      if (attempt !== myAttempt) {
-        relay.close()
-        return
-      }
-      guestRelay = relay
-      connection.kind = 'relay'
-      connection.ms = null
-      await relay.subscribe(guestTopic(code, relayId))
-      const link = {
-        send: (msg) => relay.publish(hostTopic(code), { from: relayId, msg }),
-        close: () => {
-          link.send({ type: 'leave' })
-          relay.close()
-        }
-      }
-      hostLink = link
-      const asked = Date.now()
-      link.send(joinMessage())
-      if (await waitFor(() => attempt !== myAttempt || lastHostMessage > asked, RELAY_ANSWER_MS)) {
-        if (attempt === myAttempt) watchRelayedHost(myAttempt)
-        return
-      }
-      guestRelay = null
-      hostLink = null
-      relay.close()
-    }
-  }
-
-  // Relayed messages have no connection to close, so both sides ping and watch for silence
-  function watchRelayedHost (myAttempt) {
-    clearInterval(relayTimer)
-    relayTimer = setInterval(() => {
-      if (attempt !== myAttempt) return
-      hostLink?.send({ type: 'ping' })
-      if (Date.now() - lastHostMessage > RELAY_TIMEOUT_MS) fail('onlineErrDisconnected')
-    }, RELAY_PING_MS)
-  }
-
-  // ---------- Shared ----------
-
-  /** Send an action to the host (or apply it directly when this device is the host). */
-  function act (type, payload = {}) {
-    const action = { type, ...payload }
-    if (role.value === 'host') onAction(state.value, myId, action)
-    else hostLink?.send({ type: 'action', action })
-  }
-
-  /** Share this player's latest live data; it replaces what they sent before. */
-  function sendLive (data) {
-    if (role.value === 'host') {
-      liveData.set(myId, data)
-      liveChanged = true
-    } else {
-      hostLink?.send({ type: 'live', data })
-    }
-  }
-
-  /** Send a one-off event to every other player, right away. */
-  function sendEvent (data) {
-    if (role.value === 'host') passOnEvent(myId, data)
-    else hostLink?.send({ type: 'event', data })
-  }
-
-  /** Host: send a one-off event to one player only, e.g. to catch up someone who joined late. */
-  function sendEventTo (playerId, data) {
-    if (role.value !== 'host') return
-    if (playerId === myId) {
-      onEvent?.(data, myId)
-      return
-    }
-    guests.forEach(guest => {
-      if (guest.playerId === playerId) guest.send({ type: 'event', from: myId, data })
-    })
-  }
-
-  /** Host, in the lobby: take everyone in the room to another game, keeping the room code. */
-  function switchGame (next) {
-    if (role.value !== 'host' || !state.value || switching.value || next === game) return
-    if (!switchTargets.value.some(target => target.id === next)) return
-    switching.value = next
-    const code = roomCode.value
-    guests.forEach(guest => guest.send({ type: 'switch', game: next }))
-    setTimeout(() => requestSwitch({ game: next, code, host: true }), SWITCH_MS)
-  }
-
-  function fail (key) {
-    // After a switch, keep trying until the host has the room open again
-    if (role.value === 'guest' && Date.now() < patientUntil && roomCode.value) {
-      const myAttempt = attempt
-      setTimeout(() => { if (attempt === myAttempt) joinRoom() }, RECONNECT_MS)
-      return
-    }
-    resetConnection()
-    errorKey.value = key
-    screen.value = 'home'
-  }
-
-  function resetConnection () {
-    attempt++
-    clearTimeout(connectTimer)
-    clearTimeout(directTimer)
-    clearInterval(relayTimer)
-    clearInterval(rttTimer)
-    rttTimer = null
-    connection.kind = null
-    connection.ms = null
-    Object.keys(pings).forEach(id => delete pings[id])
-    guests.clear()
-    liveData.clear()
-    liveChanged = false
-    const oldLink = hostLink
-    const oldPeer = peer
-    const oldRelays = [...hostRelays, guestRelay].filter(Boolean)
-    hostLink = null
-    peer = null
-    guestRelay = null
-    hostRelays.length = 0
-    oldLink?.close()
-    oldPeer?.destroy()
-    oldRelays.forEach(relay => relay.close())
-    state.value = null
-    remote.value = null
-  }
-
-  function leave () {
-    hostCode = ''
-    patientUntil = 0
-    switching.value = ''
-    resetConnection()
-    role.value = null
-    screen.value = 'home'
-  }
-
-  // Coming back to the app: reconnect the host to the broker right away
-  function onVisible () {
-    if (document.visibilityState === 'visible' && role.value === 'host' && peer) reconnectHost(peer)
-  }
 
   onMounted(() => {
-    document.addEventListener('visibilitychange', onVisible)
-    tickTimer = setInterval(() => {
-      now.value = Date.now()
-      if (role.value !== 'host' || !state.value) return
-      guests.forEach((guest, key) => {
-        if (guest.relay && now.value - guest.lastSeen > RELAY_TIMEOUT_MS) dropGuest(key)
-      })
-      onTick?.(state.value, now.value)
-    }, TICK_MS)
-    liveTimer = setInterval(flushLive, liveMs)
-    // Arriving from another game's lobby: the host reopens the same code, guests join it
-    const handoff = takeHandoff(game)
-    if (handoff && playerName.value) {
-      joinCode.value = handoff.code
-      if (handoff.host) {
-        hostCode = handoff.code
-        createRoom()
-      } else {
-        patientUntil = Date.now() + PATIENCE_MS
-        screen.value = 'connecting'
-        setTimeout(() => { if (screen.value === 'connecting' && !role.value) joinRoom() }, RECONNECT_MS * 1.5)
-      }
-      return
+    const code = (options.initialCode || '').toUpperCase()
+    if (code) {
+      if (session.roomCode !== code || session.screen === 'home') session.joinRoom(code)
+    } else if (options.hostRoom) {
+      session.hostFor(game)
     }
-    // Without a name the player picks one first, then creates or joins as usual
-    if (joinCode.value.length === 4 && playerName.value) joinRoom()
-    else if (options.hostRoom && playerName.value) createRoom()
   })
 
-  onUnmounted(() => {
-    document.removeEventListener('visibilitychange', onVisible)
-    clearInterval(tickTimer)
-    clearInterval(liveTimer)
-    resetConnection()
-    if (currentRoom.value?.owner === owner) currentRoom.value = null
-  })
+  onUnmounted(() => unregisterRender(game, token))
+
+  // Creating or joining from here first leaves a room this tab is in elsewhere. Without a name
+  // (a new visitor's isn't made yet, or the field was cleared) the room makes one up.
+  function createRoom () {
+    profile.name = cleanName(profile.name)
+    session.createRoom(game)
+  }
+
+  function joinRoom () {
+    profile.name = cleanName(profile.name)
+    session.joinRoom()
+  }
+
+  const guard = (fn) => (...args) => (here.value ? fn(...args) : undefined)
 
   return reactive({
-    game, screen, role, isHost, roomCode, errorKey, playerName, joinCode, now, myId,
-    view, me, shareLink, connection, pings, switching,
+    game,
+    screen,
+    elsewhere,
+    view,
+    me,
+    shareLink,
+    playerName,
+    role: computed(() => session.role),
+    isHost: computed(() => session.isHost),
+    roomCode: computed(() => session.roomCode),
+    errorKey: computed(() => session.errorKey),
+    joinCode: computed({ get: () => session.joinCode, set: (code) => { session.joinCode = code } }),
+    now: computed(() => session.now),
+    myId: session.myId,
+    connection: session.connection,
+    pings: session.pings,
+    sessionEnds: computed(() => session.view?.sessionEnds || 0),
 
-    createRoom, joinRoom, leave, act, sendLive, sendEvent, sendEventTo, switchGame
+    createRoom,
+    joinRoom,
+    leave: () => session.leave(),
+    act: guard((type, payload) => session.act(type, payload)),
+    sendLive: guard((data) => session.sendLive(data)),
+    sendEvent: guard((data) => session.sendEvent(data)),
+    sendEventTo: guard((playerId, data) => session.sendEventTo(playerId, data)),
+    switchGame: (next) => session.switchGame(next)
   })
 }

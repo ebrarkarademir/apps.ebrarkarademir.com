@@ -2,11 +2,16 @@
 import { ref, computed } from 'vue'
 import TermWindow from '../components/TermWindow.vue'
 import QrCode from '../components/QrCode.vue'
-import { switchTargets } from './gameSwitch'
+import LobbyChat from './LobbyChat.vue'
+import { switchTargets, appNav } from './gameSwitch'
+import { faceLine } from './profile'
+import { SESSION_MS } from './session'
 
 // Shared frame for online games: header, name + create/join screen, connecting spinner and
 // the lobby. Games put lobby options in the `lobby` slot and their own screens in the
 // default slot, which shows once the host has started (phase is no longer 'lobby').
+// The lobby (the room, see session.js) has a chat, lasts an hour, and the host can switch
+// its game: everyone stays, only the game's options change.
 const props = defineProps({
   room: { type: Object, required: true },
   t: { type: Object, required: true },
@@ -30,6 +35,10 @@ const widthClass = computed(() => (props.wide && props.room.screen === 'room' &&
 const onlineCount = computed(() => view.value?.players.filter(p => p.online).length || 0)
 const enoughPlayers = computed(() => onlineCount.value >= props.minPlayers)
 const startDisabled = computed(() => !enoughPlayers.value || !props.canStart)
+
+// The clock ticks a few times a second, so a fresh lobby could read a minute over its hour
+const minutesLeft = computed(() => Math.min(SESSION_MS / 60000, Math.max(0, Math.ceil((props.room.sessionEnds - props.room.now) / 60000))))
+const elsewhereTitle = computed(() => switchTargets.value.find(game => game.id === props.room.elsewhere?.game)?.title || '')
 
 function onBack () {
   if (props.room.screen === 'home') emit('go-back')
@@ -82,10 +91,14 @@ async function copyText (text) {
 
 const linkField = ref(null)
 
-// The host can take the whole room to another game; everyone follows with the same code
+// The host can switch the lobby to another game: everyone stays, with the same code
 const picking = ref(false)
 const otherGames = computed(() => switchTargets.value.filter(game => game.id !== props.room.game))
-const switchingTitle = computed(() => switchTargets.value.find(game => game.id === props.room.switching)?.title || '')
+
+function changeGame (id) {
+  picking.value = false
+  props.room.switchGame(id)
+}
 
 // Not v-model: it waits for the keyboard to finish a "word", which on Android leaves the
 // code empty (and Join disabled) while the player is still typing it
@@ -99,13 +112,24 @@ function onCodeInput (event) {
 <template>
   <TermWindow :class="widthClass" :title="title" :backLabel="room.screen === 'home' ? t.back : t.onlineLeave" @back="onBack">
     <template #status>
-      <span v-if="room.screen === 'room'" class="term-chip text-term">
-        {{ t.onlineRoomLabel }}: <span class="font-mono tracking-[0.25em]">{{ room.roomCode }}</span>
+      <span v-if="room.screen === 'room'" class="term-chip text-term whitespace-nowrap">
+        <span class="max-sm:hidden">{{ t.onlineRoomLabel }}: </span><span class="font-mono tracking-[0.25em]">{{ room.roomCode }}</span>
+        <span v-if="room.sessionEnds" :class="['ml-1 tabular-nums', { 'term-blink': minutesLeft <= 5 }]">· {{ fmt(t.onlineTimeLeft, { n: minutesLeft }) }}</span>
       </span>
     </template>
 
     <!-- Name + create or join -->
     <div v-if="room.screen === 'home'" class="space-y-6">
+      <!-- In a lobby that plays another game: it stays open until they leave it -->
+      <div v-if="room.elsewhere" class="term-panel border-term p-4 flex flex-col sm:flex-row sm:items-center gap-3" role="status">
+        <p class="flex-1 text-sm leading-relaxed">
+          <span aria-hidden="true">[~] </span>{{ fmt(t.onlineElsewhere, { code: room.elsewhere.code, game: elsewhereTitle }) }}
+        </p>
+        <button type="button" class="term-btn term-btn-primary min-h-10 text-sm shrink-0" @click="appNav.openGame(room.elsewhere.game)">
+          {{ fmt(t.onlineBackToRoom, { code: room.elsewhere.code }) }}
+        </button>
+      </div>
+
       <div v-if="room.errorKey" role="alert" class="flex gap-3 border border-dashed border-term px-4 py-3 text-sm">
         <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
         <span>{{ t[room.errorKey] }}</span>
@@ -124,7 +148,6 @@ function onCodeInput (event) {
           </div>
           <button
             @click="room.createRoom()"
-            :disabled="!room.playerName.trim()"
             class="term-btn term-btn-primary mt-auto"
           >
             {{ t.onlineCreateRoom }}
@@ -150,7 +173,7 @@ function onCodeInput (event) {
           />
           <button
             @click="room.joinRoom()"
-            :disabled="!room.playerName.trim() || room.joinCode.length !== 4"
+            :disabled="room.joinCode.length !== 4"
             class="term-btn mt-auto"
           >
             {{ t.onlineJoin }}
@@ -205,6 +228,7 @@ function onCodeInput (event) {
               ]"
             >
               <span :class="['term-dot', { 'is-off': !player.online }]"></span>
+              <span class="shrink-0 text-xs term-muted" aria-hidden="true">{{ faceLine(player.av) }}</span>
               <span class="truncate font-medium">{{ player.name }}</span>
               <span v-if="player.id === view.hostId" class="ml-auto text-[10px] uppercase tracking-wider term-muted">
                 {{ t.onlineHostBadge }}
@@ -214,14 +238,15 @@ function onCodeInput (event) {
         </div>
       </slot>
 
+      <p v-if="room.me" class="-mt-3 text-sm term-muted flex flex-wrap items-center gap-x-2">
+        <span>{{ fmt(t.onlineYouAre, { name: room.me.name }) }}</span>
+        <button type="button" class="term-link text-sm" @click="appNav.renameSelf()">[{{ t.onlineChangeName }}]</button>
+      </p>
+
       <slot name="lobby" :view="view" :is-host="room.isHost" />
 
-      <!-- Moving the room to another game -->
-      <div v-if="room.switching" class="term-panel border-term p-4 flex items-center justify-center gap-3" role="status">
-        <span class="term-spinner font-display text-2xl leading-none" aria-hidden="true"></span>
-        <span class="uppercase tracking-widest text-sm">{{ fmt(t.onlineSwitching, { game: switchingTitle }) }}</span>
-      </div>
-      <div v-else-if="room.isHost && otherGames.length">
+      <!-- Another game for the same lobby -->
+      <div v-if="room.isHost && otherGames.length">
         <button type="button" class="term-btn w-full min-h-10" :aria-expanded="picking" @click="picking = !picking">
           [~] {{ t.onlineChangeGame }}
         </button>
@@ -229,7 +254,7 @@ function onCodeInput (event) {
           <p class="term-muted text-sm text-center">{{ t.onlineChangeGameHint }}</p>
           <ul class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <li v-for="game in otherGames" :key="game.id">
-              <button type="button" class="term-card w-full h-full flex items-center gap-2 px-3 py-2 text-left text-sm" @click="room.switchGame(game.id)">
+              <button type="button" class="term-card w-full h-full flex items-center gap-2 px-3 py-2 text-left text-sm" @click="changeGame(game.id)">
                 <span class="shrink-0 font-mono text-xs term-muted" aria-hidden="true">{{ game.icon }}</span>
                 <span class="truncate font-medium">{{ game.title }}</span>
               </button>
@@ -238,14 +263,16 @@ function onCodeInput (event) {
         </div>
       </div>
 
-      <template v-if="room.isHost && !room.switching">
+      <template v-if="room.isHost">
         <button @click="emit('start')" :disabled="startDisabled" class="term-btn term-btn-primary w-full min-h-12">
           {{ t.onlineStart }}
         </button>
         <p v-if="!enoughPlayers" class="term-muted text-center text-sm">{{ fmt(t.onlineNeedPlayers, { n: minPlayers }) }}</p>
         <p v-else-if="!canStart && startHint" class="term-muted text-center text-sm">{{ startHint }}</p>
       </template>
-      <p v-else-if="!room.switching" class="term-muted text-center text-sm py-2"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
+      <p v-else class="term-muted text-center text-sm py-2"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
+
+      <LobbyChat :t="t" />
     </div>
 
     <!-- The game itself -->

@@ -1,8 +1,8 @@
 // Message relay for when two devices can't open a direct WebRTC link: routers that keep Wi-Fi
 // devices apart, mobile data, and no TURN server configured. It speaks just enough MQTT 3.1.1
 // over a secure WebSocket to talk to a free public broker: connect (optionally with a will),
-// subscribe, publish at QoS 0 and keep-alive pings. Topics are namespaced by game and room
-// code; what travels is the same game state the direct link carries, nothing secret.
+// subscribe, publish at QoS 0 (optionally retained) and keep-alive pings. Topics are namespaced
+// by room code; what travels is the same room state the direct link carries, nothing secret.
 // The online users list uses it too (see useUsers.js), with its chats encrypted end to end.
 
 // The host listens on every broker, a guest uses the first one that gets an answer
@@ -90,9 +90,10 @@ export function connectRelay (url, { onMessage, onClose, will, keepAlive = KEEPA
           ws.send(mqttPacket(SUBSCRIBE, concat(new Uint8Array([packetId >> 8, packetId & 255]), mqttString(topic), new Uint8Array([0]))))
         })
       },
-      publish (topic, message) {
+      // A retained message stays on the broker and goes to everyone who subscribes later
+      publish (topic, message, { retain = false } = {}) {
         if (ws.readyState !== WebSocket.OPEN) return
-        ws.send(mqttPacket(PUBLISH, concat(mqttString(topic), encoder.encode(JSON.stringify(message)))))
+        ws.send(mqttPacket(PUBLISH | (retain ? 1 : 0), concat(mqttString(topic), encoder.encode(JSON.stringify(message)))))
       },
       close () {
         closedByUs = true

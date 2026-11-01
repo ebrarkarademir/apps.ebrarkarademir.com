@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted, markRaw } from 'vue'
 import confetti from 'canvas-confetti'
+import { recordWin } from '../online/profile'
 import { useOnlineRoom } from '../online/useOnlineRoom'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import DoodleBoard from './doodle/DoodleBoard.vue'
@@ -614,6 +615,7 @@ watch(secondsLeft, (seconds, before) => {
 
 watch(phase, (now) => {
   if (now === 'final' && leaderboard.value[0]?.id === room.myId && !isTie.value) {
+    recordWin('doodle')
     confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
     haptics.buzz('win')
   }
