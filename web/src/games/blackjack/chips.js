@@ -1,0 +1,25 @@
+// Chip colours by value (cents) and how money reads, shared by the table and its parts.
+
+// $5 red, $25 green, $100 black, $500 purple, each with the stripes on its edge
+export const CHIP_LOOKS = {
+  500: { face: '#d7263d', edge: '#ffffff', text: '#ffffff' },
+  2500: { face: '#1b998b', edge: '#ffffff', text: '#ffffff' },
+  10000: { face: '#25272b', edge: '#f2c94c', text: '#f2c94c' },
+  50000: { face: '#6a4c93', edge: '#f2c94c', text: '#ffffff' }
+}
+
+const formats = new Map()
+
+/** Cents as money: $1,000, or $1,037.50 when there are cents. */
+export function money (cents, { sign = false } = {}) {
+  const value = Math.abs(cents) / 100
+  const whole = Number.isInteger(value)
+  const key = whole ? 0 : 2
+  if (!formats.has(key)) formats.set(key, new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: key, maximumFractionDigits: 2 }))
+  const text = formats.get(key).format(value)
+  if (cents < 0) return `-${text}`
+  return sign && cents > 0 ? `+${text}` : text
+}
+
+/** A chip's value as written on it: 5, 25, 100, 500. */
+export const chipLabel = (cents) => String(cents / 100)

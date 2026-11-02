@@ -1309,6 +1309,96 @@ export const rules = {
       ]
     }
   },
+  blackjack: {
+    EN: {
+      icon: '[21]',
+      title: 'Blackjack',
+      players: '1 player against the dealer, or up to 5 at a table',
+      duration: 'About a minute a hand',
+      goal: 'Finish closer to 21 than the dealer without going over.',
+      steps: [
+        'Play solo, open a table and share its code or link, or join a friend’s. You start with $1,000 in chips, and the server keeps your balance and stats for next time.',
+        'Place your bet with the chips ($5 to $500) and press Deal. At a shared table the cards come once everyone who bet is ready, or 15 seconds after the first one is.',
+        'Number cards count their number, J, Q and K count 10, and an Ace counts 1 or 11, whichever helps. A hand with an Ace counted as 11 is soft (shown like 7/17).',
+        'On your turn: Hit takes a card, Stand keeps your total, Double doubles your bet for exactly one more card, and Split turns a pair into two hands with a bet each.',
+        'Over 21 is a bust and loses straight away. The dealer then turns the face-down card and draws until reaching 17 or more, standing on every 17.',
+        'Beat the dealer and you win as much as you bet; a tie is a push and your bet comes back. A Blackjack, an Ace and a ten-value card as your first two, pays 3 to 2.'
+      ],
+      tips: [
+        'The dealer checks for Blackjack when showing an Ace or a ten; if there is one, the hand ends at once.',
+        'Split Aces get one card each, and 21 after a split counts as 21, not Blackjack. You can split up to four hands.',
+        'A turn left too long stands by itself after 20 seconds.',
+        'Out of chips? Get $1,000 more from the lobby or the table.',
+        'Keys: 1–4 chips, Enter deal, H hit, S stand, D double, P split.'
+      ]
+    },
+    TR: {
+      icon: '[21]',
+      title: 'Blackjack',
+      players: 'Krupiyeye karşı 1 oyuncu ya da bir masada en fazla 5',
+      duration: 'El başına yaklaşık bir dakika',
+      goal: 'Krupiyeden 21’e daha yakın bitir, ama 21’i geçme.',
+      steps: [
+        'Tek başına oyna, bir masa açıp kodunu ya da bağlantısını paylaş veya bir arkadaşının masasına katıl. 1.000 $’lık fişle başlarsın; bakiyeni ve istatistiklerini sunucu bir dahaki sefere saklar.',
+        'Fişlerle bahsini koy (5 $ ile 500 $ arası) ve Dağıt’a bas. Paylaşılan masada kartlar, bahis koyan herkes hazır olunca ya da ilk hazır olandan 15 saniye sonra gelir.',
+        'Sayı kartları kendi değerindedir, J, Q ve K 10 sayılır, As ise işine hangisi yararsa 1 ya da 11’dir. Asın 11 sayıldığı el yumuşaktır (7/17 gibi gösterilir).',
+        'Sıra sendeyken: Kart bir kart alır, Dur toplamını korur, İkiye katla bahsini ikiye katlayıp tam bir kart daha verir, Böl ise bir çifti her biri bahisli iki ele ayırır.',
+        '21’i geçmek patlamaktır ve hemen kaybettirir. Sonra krupiye kapalı kartını açar ve 17 ya da üstüne ulaşana kadar kart çeker; her 17’de durur.',
+        'Krupiyeyi geçersen bahsin kadar kazanırsın; eşitlik beraberliktir ve bahsin geri gelir. Blackjack, yani ilk iki kartın bir As ve 10 değerinde bir kart olması, 3’e 2 öder.'
+      ],
+      tips: [
+        'Krupiye As ya da 10 gösterdiğinde Blackjack’i olup olmadığına bakar; varsa el hemen biter.',
+        'Bölünen Aslara birer kart verilir ve bölmeden sonraki 21, Blackjack değil 21 sayılır. En fazla dört ele bölebilirsin.',
+        'Çok bekletilen sıra 20 saniye sonra kendiliğinden durur.',
+        'Fişin mi bitti? Lobiden ya da masadan 1.000 $ daha al.',
+        'Tuşlar: 1–4 fiş, Enter dağıt, H kart, S dur, D ikiye katla, P böl.'
+      ]
+    },
+    RU: {
+      icon: '[21]',
+      title: 'Блэкджек',
+      players: '1 игрок против дилера или до 5 за столом',
+      duration: 'Около минуты на раздачу',
+      goal: 'Набери ближе к 21, чем дилер, но не больше 21.',
+      steps: [
+        'Играй один, открой стол и поделись его кодом или ссылкой либо сядь за стол друга. На старте у тебя фишки на $1 000, а баланс и статистику сервер сохраняет до следующего раза.',
+        'Сделай ставку фишками (от $5 до $500) и нажми «Раздать». За общим столом карты раздаются, когда готовы все, кто поставил, или через 15 секунд после первого готового.',
+        'Карты с цифрами стоят по номиналу, J, Q и K — по 10, а туз — 1 или 11, как выгоднее. Рука, где туз считается за 11, мягкая (показывается как 7/17).',
+        'В свой ход: «Ещё» — взять карту, «Хватит» — остаться при своём, «Удвоить» — удвоить ставку и получить ровно одну карту, «Разделить» — превратить пару в две руки, на каждую своя ставка.',
+        'Больше 21 — перебор, это сразу проигрыш. Затем дилер открывает закрытую карту и берёт, пока не наберёт 17 или больше, останавливаясь на любых 17.',
+        'Обыграл дилера — выигрываешь столько же, сколько поставил; при равенстве ничья и ставка возвращается. Блэкджек — туз и карта в 10 первыми двумя — платит 3 к 2.'
+      ],
+      tips: [
+        'Если у дилера открыт туз или десятка, он проверяет, нет ли у него блэкджека; если есть, раздача сразу заканчивается.',
+        'Разделённые тузы получают по одной карте, а 21 после разделения считается просто 21, не блэкджеком. Разделять можно до четырёх рук.',
+        'Если затянуть ход, через 20 секунд рука сама остановится.',
+        'Кончились фишки? Возьми ещё $1 000 в лобби или за столом.',
+        'Клавиши: 1–4 фишки, Enter раздать, H ещё, S хватит, D удвоить, P разделить.'
+      ]
+    },
+    KK: {
+      icon: '[21]',
+      title: 'Блэкджек',
+      players: 'Дилерге қарсы 1 ойыншы не бір үстелде 5-ке дейін',
+      duration: 'Бір үлестіруге шамамен бір минут',
+      goal: 'Дилерден гөрі 21-ге жақынырақ жина, бірақ 21-ден асырма.',
+      steps: [
+        'Жалғыз ойна, үстел ашып кодымен не сілтемесімен бөліс немесе досыңның үстеліне отыр. 1 000 $ фишкамен бастайсың, ал балансың мен статистикаңды сервер келесі жолға сақтайды.',
+        'Фишкалармен бәс тік (5 $-дан 500 $-ға дейін) және «Үлестіру» түймесін бас. Ортақ үстелде карталар бәс тіккендердің бәрі дайын болғанда не бірінші дайын болғаннан 15 секунд өткенде үлестіріледі.',
+        'Сандық карталар өз мәнімен саналады, J, Q және K — 10, ал тұз пайдаңа қарай 1 не 11. Тұз 11 болып саналатын қол жұмсақ (7/17 сияқты көрсетіледі).',
+        'Кезегің келгенде: «Тағы» карта алады, «Жетеді» жиынтығыңды қалдырады, «Екі есе» бәсті екі есе арттырып, тура бір карта береді, «Бөлу» жұпты әрқайсысына бөлек бәс тігілген екі қолға бөледі.',
+        '21-ден асу — асып кету, бұл бірден ұтылыс. Содан кейін дилер жабық картасын ашып, 17 не одан көп жинағанша карта алады; кез келген 17-де тоқтайды.',
+        'Дилерді ұтсаң, тіккен бәсіңдей ұтасың; тең болса, бәсің қайтады. Блэкджек — алғашқы екі картаның тұз және 10 мәнді карта болуы — 3-ке 2 төлейді.'
+      ],
+      tips: [
+        'Дилерде тұз не ондық ашық тұрса, ол өзінде блэкджек бар-жоғын тексереді; бар болса, үлестіру бірден аяқталады.',
+        'Бөлінген тұздарға бір-бір карта беріледі, ал бөлгеннен кейінгі 21 блэкджек емес, жай 21 болып саналады. Төрт қолға дейін бөлуге болады.',
+        'Кезекті тым ұзақ созсаң, 20 секундтан кейін қол өзі тоқтайды.',
+        'Фишка таусылды ма? Лоббиден не үстелден тағы 1 000 $ ал.',
+        'Пернелер: 1–4 фишка, Enter үлестіру, H тағы, S жетеді, D екі есе, P бөлу.'
+      ]
+    }
+  },
   users: {
     EN: {
       icon: 'who',

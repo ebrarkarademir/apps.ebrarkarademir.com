@@ -19,6 +19,7 @@ import SudokuGame from './games/SudokuGame.vue'
 import ChessGame from './games/ChessGame.vue'
 import DamaGame from './games/DamaGame.vue'
 import HackGame from './games/HackGame.vue'
+import BlackjackGame from './games/BlackjackGame.vue'
 import { translations } from './translations'
 
 // Sunny Square, the 3D world, loads only when it's opened: three.js is far bigger than the rest
@@ -101,6 +102,17 @@ const games = computed(() => [
     duration: minutes('3–8'),
     mode: t.value.cardModeSoloOnline
 
+  },
+  {
+    id: 'blackjack',
+    category: ['solo', 'online'],
+    title: t.value.blackjackTitle,
+    description: t.value.blackjackDesc,
+    icon: '[21]',
+    art: cardArt.blackjack,
+    players: '1–5',
+    duration: minutes('1–2'),
+    mode: t.value.cardModeSoloOnline
   },
   {
     id: 'futsal',
@@ -279,6 +291,8 @@ const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? invit
 const inviteGame = legacyInviteGame || (ONLINE_GAMES.includes(initialRoute.game) ? initialRoute.game : null)
 const inviteCode = inviteGame ? (inviteParams.get('join') || '') : ''
 if (legacyInviteGame) initialRoute.game = legacyInviteGame
+// Blackjack's tables live on the server, outside the rooms above: its links carry a table code
+const blackjackInvite = ref(initialRoute.game === 'blackjack' ? (inviteParams.get('join') || '').toUpperCase().slice(0, 4) : '')
 
 const selectedGame = ref(initialRoute.game)
 const page = ref(initialRoute.page || null)
@@ -579,6 +593,7 @@ const applyRoute = ({ category, game, page: pageName }) => {
   // A launch, and an invite waiting for its room, only last while their game is open
   if (launch.value?.game !== game) launch.value = null
   if (inviting.value?.game !== game) inviting.value = null
+  if (game !== 'blackjack') blackjackInvite.value = ''
   showRules.value = false
   flippedGame.value = null
 }
@@ -871,6 +886,13 @@ onUnmounted(() => {
         :t="t"
         :initialCode="inviteCodeFor('crater')"
         :hostRoom="hostRoomFor('crater')"
+        @go-back="closeGame"
+      />
+
+      <BlackjackGame
+        v-else-if="selectedGame === 'blackjack'"
+        :t="t"
+        :initialCode="blackjackInvite"
         @go-back="closeGame"
       />
 

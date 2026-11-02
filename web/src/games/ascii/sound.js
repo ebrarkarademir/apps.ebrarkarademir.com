@@ -235,7 +235,20 @@ const patches = {
   cheer: (t) => {
     hiss(t, { duration: 2.2, volume: 0.2, type: 'bandpass', frequency: 1100, to: 700, attack: 0.18 })
     hiss(t + 0.05, { duration: 1.8, volume: 0.1, type: 'bandpass', frequency: 2400, to: 1500, attack: 0.25 })
-  }
+  },
+  // Blackjack: a card sliding off the shoe onto the felt
+  card: (t) => hiss(t, { duration: 0.07, volume: 0.07, type: 'highpass', frequency: 2600, to: 5200 }),
+  // A chip landing on the others: two clacks
+  chip: (t) => {
+    tone(t, { type: 'triangle', from: 2350, duration: 0.03, volume: 0.03 })
+    tone(t + 0.035, { type: 'triangle', from: 2900, duration: 0.025, volume: 0.022 })
+    thud(t, 0.02, 0.04, 4200)
+  },
+  // A hand won, and a Blackjack: rising chimes
+  win: (t) => [0, 0.09, 0.18].forEach((d, i) => bell(t + d, [659.25, 783.99, 1046.5][i], 0.035)),
+  blackjack: (t) => [0, 0.08, 0.16, 0.26].forEach((d, i) => bell(t + d, [523.25, 659.25, 783.99, 1318.51][i], 0.04)),
+  // A hand lost: one low, soft note
+  lose: (t) => tone(t, { type: 'sine', from: 330, to: 196, duration: 0.35, volume: 0.04 })
 }
 
 export const sound = {
