@@ -54,11 +54,6 @@ function create (game) {
       </span>
     </template>
 
-    <p class="flex gap-3 border border-dashed border-term-low px-4 py-3 text-sm mb-6">
-      <span class="shrink-0" aria-hidden="true">[i]</span>
-      <span class="term-muted leading-relaxed">{{ t.lobbyIntro }}</span>
-    </p>
-
     <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
       <!-- The lobby this tab is in -->
       <section v-if="mine" class="space-y-4" aria-labelledby="lobby-mine-title">

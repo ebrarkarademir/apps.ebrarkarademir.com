@@ -308,6 +308,8 @@ const showRules = ref(false)
 // The dev Firebase site (apps-76619-dev.web.app) and the local dev server get a DEV mark
 // so they can't be mistaken for the live site
 const isDevSite = import.meta.env.DEV || window.location.hostname.includes('-dev.')
+// The site's version (from package.json), shown on both sites
+const appVersion = `v${__APP_VERSION__}`
 
 // The visitor's public IPv4 address, only to tell the country they're in (the nationality their
 // profile shows unless they pick one). The site has no server of its own, so a public lookup
@@ -736,7 +738,8 @@ onUnmounted(() => {
   <div class="crt min-h-screen bg-black text-term font-mono">
     <nav :aria-label="t.navLabel" class="sticky top-0 z-30 bg-black/90 border-b border-term-low">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap lg:flex-nowrap items-center gap-x-6 gap-y-3">
-        <span v-if="isDevSite" class="order-1 -mr-3 term-inverse px-1.5 text-xs font-bold tracking-widest" title="Development site">DEV</span>
+        <span v-if="isDevSite" class="order-1 -mr-3 term-inverse px-1.5 text-xs font-bold tracking-widest" title="Development site">DEV {{ appVersion }}</span>
+        <span v-else class="order-1 -mr-3 border border-term-low px-1.5 text-xs font-bold tracking-widest term-muted" title="Site version">{{ appVersion }}</span>
 
         <!-- Shell prompt -->
         <p class="order-1 flex-1 basis-0 lg:flex-none lg:basis-auto min-w-0 truncate text-sm font-semibold">

@@ -210,12 +210,6 @@ onUnmounted(() => {
       </span>
     </template>
 
-    <!-- On a phone it makes way for the person picked -->
-    <p :class="['gap-3 border border-dashed border-term-low px-4 py-3 text-sm mb-6', showingDetail ? 'hidden md:flex' : 'flex']">
-      <span class="shrink-0" aria-hidden="true">[i]</span>
-      <span class="term-muted leading-relaxed">{{ t.usersNotice }}</span>
-    </p>
-
     <div class="grid gap-6 md:grid-cols-[17rem_minmax(0,1fr)] lg:grid-cols-[19rem_minmax(0,1fr)]">
       <!-- Everyone here -->
       <section :class="{ 'hidden md:block': showingDetail }" aria-labelledby="users-list-title">

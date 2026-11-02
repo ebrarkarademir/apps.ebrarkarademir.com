@@ -45,27 +45,19 @@ function onBack () {
   else props.room.leave()
 }
 
-async function shareRoom () {
+async function copyRoomLink () {
   const link = props.room.shareLink
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: props.title, url: link })
-      return
-    } catch (err) {
-      if (err?.name === 'AbortError') return // share sheet dismissed
-    }
-  }
   if (await copyText(link)) {
     copied.value = true
     setTimeout(() => { copied.value = false }, 1800)
-  } else {
-    // Nothing worked: the link stays selected in the field below for a manual copy
-    linkField.value?.select()
+  } else if (navigator.share) {
+    // Copying is blocked: the share sheet can still pass the link on
+    navigator.share({ title: props.title, url: link }).catch(() => {})
   }
 }
 
-// The share and clipboard APIs only exist on https (or localhost), so plain http pages such
-// as the dev server opened over Wi-Fi fall back to the old copy command
+// The clipboard API only exists on https (or localhost), so plain http pages such as the dev
+// server opened over Wi-Fi fall back to the old copy command
 async function copyText (text) {
   try {
     await navigator.clipboard.writeText(text)
@@ -88,8 +80,6 @@ async function copyText (text) {
     return ok
   }
 }
-
-const linkField = ref(null)
 
 // The host can switch the lobby to another game: everyone stays, with the same code
 const picking = ref(false)
@@ -194,23 +184,14 @@ function onCodeInput (event) {
         <div class="min-w-0 text-center">
           <p class="term-label">{{ t.onlineRoomLabel }}</p>
           <p class="font-display text-7xl leading-none tracking-[0.3em] my-3 pl-[0.3em]">{{ room.roomCode }}</p>
-          <p class="term-muted text-sm">{{ fmt(t.onlineShareHint, { game: title }) }}</p>
-          <button @click="shareRoom" class="term-btn mt-4 min-h-9 text-sm">
+          <button @click="copyRoomLink" class="term-btn mt-2 min-h-9 text-sm">
             {{ copied ? t.onlineCopied : t.onlineCopyLink }}
           </button>
-          <input
-            ref="linkField"
-            :value="room.shareLink"
-            readonly
-            :aria-label="t.onlineCopyLink"
-            @focus="$event.target.select()"
-            class="term-input mt-3 h-9 text-xs text-center term-muted"
-          />
         </div>
 
         <!-- Friends in the same room can scan the host's screen instead of typing the code -->
         <figure class="mx-auto flex flex-col items-center gap-2">
-          <QrCode :text="room.shareLink" class="w-40 h-40" />
+          <QrCode :text="room.shareLink" class="w-56 h-56 sm:w-64 sm:h-64" />
           <figcaption class="term-label">&gt; {{ t.onlineScanHint }}</figcaption>
         </figure>
       </div>
@@ -238,10 +219,9 @@ function onCodeInput (event) {
         </div>
       </slot>
 
-      <p v-if="room.me" class="-mt-3 text-sm term-muted flex flex-wrap items-center gap-x-2">
-        <span>{{ fmt(t.onlineYouAre, { name: room.me.name }) }}</span>
-        <button type="button" class="term-link text-sm" @click="appNav.renameSelf()">[{{ t.onlineChangeName }}]</button>
-      </p>
+      <button v-if="room.me" type="button" class="term-btn -mt-3 min-h-9 text-sm" @click="appNav.renameSelf()">
+        [~] {{ t.onlineChangeName }}
+      </button>
 
       <slot name="lobby" :view="view" :is-host="room.isHost" />
 

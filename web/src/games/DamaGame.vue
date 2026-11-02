@@ -281,20 +281,12 @@ const resultKings = computed(() => {
   if (myColor.value && winner !== myColor.value) return [{ color: myColor.value, fallen: true }]
   return [{ color: winner }]
 })
-
-// Both sides' stones, in the lobby, with a king at each end
-const BACK_RANK = ['king', 'man', 'man', 'man', 'man', 'man', 'man', 'king']
 </script>
 
 <template>
   <OnlineRoom :room="room" :t="t" :title="t.damaTitle" :minPlayers="2" @go-back="emit('go-back')" @start="room.act('start')">
     <template #lobby="{ view: lobby, isHost }">
       <div class="space-y-4">
-        <div class="flex flex-col items-center gap-1 text-2xl sm:text-3xl" aria-hidden="true">
-          <div v-for="color in ['b', 'w']" :key="color" class="flex gap-1">
-            <ChessPiece v-for="(type, index) in BACK_RANK" :key="index" :type="type" :set="DAMA_PIECES" :color="color" />
-          </div>
-        </div>
         <div class="flex flex-wrap items-center gap-2 text-sm">
           <span class="term-label mr-1">&gt; {{ t.chessClock }}</span>
           <button

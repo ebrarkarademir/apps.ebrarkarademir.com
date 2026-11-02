@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { spawn } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 // Sunny Square, the 3D world, needs its own server (../backend). The dev server starts it too
@@ -31,9 +32,15 @@ function worldServer () {
   }
 }
 
+// The site's version, shown in the top bar, is the one in package.json
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(), worldServer()],
+  define: {
+    __APP_VERSION__: JSON.stringify(version)
+  },
   server: {
     // Listen on the local network so phones on the same Wi-Fi can open the dev server
     host: true,
