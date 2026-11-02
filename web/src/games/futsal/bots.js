@@ -373,7 +373,7 @@ function attack (match, index, brain, level, random) {
   const { ball } = match
   const dir = attackDir(me.team)
   // Go to where the ball is headed, not where it is
-  const spot = meetPoint(me, ball, RUN_SPEED * (match.pace || 1) * level.speed)
+  const spot = meetPoint(me, ball, RUN_SPEED * level.speed)
   const inRange = Math.hypot(dir * HALF_W - spot.x, spot.y) < SHOT_RANGE
   const aim = brain.aim
   if (!aim || match.time > aim.until || (aim.mode === 'dribble' && inRange) || (aim.mode === 'shoot' && !inRange)) {

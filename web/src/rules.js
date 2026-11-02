@@ -244,19 +244,18 @@ export const rules = {
       icon: '[o]',
       title: 'Futsal',
       players: '1 player against bots, or 2–10 online',
-      duration: '2–8 min matches',
+      duration: '2–5 min matches',
       goal: 'Score more goals than the other team before the clock runs out.',
       steps: [
         'Solo: you play for the home team, with bot teammates, against a team of bots. Online: one person creates a room, the others join with the code and pick a team. The host can add bots to fill the places.',
-        'Before kick-off pick the look and the rules: the court (Neon, Arena or Street), each team’s kit colours, the game speed, the match length, a goal limit and what a draw at full time means. Online, the host picks for everyone.',
         'Run with the arrow keys or WASD. On a phone, drag on the left half of the screen to steer. Players have weight: they take a moment to get going and to stop.',
         'Press Space (or X, K, or the right half of the screen) to kick. The kick goes off the moment the ball is within reach, so hold it down as the ball comes to you. You run a little slower while holding it.',
         'A kick sends the ball straight away from the middle of your circle, so get behind it in the direction you want it to go. Running into the ball pushes it along.',
         'The ball never goes out: it bounces off the lines round the court, so there are no throw-ins or corners. Players can run on past the lines, and step into the goal mouth, but not through the nets.',
-        'At a kick-off the other team stays out of the dotted ring until the ball is touched, and a kick-off not taken within 4 seconds goes to them. Level at full time? The next goal wins (golden goal), unless the options say a draw stays a draw.'
+        'At a kick-off the other team stays out of the dotted ring until the ball is touched, and a kick-off not taken within 4 seconds goes to them. Level at full time? The next goal wins (golden goal).'
       ],
       tips: [
-        'Everyone is a circle of the same size, and its edge is exactly where a player ends. Each team plays in its kit colours, and away shirts also carry an inner ring, so the teams tell apart without colour. Yours has a v over it, a small pointer shows which way each player is heading, and a dashed ring shows how far a kick reaches while kick is held.',
+        'Everyone is a circle of the same size, and the ring is exactly where a player ends. Home players are filled (#), away players hollow ( ). Yours has a v over it, and a ring lights up while its player holds kick.',
         'A kick adds to the ball’s pace: a ball already rolling the way you kick flies off, one coming straight at you mostly stops.',
         'Play it off the lines: a ball banked off a touchline goes round a defender.',
         'If someone drops out, a bot plays for them until they’re back.',
@@ -267,19 +266,18 @@ export const rules = {
       icon: '[o]',
       title: 'Futsal',
       players: 'Botlara karşı tek kişi ya da çevrim içi 2–10 kişi',
-      duration: '2–8 dakikalık maçlar',
+      duration: '2–5 dakikalık maçlar',
       goal: 'Süre bitmeden rakip takımdan daha çok gol at.',
       steps: [
         'Tek kişilik: ev sahibi takımda, bot takım arkadaşlarınla, botlardan oluşan bir takıma karşı oynarsın. Çevrim içi: bir kişi oda oluşturur, diğerleri kodla katılıp takım seçer. Sunucu boş yerlere bot ekleyebilir.',
-        'Başlamadan önce görünümü ve kuralları seç: saha (Neon, Arena ya da Sokak), takımların forma renkleri, oyun hızı, maç süresi, gol sınırı ve normal süre berabere biterse ne olacağı. Çevrim içi maçta herkes için sunucu seçer.',
         'Ok tuşları ya da WASD ile koş. Telefonda ekranın sol yarısında parmağını sürükleyerek yön ver. Oyuncuların ağırlığı var: hızlanmaları da durmaları da biraz zaman alır.',
         'Vurmak için Boşluk’a (ya da X, K veya ekranın sağ yarısına) bas. Vuruş, top menzile girdiği an gerçekleşir; top sana gelirken basılı tut. Basılı tutarken biraz daha yavaş koşarsın.',
         'Vuruş topu dairenin ortasından dümdüz uzağa gönderir; topun gitmesini istediğin yönün tam arkasına geç. Topa koşarak çarpmak onu önünde sürer.',
         'Top hiç dışarı çıkmaz: sahanın çevresindeki çizgilerden seker, yani taç ya da korner yok. Oyuncular çizgilerin dışına koşabilir, kale ağzına girebilir, ama fileden geçemez.',
-        'Başlama vuruşunda rakip takım topa dokunulana kadar noktalı halkanın dışında kalır; 4 saniye içinde yapılmayan başlama vuruşu rakibe geçer. Normal süre berabere mi bitti? Ayarlarda beraberlik seçilmediyse ilk golü atan kazanır (altın gol).'
+        'Başlama vuruşunda rakip takım topa dokunulana kadar noktalı halkanın dışında kalır; 4 saniye içinde yapılmayan başlama vuruşu rakibe geçer. Normal süre berabere mi bitti? İlk golü atan kazanır (altın gol).'
       ],
       tips: [
-        'Herkes aynı boyda bir daire ve dairenin kenarı oyuncunun tam sınırı. Her takım kendi forma renklerinde oynar; deplasman formalarında ayrıca iç halka vardır, böylece takımlar renksiz de ayırt edilir. Seninkinin üstünde v işareti var; küçük bir ok her oyuncunun hangi yöne gittiğini, kesikli halka da vuruş tuşu basılıyken vuruşun nereye kadar ulaştığını gösterir.',
+        'Herkes aynı boyda bir daire ve halka oyuncunun tam sınırı. Ev sahibi oyuncular dolu (#), deplasman oyuncuları boş ( ). Seninkinin üstünde v işareti var; vuruş tuşunu basılı tutan oyuncunun halkası parlar.',
         'Vuruş topun hızına eklenir: vurduğun yöne zaten yuvarlanan top uçar, doğrudan sana gelen top ise neredeyse durur.',
         'Çizgileri kullan: yan çizgiden sektirilen top defansın etrafından dolaşır.',
         'Biri oyundan düşerse, o dönene kadar yerine bir bot oynar.',
@@ -290,19 +288,18 @@ export const rules = {
       icon: '[o]',
       title: 'Футзал',
       players: '1 игрок против ботов или 2–10 онлайн',
-      duration: 'Матчи по 2–8 мин',
+      duration: 'Матчи по 2–5 мин',
       goal: 'Забей больше голов, чем соперники, пока не вышло время.',
       steps: [
         'Соло: ты играешь за хозяев вместе с ботами-напарниками против команды ботов. Онлайн: один создаёт комнату, остальные входят по коду и выбирают команду. Ведущий может добавить ботов на свободные места.',
-        'Перед началом выбери вид и правила: площадку (Неон, Арена или Улица), цвета формы команд, скорость игры, длину матча, лимит голов и что значит ничья в основное время. В онлайн-матче за всех выбирает ведущий.',
         'Бегай стрелками или WASD. На телефоне веди пальцем по левой половине экрана. У игроков есть инерция: им нужно мгновение, чтобы разогнаться и остановиться.',
         'Нажми пробел (или X, K, или правую половину экрана), чтобы ударить. Удар происходит в тот момент, когда мяч оказывается в досягаемости, так что держи кнопку, пока мяч идёт к тебе. С зажатой кнопкой бежишь чуть медленнее.',
         'Удар отправляет мяч прямо от центра твоего круга, так что заходи за мяч с той стороны, откуда хочешь его послать. Если вбежать в мяч, он покатится вперёд.',
         'Мяч никогда не уходит за пределы поля: он отскакивает от линий вокруг площадки, поэтому аутов и угловых нет. Игроки могут забегать за линии и в створ ворот, но не сквозь сетку.',
-        'При начальном ударе соперники не заходят в пунктирный круг, пока мяча не коснутся, а если удар не сделан за 4 секунды, мяч переходит к ним. Ничья в основное время? Следующий гол побеждает (золотой гол), если в настройках не выбрана ничья.'
+        'При начальном ударе соперники не заходят в пунктирный круг, пока мяча не коснутся, а если удар не сделан за 4 секунды, мяч переходит к ним. Ничья в основное время? Следующий гол побеждает (золотой гол).'
       ],
       tips: [
-        'Все игроки — круги одного размера, и край круга точно показывает, где игрок заканчивается. Каждая команда играет в своих цветах, а у гостей на форме ещё и внутреннее кольцо, так что команды различимы и без цвета. Над твоим игроком стоит v, маленькая стрелка показывает, куда бежит каждый игрок, а пунктирное кольцо — докуда достаёт удар, пока кнопка удара зажата.',
+        'Все игроки — круги одного размера, и кольцо точно показывает, где игрок заканчивается. Хозяева закрашены (#), гости пустые ( ). Над твоим игроком стоит v, а кольцо подсвечивается, пока игрок держит удар.',
         'Удар добавляет мячу скорости: мяч, который уже катится в сторону удара, улетает, а мяч, летящий прямо на тебя, почти останавливается.',
         'Играй от линий: мяч, отскочивший от боковой, обходит защитника.',
         'Если кто-то отключился, за него играет бот, пока игрок не вернётся.',
@@ -313,19 +310,18 @@ export const rules = {
       icon: '[o]',
       title: 'Футзал',
       players: 'Боттарға қарсы 1 ойыншы немесе онлайн 2–10',
-      duration: '2–8 минуттық матчтар',
+      duration: '2–5 минуттық матчтар',
       goal: 'Уақыт біткенше қарсылас командадан көп гол соқ.',
       steps: [
         'Жеке: сен бот серіктеріңмен бірге үй иелері командасында боттардан құралған командаға қарсы ойнайсың. Онлайн: бір адам бөлме ашады, қалғандары кодпен кіріп, команда таңдайды. Жүргізуші бос орындарға бот қоса алады.',
-        'Бастамас бұрын көрініс пен ережелерді таңда: алаң (Неон, Арена не Көше), командалардың форма түстері, ойын жылдамдығы, матч ұзақтығы, гол шегі және негізгі уақыт тең біткенде не болатыны. Онлайн матчта бәрі үшін жүргізуші таңдайды.',
         'Бағыт пернелерімен не WASD арқылы жүгір. Телефонда экранның сол жақ жартысында саусағыңды сүйреп, бағыт бер. Ойыншылардың салмағы бар: жүгіріп кетуге де, тоқтауға да сәл уақыт керек.',
         'Соғу үшін Бос орынды (не X, K, не экранның оң жақ жартысын) бас. Соққы доп жеткен сәтте жасалады, сондықтан доп саған келе жатқанда басып тұр. Басып тұрғанда сәл баяу жүгіресің.',
         'Соққы допты шеңберіңнің ортасынан тура алысқа жібереді, сондықтан допты жібергің келетін бағытқа қарсы жағынан кел. Допқа жүгіріп келіп тисең, ол алға қарай итеріледі.',
         'Доп ешқашан алаңнан шықпайды: алаң айналасындағы сызықтардан серпіледі, сондықтан аут та, бұрыштама да жоқ. Ойыншылар сызықтан әрі жүгіріп, қақпа аузына кіре алады, бірақ тор арқылы өте алмайды.',
-        'Бастапқы соққыда қарсылас команда допқа тиілгенше нүктелі шеңберге кірмейді, ал 4 секунд ішінде жасалмаған бастапқы соққы соларға өтеді. Негізгі уақыт тең бітті ме? Баптауларда тең нәтиже таңдалмаса, келесі гол жеңіс әкеледі (алтын гол).'
+        'Бастапқы соққыда қарсылас команда допқа тиілгенше нүктелі шеңберге кірмейді, ал 4 секунд ішінде жасалмаған бастапқы соққы соларға өтеді. Негізгі уақыт тең бітті ме? Келесі гол жеңіс әкеледі (алтын гол).'
       ],
       tips: [
-        'Барлығы бірдей өлшемдегі шеңбер, ал шеңбердің шеті ойыншының дәл шекарасы. Әр команда өз форма түстерінде ойнайды, ал қонақтардың формасында ішкі сақина да бар, сондықтан командаларды түссіз де ажыратуға болады. Сенің ойыншыңның үстінде v тұрады, кішкентай нұсқар әр ойыншының қайда бет алғанын, ал үзік сақина соққы басып тұрғанда оның қай жерге дейін жететінін көрсетеді.',
+        'Барлығы бірдей өлшемдегі шеңбер, ал сақина ойыншының дәл шекарасын көрсетеді. Үй иелері толтырылған (#), қонақтар қуыс ( ). Сенің ойыншыңның үстінде v тұрады, ал ойыншы соққыны басып тұрғанда сақина жанады.',
         'Соққы доптың жылдамдығына қосылады: соққы бағытында домалап бара жатқан доп ұшып кетеді, ал тура саған келе жатқан доп негізінен тоқтайды.',
         'Сызықтарды пайдалан: бүйір сызықтан серпілген доп қорғаушыны айналып өтеді.',
         'Біреу шығып кетсе, ол қайтып оралғанша оның орнына бот ойнайды.',

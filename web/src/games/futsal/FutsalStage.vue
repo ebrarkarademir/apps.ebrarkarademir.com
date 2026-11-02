@@ -1,12 +1,11 @@
 <script setup>
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import {
-  STEP, HALF_W, GOAL_HALF, CIRCLE_R, RESTART_TIME, BALL_R,
-  createMatch, stepMatch, setInput, pressKick, snapshot, viewOf, readSnapshot, attackDir, stepPlayer, paceOf
+  STEP, HALF_W, CIRCLE_R, RESTART_TIME,
+  createMatch, stepMatch, setInput, pressKick, snapshot, viewOf, readSnapshot, attackDir, stepPlayer
 } from './engine'
 import { LEVELS, newBrain, botControls } from './bots'
 import { createRenderer, VIEW_W, VIEW_H } from './renderer'
-import { kitOf, DEFAULT_KITS, DEFAULT_COURT } from './looks'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
 import FullscreenButton from '../ascii/FullscreenButton.vue'
 import { useFullscreen } from '../ascii/fullscreen'
@@ -48,10 +47,6 @@ const props = defineProps({
   goals: { type: Number, default: 0 },
   level: { type: String, default: 'normal' },
   kickoff: { type: Number, default: 0 },
-  pace: { type: String, default: 'normal' }, // game speed, a name from PACES
-  golden: { type: Boolean, default: true }, // a draw at full time goes to a golden goal
-  court: { type: String, default: DEFAULT_COURT }, // how it looks (looks.js)
-  kits: { type: Array, default: () => DEFAULT_KITS },
   paused: { type: Boolean, default: false },
   online: { type: Object, default: () => ({}) }, // host: id -> still in the room
   inputs: { type: Map, default: null }, // host: id -> the latest controls that guest sent
@@ -80,7 +75,6 @@ const MOVE_KEYS = {
 }
 const KICK_KEYS = new Set(['Space', 'KeyX', 'KeyK'])
 const CONFETTI = ['*', '+', 'o', '.', "'", '*']
-const GOAL_BOARD_TIME = 3.5 // the boards cheer a goal this long
 
 const area = ref(null)
 const canvas = ref(null)
@@ -129,14 +123,9 @@ let kickKey = false
 let kickWasDown = false
 
 const particles = []
-const rings = [] // shock rings from hard kicks
-let net = null // the net a goal just went into, while it ripples
-let boardGoal = null // { team, until }: the boards cheering a goal
-const facing = [] // by player: { a, x, y }, the way they're heading and where they were
 const trail = []
 let trailClock = 0
 let flash = 0
-let flashColor = '0, 255, 0'
 let shake = 0
 let message = null // { text, sub, until }: a banner over the court for a moment
 let lastView = null
@@ -148,12 +137,6 @@ const seconds = () => performance.now() / 1000
 const lerp = (a, b, f) => a + (b - a) * f
 
 const teamNames = computed(() => [props.t.futsalHome, props.t.futsalAway])
-const kitList = computed(() => props.kits.map(kitOf))
-// '#rrggbb' as 'r, g, b', for colours with their own transparency
-const rgb = (hex) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ')
-// The score boxes in the teams' colours
-const scoreStyle = (team) => ({ background: kitList.value[team].main, color: kitList.value[team].text, borderColor: kitList.value[team].dark })
-const nameStyle = (team) => ({ color: kitList.value[team].main })
 const myTeam = () => (meIndex >= 0 ? props.roster[meIndex]?.team ?? 0 : -1)
 const nameOf = (index) => props.roster[index]?.name || '?'
 const watching = computed(() => !props.roster.some(p => p.id === props.myId))
@@ -177,10 +160,6 @@ function newMatch () {
   ownShift.x = ownShift.y = 0
   acks.clear()
   particles.length = 0
-  rings.length = 0
-  facing.length = 0
-  net = null
-  boardGoal = null
   trail.length = 0
   flash = shake = 0
   message = null
@@ -191,7 +170,7 @@ function newMatch () {
     match = null
     return
   }
-  match = createMatch({ roster: props.roster, minutes: props.minutes, goals: props.goals, kickoff: props.kickoff, golden: props.golden, pace: props.pace })
+  match = createMatch({ roster: props.roster, minutes: props.minutes, goals: props.goals, kickoff: props.kickoff })
   prev = { ball: { x: 0, y: 0 }, players: match.players.map(() => ({ x: 0, y: 0 })) }
   remember()
 }
@@ -400,7 +379,7 @@ function predict () {
   if (history.length > HISTORY) history.shift()
   own.px = own.x
   own.py = own.y
-  stepPlayer(own, sent, ownPhase.phase, ownPhase.kickoff, paceOf(props.pace))
+  stepPlayer(own, sent, ownPhase.phase, ownPhase.kickoff)
 }
 
 const num = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : 0)
@@ -418,7 +397,7 @@ function reconcile (snap, acked) {
     // Controls the host has moved past are done with, and so are the steps it has played
     // with the ones it has now
     history = history.filter(entry => entry.q > q || (entry.q === q && entry.k > steps))
-    for (const entry of history) stepPlayer(next, entry, snap.phase, snap.kickoff, paceOf(props.pace))
+    for (const entry of history) stepPlayer(next, entry, snap.phase, snap.kickoff)
   } else {
     history = []
   }
@@ -562,7 +541,6 @@ function react (before, view) {
   if (kicks1 > kicks0) {
     sound.play('kick', view.lastKick)
     throwSparks(particles, view.ball.x, view.ball.y, { count: 3 + Math.round(view.lastKick * 6), speed: 6 + view.lastKick * 10, life: 0.3 })
-    if (view.lastKick > 0.5 && !reduceMotion) rings.push({ x: view.ball.x, y: view.ball.y, age: 0, ttl: 0.45, color: '#ffffff', from: BALL_R, to: BALL_R + 2 + view.lastKick * 3 })
     if (view.lastKick > 0.85 && !reduceMotion) shake = Math.max(shake, 0.35)
   }
   if (posts1 > posts0) {
@@ -593,16 +571,9 @@ function celebrate (view) {
   sound.play('cheer')
   const mine = myTeam()
   if (mine >= 0) haptics.buzz(team === mine ? 'win' : 'wrong')
-  // The net the ball went into: home scores on the right. It ripples, confetti in the scorers'
-  // colours flies out of it, and the boards cheer.
+  // The net the ball went into: home scores on the right
   const side = team === 0 ? 1 : -1
-  const kit = kitList.value[team]
-  const y = Math.max(-GOAL_HALF, Math.min(GOAL_HALF, view.ball.y))
-  net = { side, y, age: 0, color: kit.main }
-  boardGoal = { team, until: seconds() + GOAL_BOARD_TIME }
-  burst(particles, side * (HALF_W + 1), y, { chars: CONFETTI, colors: [GREEN, DIM, HOT], count: reduceMotion ? 6 : 16, speed: 14, life: 1.1, drag: 2.2 })
-  burst(particles, side * (HALF_W + 1), y, { chars: ['#'], colors: [kit.main, kit.dark, '#ffffff'], count: reduceMotion ? 8 : 40, speed: 18, life: 1.6, drag: 1.8, square: true, spin: 7 })
-  flashColor = rgb(kit.main)
+  burst(particles, side * (HALF_W + 1), view.ball.y, { chars: CONFETTI, colors: [GREEN, DIM, HOT], count: reduceMotion ? 10 : 34, speed: 16, life: 1.3, drag: 2.2 })
   if (!reduceMotion) flash = 1
 }
 
@@ -610,44 +581,6 @@ function effects (dt) {
   flash = Math.max(0, flash - dt * 3)
   shake = Math.max(0, shake - dt * 3)
   stepParticles(particles, dt)
-  for (const ring of rings) ring.age += dt
-  while (rings.length && rings[0].age >= rings[0].ttl) rings.shift()
-  if (net) {
-    net.age += dt
-    if (net.age > 1.4) net = null
-  }
-}
-
-// The way a player's heading, eased round as they turn. A jump (a line-up after a goal) faces
-// them up the court again.
-function heading (i, x, y, team, dt) {
-  let f = facing[i]
-  const forward = attackDir(team) > 0 ? 0 : Math.PI
-  if (!f) {
-    f = facing[i] = { a: forward, x, y }
-    return f.a
-  }
-  const dx = x - f.x
-  const dy = y - f.y
-  f.x = x
-  f.y = y
-  if (Math.hypot(dx, dy) > 5) {
-    f.a = forward
-  } else if (dt > 0 && Math.hypot(dx, dy) / dt > 2.5) {
-    const turn = ((Math.atan2(dy, dx) - f.a + Math.PI * 3) % (Math.PI * 2)) - Math.PI
-    f.a += turn * Math.min(1, dt * 14)
-  }
-  return f.a
-}
-
-// What the boards along the touchlines say: the score, a goal, or the golden goal
-function boardMessage (view) {
-  const name = (team) => upper(teamNames.value[team])
-  if (boardGoal && seconds() < boardGoal.until) {
-    return { text: `${upper(props.t.futsalGoal)}  ${name(boardGoal.team)}  ***  `, color: kitList.value[boardGoal.team].main }
-  }
-  if (view.golden && view.phase !== 'end') return { text: `${upper(props.t.futsalGolden)}  ·  ${upper(props.t.futsalGoldenHint)}  ***  ` }
-  return { text: `***  FUTSAL  ***  ${name(0)} ${view.score[0]} : ${view.score[1]} ${name(1)}  ` }
 }
 
 // A fast ball leaves a short dotted trail
@@ -683,8 +616,8 @@ function banners (view, texts) {
   }
 }
 
-function render (view, time, dt) {
-  const scene = { ball: { x: 0, y: 0 }, trail, players: [], zone: null, countdown: null, rings, net, board: null, particles, texts: [], flash, flashColor, shake, time }
+function render (view, time) {
+  const scene = { ball: { x: 0, y: 0 }, trail, players: [], zone: null, countdown: null, particles, texts: [], flash, shake, time }
   if (view) {
     scene.ball = view.ball
     const mine = myTeam()
@@ -695,19 +628,8 @@ function render (view, time, dt) {
       const me = i === meIndex
       const look = me ? 'me' : (mine < 0 ? entry.team === 0 : entry.team === mine) ? 'mate' : 'foe'
       const at = me && spot ? spot : p
-      scene.players.push({
-        x: at.x,
-        y: at.y,
-        team: entry.team,
-        mark: entry.mark || '?',
-        look,
-        held: me ? kickDown() : p.held,
-        label: entry.bot ? '' : entry.name,
-        marker: me,
-        facing: heading(i, at.x, at.y, entry.team, props.paused ? 0 : dt)
-      })
+      scene.players.push({ x: at.x, y: at.y, team: entry.team, mark: entry.mark || '?', look, held: me ? kickDown() : p.held, label: entry.bot ? '' : entry.name, marker: me })
     })
-    scene.board = boardMessage(view)
     if (view.phase === 'kickoff') scene.zone = { x: 0, y: 0, r: CIRCLE_R }
     // In front of the ball, in the half the kicker faces, which the other team keeps clear of
     if (view.phase === 'kickoff' && view.timer < RESTART_TIME - 0.5) {
@@ -749,7 +671,7 @@ function frame (alpha) {
     if (!props.paused) followBall(view, dt)
   }
   if (!props.paused) effects(dt)
-  render(view, now / 1000, dt)
+  render(view, now / 1000)
   updateHud(view)
 }
 
@@ -813,11 +735,9 @@ watch(() => props.round, () => {
 })
 const courtLabels = (names) => [`(#) ${upper(names[0])}`, `${upper(names[1])} ( )`]
 watch(teamNames, (names) => renderer?.setLabels(courtLabels(names)))
-watch(() => [props.court, ...props.kits], () => renderer?.setLook({ court: props.court, kits: props.kits }))
 
 onMounted(() => {
   renderer = createRenderer(canvas.value)
-  renderer.setLook({ court: props.court, kits: props.kits })
   renderer.setLabels(courtLabels(teamNames.value))
   newMatch()
   observer = new ResizeObserver(fit)
@@ -866,19 +786,18 @@ onUnmounted(() => {
       @contextmenu.prevent
     >
       <!-- Scoreboard: each team's score boxed beside its name, the clock between, and a waiting kick-off under it -->
-      <!-- Scoreboard: each team's name and score in its colours, the clock between, and a waiting kick-off under it -->
-      <div v-if="!full" class="scoreboard w-full shrink-0 grid grid-cols-[1fr_auto_1fr] items-stretch" :style="{ maxWidth: `${Math.max(box.w, 300)}px`, height: `${TOP_BAR}px` }" aria-hidden="true">
-        <p class="side justify-end" :style="{ borderLeftColor: kitList[0].main }">
-          <span class="truncate text-xs sm:text-sm font-bold uppercase tracking-wider" :style="nameStyle(0)">(#) {{ teamNames[0] }}</span>
-          <span class="score" :style="scoreStyle(0)">{{ hud.score[0] }}</span>
+      <div v-if="!full" class="w-full shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4" :style="{ maxWidth: `${Math.max(box.w, 300)}px`, height: `${TOP_BAR}px` }" aria-hidden="true">
+        <p class="flex items-center justify-end gap-2 min-w-0">
+          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">(#) {{ teamNames[0] }}</span>
+          <span class="score">{{ hud.score[0] }}</span>
         </p>
-        <div class="clock text-center leading-none">
+        <div class="text-center leading-none">
           <p :class="['font-display tabular-nums whitespace-nowrap', hud.golden ? 'text-lg' : 'text-3xl', { 'term-blink': hud.hurry }]">{{ hud.clock }}</p>
           <p class="h-3 mt-0.5 text-[10px] font-semibold uppercase tracking-widest term-muted whitespace-nowrap">{{ hud.status }}</p>
         </div>
-        <p class="side" :style="{ borderRightColor: kitList[1].main }">
-          <span class="score" :style="scoreStyle(1)">{{ hud.score[1] }}</span>
-          <span class="truncate text-xs sm:text-sm font-bold uppercase tracking-wider" :style="nameStyle(1)">{{ teamNames[1] }} ( )</span>
+        <p class="flex items-center gap-2 min-w-0">
+          <span class="score">{{ hud.score[1] }}</span>
+          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">{{ teamNames[1] }} ( )</span>
         </p>
       </div>
       <p class="sr-only" aria-live="polite">{{ teamNames[0] }} {{ hud.score[0] }}, {{ teamNames[1] }} {{ hud.score[1] }}</p>
@@ -896,7 +815,7 @@ onUnmounted(() => {
       <!-- Full screen: the score small in one corner and the way out in the other -->
       <template v-if="full">
         <p class="mini-score absolute left-2 top-2 z-10 pointer-events-none font-display text-xl leading-none tabular-nums whitespace-nowrap" aria-hidden="true">
-          <span :style="nameStyle(0)">(#) {{ hud.score[0] }}</span> : <span :style="nameStyle(1)">{{ hud.score[1] }} ( )</span> <span :class="['term-muted', { 'term-blink': hud.hurry }]">{{ hud.clock }}</span>
+          (#) {{ hud.score[0] }} : {{ hud.score[1] }} ( ) <span :class="['term-muted', { 'term-blink': hud.hurry }]">{{ hud.clock }}</span>
         </p>
         <FullscreenButton :t="t" full class="absolute right-2 top-2 z-10 bg-black/70" @toggle="onFullClick" />
       </template>
@@ -914,41 +833,14 @@ onUnmounted(() => {
   box-shadow: 0 0 0 1px var(--color-term-low), 0 0 18px rgb(0 255 0 / 0.15);
 }
 
-.scoreboard {
-  border: 1px solid var(--color-term-low);
-  background: linear-gradient(180deg, rgb(0 40 12 / 0.55), rgb(0 0 0 / 0.85));
-  box-shadow: 0 0 14px rgb(0 255 0 / 0.08);
-}
-
-.side {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-  padding: 0 0.4rem;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-}
-
-.clock {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 0 0.9rem;
-  border-left: 1px solid var(--color-term-low);
-  border-right: 1px solid var(--color-term-low);
-  background: rgb(0 0 0 / 0.6);
-}
-
 .score {
-  min-width: 2.3rem;
-  padding: 0.2rem 0.35rem 0;
-  border: 1px solid;
+  min-width: 2.4rem;
+  padding: 0.2rem 0.4rem 0;
+  border: 1px solid var(--color-term);
   font-family: var(--font-display);
-  font-size: 1.9rem;
+  font-size: 2rem;
   line-height: 1;
   text-align: center;
-  text-shadow: none;
   font-variant-numeric: tabular-nums;
 }
 
