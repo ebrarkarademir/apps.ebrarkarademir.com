@@ -4,7 +4,7 @@ import TermWindow from '../components/TermWindow.vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom, currentRoom } from '../online/useOnlineRoom'
 import { useLocalRoom, LOCAL_ID } from '../online/useLocalRoom'
-import BlackjackTable from './blackjack/BlackjackTable.vue'
+import BlackjackStage from './blackjack/BlackjackStage.vue'
 import ChipsPanel from './blackjack/ChipsPanel.vue'
 import { money } from './blackjack/chips'
 import { RULES } from './blackjack/table.js'
@@ -13,7 +13,8 @@ import { profile as siteProfile } from '../online/profile'
 
 // Blackjack against the dealer: solo, or at one table of up to five in an online room, like
 // the other online games, with no server of our own (see blackjack/room.js). Chips and stats
-// stay on this device.
+// stay on this device. The table takes the whole screen (see blackjack/BlackjackStage.vue),
+// with side bets, emotes, the bar and gifts.
 const props = defineProps({
   t: { type: Object, required: true },
   // Room code from a shared invite link
@@ -27,7 +28,7 @@ const emit = defineEmits(['go-back'])
 const ERROR_MS = 3500
 const SOLO_ART = ['.------.        ', '|A     |  .----', '|  /\\  |  |?   ', "'------'  '----"].join('\n')
 const ONLINE_ART = [' o    o    o    o    o', '/|\\  /|\\  /|\\  /|\\  /|\\', '/ \\  / \\  / \\  / \\  / \\'].join('\n')
-const cardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
+const cardClass = 'term-card group flex flex-col gap-2 sm:gap-3 p-3 sm:p-5 text-left min-w-0'
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 const nameOf = () => siteProfile.name || props.t.bjYou
@@ -60,6 +61,8 @@ const table = computed(() => {
 })
 const seated = computed(() => !!table.value?.seats.some(seat => seat?.me))
 const myChips = computed(() => view.value?.me || { balance: 0, stats: {} })
+const myId = computed(() => (mode.value === 'solo' ? LOCAL_ID : room.myId))
+const names = computed(() => Object.fromEntries((view.value?.players || []).map(player => [player.id, player.name])))
 
 // ---------- Chips on this device ----------
 
@@ -119,7 +122,7 @@ watch(() => view.value?.note?.n || 0, (n, old) => {
 const errorText = computed(() => {
   if (!error.value) return ''
   const text = props.t[`bjErr_${error.value}`] || props.t.bjErr_unknown
-  return fmt(text, { min: money(RULES.minBet), max: money(RULES.maxBet) })
+  return fmt(text, { min: money(RULES.minBet), max: money(RULES.maxBet), sideMin: money(RULES.sideMin), sideMax: money(RULES.sideMax) })
 })
 
 onUnmounted(() => clearTimeout(errorTimer))
@@ -127,9 +130,9 @@ onUnmounted(() => clearTimeout(errorTimer))
 // ---------- Playing ----------
 
 // The table shows a bet as it's being built until the room has it: at once on this device, or
-// once the host's next state arrives
-function bet (amount, done) {
-  act('bet', { amount })
+// once the host's next state arrives. `key` says which: 'main', or a side bet ('pp', 't3').
+function bet ({ key, amount }, done) {
+  act('bet', { key, amount })
   if (mode.value === 'solo' || room.isHost) {
     nextTick(done)
     return
@@ -158,7 +161,7 @@ function leaveSolo () {
 <template>
   <!-- Your chips, and solo or online -->
   <TermWindow v-if="mode === null" class="max-w-4xl" :title="t.blackjackTitle" :backLabel="t.back" @back="emit('go-back')">
-    <div class="space-y-6">
+    <div class="space-y-4 sm:space-y-6">
       <p v-if="errorText" role="alert" class="flex gap-3 border border-dashed border-term px-4 py-2 text-sm">
         <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
         <span>{{ errorText }}</span>
@@ -166,22 +169,22 @@ function leaveSolo () {
 
       <ChipsPanel :t="t" :wallet="chips" :name="nameOf()" @refill="refillHere" />
 
-      <div class="grid sm:grid-cols-2 gap-4">
+      <div class="grid grid-cols-2 gap-3 sm:gap-4">
         <button type="button" :class="cardClass" @click="startSolo">
-          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ SOLO_ART }}</span>
-          <span class="font-display text-3xl leading-none uppercase">{{ t.gameSolo }}</span>
-          <span class="term-muted text-sm leading-relaxed">{{ t.bjPlaySoloHint }}</span>
+          <span class="whitespace-pre text-[0.55rem] min-[400px]:text-xs sm:text-sm leading-tight overflow-hidden" aria-hidden="true">{{ SOLO_ART }}</span>
+          <span class="font-display text-2xl sm:text-3xl leading-none uppercase">{{ t.gameSolo }}</span>
+          <span class="term-muted text-xs sm:text-sm leading-relaxed">{{ t.bjPlaySoloHint }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-xs sm:text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
           </span>
         </button>
 
         <button type="button" :class="cardClass" @click="mode = 'online'">
-          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ ONLINE_ART }}</span>
-          <span class="font-display text-3xl leading-none uppercase">{{ t.gameOnline }}</span>
-          <span class="term-muted text-sm leading-relaxed">{{ t.bjOpenTableHint }}</span>
+          <span class="whitespace-pre text-[0.55rem] min-[400px]:text-xs sm:text-sm leading-tight overflow-hidden" aria-hidden="true">{{ ONLINE_ART }}</span>
+          <span class="font-display text-2xl sm:text-3xl leading-none uppercase">{{ t.gameOnline }}</span>
+          <span class="term-muted text-xs sm:text-sm leading-relaxed">{{ t.bjOpenTableHint }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-xs sm:text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
           </span>
         </button>
       </div>
@@ -191,22 +194,26 @@ function leaveSolo () {
   </TermWindow>
 
   <!-- Solo: a table of your own -->
-  <TermWindow v-else-if="mode === 'solo'" class="max-w-6xl" :title="t.blackjackTitle" :backLabel="t.back" @back="leaveSolo">
-    <p v-if="errorText" role="alert" class="mb-4 flex gap-3 border border-dashed border-term px-4 py-2 text-sm">
-      <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
-      <span>{{ errorText }}</span>
-    </p>
-    <BlackjackTable
+  <template v-else-if="mode === 'solo'">
+    <BlackjackStage
       v-if="table"
       :t="t"
       :table="table"
       :profile="myChips"
+      :social="view?.social"
+      :names="names"
+      :my-id="myId"
+      :exit-label="t.back"
+      :error="errorText"
+      @exit="leaveSolo"
       @bet="bet"
       @deal="act('ready')"
       @act="(action) => act('act', { action })"
       @refill="act('refill')"
+      @emote="(k) => act('emote', { k })"
+      @buy="(order) => act('buy', order)"
     />
-  </TermWindow>
+  </template>
 
   <!-- Online: everyone in the room at one table -->
   <OnlineRoom
@@ -229,22 +236,26 @@ function leaveSolo () {
       </div>
     </template>
 
-    <div v-if="table">
-      <p v-if="errorText" role="alert" class="mb-4 flex gap-3 border border-dashed border-term px-4 py-2 text-sm">
-        <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
-        <span>{{ errorText }}</span>
-      </p>
-      <p v-if="!seated" class="mb-3 text-center text-sm term-muted">{{ t.bjWatching }}</p>
-      <BlackjackTable
-        :t="t"
-        :table="table"
-        :profile="myChips"
-        @bet="bet"
-        @deal="act('ready')"
-        @act="(action) => act('act', { action })"
-        @refill="act('refill')"
-      />
-      <button v-if="room.isHost" type="button" class="term-btn w-full mt-4" @click="room.act('lobby')">{{ t.onlineBackToLobby }}</button>
-    </div>
+    <BlackjackStage
+      v-if="table"
+      :t="t"
+      :table="table"
+      :profile="myChips"
+      :social="view?.social"
+      :names="names"
+      :my-id="myId"
+      :exit-label="t.onlineLeave"
+      :can-lobby="room.isHost"
+      :error="errorText"
+      :watching="seated ? '' : t.bjWatching"
+      @exit="room.leave()"
+      @lobby="room.act('lobby')"
+      @bet="bet"
+      @deal="act('ready')"
+      @act="(action) => act('act', { action })"
+      @refill="act('refill')"
+      @emote="(k) => act('emote', { k })"
+      @buy="(order) => act('buy', order)"
+    />
   </OnlineRoom>
 </template>

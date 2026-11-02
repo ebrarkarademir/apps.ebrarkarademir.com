@@ -6,11 +6,13 @@ import { CHIP_LOOKS } from './chips'
 // under it. Each chip has its colour by value and the striped edge of a real one.
 const props = defineProps({
   amount: { type: Number, default: 0 },
-  label: { type: String, default: '' }
+  label: { type: String, default: '' },
+  // The most chips drawn, for a small spot
+  max: { type: Number, default: 8 }
 })
 
 const VALUES = [50000, 10000, 2500, 500]
-const MAX_SHOWN = 8
+const RISE = 3 // px each chip sits above the one under it
 
 const chips = computed(() => {
   let left = props.amount
@@ -21,18 +23,18 @@ const chips = computed(() => {
       left -= value
     }
   }
-  return list.slice(0, MAX_SHOWN).reverse()
+  return list.slice(0, props.max).reverse()
 })
 </script>
 
 <template>
   <span v-if="amount > 0" class="stack">
-    <span class="chips" aria-hidden="true">
+    <span class="chips" :style="{ '--rise': `${(max - 1) * RISE}px` }" aria-hidden="true">
       <span
         v-for="(value, i) in chips"
         :key="i"
         class="chip"
-        :style="{ '--face': CHIP_LOOKS[value].face, '--edge': CHIP_LOOKS[value].edge, bottom: `${i * 3}px` }"
+        :style="{ '--face': CHIP_LOOKS[value].face, '--edge': CHIP_LOOKS[value].edge, bottom: `${i * RISE}px` }"
       ></span>
     </span>
     <span v-if="label" class="amount">{{ label }}</span>
@@ -50,7 +52,7 @@ const chips = computed(() => {
 .chips {
   position: relative;
   width: var(--chip, 30px);
-  height: calc(var(--chip, 30px) + 24px);
+  height: calc(var(--chip, 30px) + var(--rise, 21px));
 }
 
 .chip {

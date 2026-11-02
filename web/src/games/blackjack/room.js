@@ -1,11 +1,13 @@
 import { Table, RULES } from './table.js'
+import { socialState, sendEmote, placeOrder, pruneSocial, projectSocial } from './social.js'
 
 // Blackjack in a room (see online/session.js), with no server of our own: the host's device runs
 // the table and everyone else sees what the host sends them. Solo play runs the very same rules
 // in a room of one (online/useLocalRoom.js).
 //
 // The room's state keeps the table as plain data (`bj`, see Table.save), each player's chips
-// (`wallets`, by player id) and the last thing refused to each player (`notes`). A player's
+// (`wallets`, by player id), the last thing refused to each player (`notes`), and the emotes,
+// bar orders and gifts going round the table (`social`, see social.js). A player's
 // chips live on their own device: they bring them when they arrive and keep a copy of the room's
 // figure as it changes (loadChips / saveChips). So chips can't be checked by anyone, and the
 // host's device knows the cards: fine for play money among friends.
@@ -17,7 +19,7 @@ import { Table, RULES } from './table.js'
 const CHIPS_KEY = 'blackjackChips'
 const OLD_CHIPS_KEY = 'blackjackPractice' // the practice table's chips, from before rooms
 const MAX_CENTS = 1e11
-const STAT_KEYS = ['hands', 'wins', 'losses', 'pushes', 'blackjacks', 'busts', 'net', 'biggestWin', 'peak', 'refills', 'wagered', 'doubles', 'splits']
+const STAT_KEYS = ['hands', 'wins', 'losses', 'pushes', 'blackjacks', 'busts', 'net', 'biggestWin', 'peak', 'refills', 'wagered', 'doubles', 'splits', 'sideBets', 'sideWins', 'barTab', 'gifts']
 const MAX_KEYS = ['biggestWin', 'peak'] // the best so far, not a running total
 
 // ---------- This player's chips, on this device ----------
@@ -66,7 +68,11 @@ export function refill (wallet) {
 
 // ---------- The room, on the host ----------
 
-export const initialState = () => ({ bj: null, wallets: {}, notes: {}, solo: false })
+export const initialState = () => ({ bj: null, wallets: {}, notes: {}, solo: false, social: socialState() })
+
+// A fresh table starts with nothing on it, but the numbering goes on, so no browser takes a new
+// emote for one it has already shown
+const freshSocial = (s) => socialState(s.social?.n || 0)
 
 // The table's wallet, over the chips in the room's state
 function walletOf (s) {
@@ -162,6 +168,7 @@ export function onAction (s, playerId, action) {
       if (!isHost || s.phase !== 'lobby') return
       s.bj = new Table({ id: 'room', kind: s.solo ? 'solo' : 'shared', wallet: walletOf(s) }).save()
       s.notes = {}
+      s.social = freshSocial(s)
       s.phase = 'table'
       sync(s, now)
       return
@@ -169,20 +176,41 @@ export function onAction (s, playerId, action) {
       if (!isHost || s.phase !== 'table') return
       refundOpenHands(s)
       s.bj = null
+      s.social = freshSocial(s)
       s.phase = 'lobby'
       return
+    // An emote, from anyone at the table, seated or watching; too many too fast are dropped
+    case 'emote':
+      if (s.phase !== 'table') return
+      sendEmote(s.social ||= socialState(), playerId, action.k, now)
+      return
+    // Something from the bar, for themselves, someone seated, or the dealer
+    case 'buy': {
+      if (s.phase !== 'table' || !s.bj) return
+      if (!s.wallets[playerId]) return note(s, playerId, 'unknown')
+      const seated = (id) => s.bj.seats.some(seat => seat?.playerId === id)
+      const to = typeof action.to === 'string' ? action.to : ''
+      const err = placeOrder(s.social ||= socialState(), walletOf(s), playerId, { k: action.k, to }, now, seated)
+      if (err && err !== 'slow') note(s, playerId, err)
+      return
+    }
     case 'refill': {
       const wallet = s.wallets[playerId]
       const err = wallet ? refill(wallet) : 'unknown'
       if (err) note(s, playerId, err)
       return
     }
+    // A bet: the main one, or with `key` a side bet ('pp' or 't3')
     case 'bet':
     case 'ready':
     case 'act': {
       if (s.phase !== 'table' || !s.bj) return
       const res = withTable(s, (table) => {
-        if (action.type === 'bet') return table.bet(playerId, action.amount, now)
+        if (action.type === 'bet') {
+          return action.key && action.key !== 'main'
+            ? table.sideBet(playerId, action.key, action.amount, now)
+            : table.bet(playerId, action.amount, now)
+        }
         if (action.type === 'ready') return table.ready(playerId, now)
         return table.act(playerId, action.action, now)
       })
@@ -191,8 +219,10 @@ export function onAction (s, playerId, action) {
   }
 }
 
-// Turns that ran out, the dealer's cards and the next round, a few times a second
+// Turns that ran out, the dealer's cards and the next round, a few times a second; and what's
+// been finished at the bar cleared away
 export function onTick (s, now) {
+  if (s.social) pruneSocial(s.social, now)
   if (s.phase !== 'table' || !s.bj) return
   withTable(s, (table) => {
     syncSeats(s, table, now)
@@ -203,14 +233,19 @@ export function onTick (s, now) {
 export const onJoin = (s) => sync(s)
 export const onLeave = (s) => sync(s)
 
-/** What one player sees: the table without the shoe or the face-down card, and their own chips. */
+/**
+ * What one player sees: the table without the shoe or the face-down card, their own chips, and
+ * what's going on round the table.
+ */
 export function project (s, playerId) {
-  const { bj, wallets, notes, ...room } = s
+  const { bj, wallets, notes, social, ...room } = s
+  const now = Date.now()
   return {
     ...room,
-    table: bj ? loadTable(s).view(playerId, Date.now()) : null,
+    table: bj ? loadTable(s).view(playerId, now) : null,
     me: wallets[playerId] || null,
     note: notes[playerId] || null,
-    balances: Object.fromEntries(Object.entries(wallets).map(([id, wallet]) => [id, wallet.balance]))
+    balances: Object.fromEntries(Object.entries(wallets).map(([id, wallet]) => [id, wallet.balance])),
+    social: projectSocial(social, now)
   }
 }

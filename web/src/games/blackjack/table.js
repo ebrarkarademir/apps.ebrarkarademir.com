@@ -13,8 +13,13 @@
 // after a split; split any pair of equal value, up to four hands, aces once with one card each;
 // 21 after a split isn't a Blackjack. The dealer checks for Blackjack when showing an ace or a
 // ten, and a dealer Blackjack ends the round at once.
+//
+// Next to the main bet a seat can put down two side bets, Perfect Pairs and 21+3 (see
+// sidebets.js). They go with the main bet, leave the wallet with it when the cards are dealt,
+// and are paid on those first cards straight away.
 
 import { handValue, canPair, newShoe, secureInt } from './cards.js'
+import { SIDE_KEYS, PAYS, sideResult } from './sidebets.js'
 
 export const RULES = Object.freeze({
   decks: 6,
@@ -22,6 +27,8 @@ export const RULES = Object.freeze({
   seats: 5,
   minBet: 500, // $5
   maxBet: 50000, // $500
+  sideMin: 500, // $5, each side bet
+  sideMax: 10000, // $100
   startBalance: 100000, // $1,000
   maxHands: 4,
   betMs: 15000, // a shared table deals this long after the first player is ready
@@ -40,6 +47,13 @@ const ACTIONS = ['hit', 'stand', 'double', 'split']
 
 const fail = (err) => ({ ok: false, err })
 const OK = { ok: true }
+
+// A seat's side bets for the next deal, by key; a seat from before side bets has none
+const NO_SIDES = Object.freeze({ pp: 0, t3: 0 })
+const sidesOf = (seat) => ({ ...NO_SIDES, ...seat.side })
+const sideTotal = (side) => SIDE_KEYS.reduce((sum, key) => sum + (side[key] || 0), 0)
+// Everything a seat has down for the next deal
+const stakeOf = (seat) => seat.bet + sideTotal(sidesOf(seat))
 
 export class Table {
   /**
@@ -118,7 +132,7 @@ export class Table {
     if (this.seatOf(playerId)) return fail('seated')
     const index = at >= 0 && at < this.seats.length && !this.seats[at] ? at : this.seats.findIndex(seat => !seat)
     if (index < 0) return fail('full')
-    this.seats[index] = { playerId, name, bet: 0, lastBet: 0, ready: false, hands: [], away: false, leaving: false }
+    this.seats[index] = { playerId, name, bet: 0, lastBet: 0, side: { ...NO_SIDES }, lastSide: { ...NO_SIDES }, sides: [], ready: false, hands: [], away: false, leaving: false }
     this.changed()
     return { ok: true, seat: index }
   }
@@ -152,7 +166,7 @@ export class Table {
 
   // ---------- Betting ----------
 
-  /** Sets this player's bet for the next deal (0 takes it back). */
+  /** Sets this player's bet for the next deal. 0 takes it back, and its side bets with it. */
   bet (playerId, amount, now = Date.now()) {
     if (this.phase !== 'betting') return fail('phase')
     const found = this.seatOf(playerId)
@@ -160,9 +174,31 @@ export class Table {
     if (!Number.isInteger(amount) || amount < 0 || amount % 100) return fail('amount')
     if (amount && amount < this.rules.minBet) return fail('min')
     if (amount > this.rules.maxBet) return fail('max')
-    if (amount > this.wallet.balance(playerId)) return fail('funds')
-    found.seat.bet = amount
-    found.seat.ready = false
+    const seat = found.seat
+    const sides = amount ? sideTotal(sidesOf(seat)) : 0
+    if (amount + sides > this.wallet.balance(playerId)) return fail('funds')
+    seat.bet = amount
+    if (!amount) seat.side = { ...NO_SIDES }
+    seat.ready = false
+    this.checkBets(now)
+    this.changed()
+    return OK
+  }
+
+  /** Sets a side bet for the next deal: 'pp' (Perfect Pairs) or 't3' (21+3); 0 takes it back. */
+  sideBet (playerId, key, amount, now = Date.now()) {
+    if (this.phase !== 'betting') return fail('phase')
+    if (!SIDE_KEYS.includes(key)) return fail('side')
+    const found = this.seatOf(playerId)
+    if (!found) return fail('seat')
+    if (!Number.isInteger(amount) || amount < 0 || amount % 100) return fail('amount')
+    if (amount && amount < this.rules.sideMin) return fail('sideMin')
+    if (amount > this.rules.sideMax) return fail('sideMax')
+    const seat = found.seat
+    const side = { ...sidesOf(seat), [key]: amount }
+    if (seat.bet + sideTotal(side) > this.wallet.balance(playerId)) return fail('funds')
+    seat.side = side
+    seat.ready = false
     this.checkBets(now)
     this.changed()
     return OK
@@ -174,7 +210,7 @@ export class Table {
     const found = this.seatOf(playerId)
     if (!found) return fail('seat')
     if (found.seat.bet < this.rules.minBet) return fail('min')
-    if (found.seat.bet > this.wallet.balance(playerId)) return fail('funds')
+    if (stakeOf(found.seat) > this.wallet.balance(playerId)) return fail('funds')
     found.seat.ready = true
     this.checkBets(now)
     this.changed()
@@ -203,13 +239,16 @@ export class Table {
     const playing = []
     this.seats.forEach((seat, index) => {
       if (!seat || seat.leaving || seat.bet < this.rules.minBet) return
-      // The stake leaves the wallet now; someone who can no longer cover it sits this one out
-      if (!this.wallet.debit(seat.playerId, seat.bet)) {
+      // The stake, side bets and all, leaves the wallet now; someone who can no longer cover it
+      // sits this one out
+      const stake = stakeOf(seat)
+      if (!this.wallet.debit(seat.playerId, stake)) {
         seat.bet = 0
+        seat.side = { ...NO_SIDES }
         seat.ready = false
         return
       }
-      this.wallet.record(seat.playerId, { wagered: seat.bet })
+      this.wallet.record(seat.playerId, { wagered: stake })
       playing.push(index)
     })
     if (!playing.length) {
@@ -224,6 +263,7 @@ export class Table {
       const seat = this.seats[index]
       seat.hands = [{ cards: [], bet: seat.bet, doubled: false, split: false, done: false, outcome: null, payout: 0 }]
       seat.lastBet = seat.bet
+      seat.lastSide = sidesOf(seat)
       seat.ready = false
     }
     // One card each and one for the dealer, face up; then a second each and the dealer's face down
@@ -231,6 +271,7 @@ export class Table {
       for (const index of playing) this.seats[index].hands[0].cards.push(this.draw())
       this.dealer.cards.push(this.draw())
     }
+    for (const index of playing) this.settleSides(this.seats[index])
     const dealTime = this.dealt * this.rules.cardMs
     for (const index of playing) {
       const hand = this.seats[index].hands[0]
@@ -340,6 +381,27 @@ export class Table {
     return OK
   }
 
+  // ---------- Side bets ----------
+
+  // Paid on the cards just dealt, the player's first two and the dealer's up card, before anyone
+  // plays: { key, bet, kind, odds, payout } each, kind null for a side bet that lost
+  settleSides (seat) {
+    const cards = seat.hands[0].cards.map(card => card.c)
+    const up = this.dealer.cards[0].c
+    const side = sidesOf(seat)
+    seat.sides = []
+    for (const key of SIDE_KEYS) {
+      const bet = side[key]
+      if (!bet) continue
+      const hit = sideResult(key, cards, up)
+      const payout = hit ? bet + bet * hit.odds : 0
+      if (payout) this.wallet.credit(seat.playerId, payout)
+      seat.sides.push({ key, bet, kind: hit?.kind || null, odds: hit?.odds || 0, payout })
+      const net = payout - bet
+      this.wallet.record(seat.playerId, { sideBets: 1, sideWins: hit ? 1 : 0, net, biggestWin: Math.max(0, net) })
+    }
+  }
+
   // ---------- The dealer and the payout ----------
 
   // Hands still waiting on the dealer: not bust and not a Blackjack (that's paid either way)
@@ -405,7 +467,8 @@ export class Table {
     this.deadline = now + this.rules.settleMs
   }
 
-  // A new round: cards cleared, and everyone's last bet offered again if they can still cover it
+  // A new round: cards cleared, and everyone's last bet offered again if they can still cover it,
+  // with its side bets if they can cover those too
   newRound (now) {
     this.seats.forEach((seat, index) => {
       if (!seat) return
@@ -414,9 +477,13 @@ export class Table {
         return
       }
       seat.hands = []
+      seat.sides = []
       seat.ready = false
       const balance = this.wallet.balance(seat.playerId)
-      seat.bet = seat.lastBet >= this.rules.minBet && seat.lastBet <= balance ? seat.lastBet : 0
+      const bet = seat.lastBet >= this.rules.minBet && seat.lastBet <= balance ? seat.lastBet : 0
+      const side = { ...NO_SIDES, ...seat.lastSide }
+      seat.bet = bet
+      seat.side = bet && bet + sideTotal(side) <= balance ? side : { ...NO_SIDES }
     })
     this.phase = 'betting'
     this.dealer = { cards: [], hidden: true }
@@ -478,9 +545,12 @@ export class Table {
         bust: dealerValue.bust
       },
       seats: this.seats.map(seat => seat && {
+        pid: seat.playerId,
         name: seat.name,
         me: seat.playerId === playerId,
         bet: seat.bet,
+        side: sidesOf(seat),
+        sides: seat.sides || [],
         ready: seat.ready,
         away: seat.away,
         leaving: seat.leaving,
@@ -491,7 +561,7 @@ export class Table {
       }),
       options: this.options(playerId),
       shoe: { left: this.shoe.length - this.used, size: this.shoe.length, shuffled: this.shuffled },
-      rules: { minBet: this.rules.minBet, maxBet: this.rules.maxBet, chips: CHIPS, seats: this.seats.length }
+      rules: { minBet: this.rules.minBet, maxBet: this.rules.maxBet, sideMin: this.rules.sideMin, sideMax: this.rules.sideMax, pays: PAYS, chips: CHIPS, seats: this.seats.length }
     }
   }
 }

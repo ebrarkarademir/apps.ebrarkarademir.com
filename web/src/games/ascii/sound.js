@@ -249,6 +249,16 @@ const patches = {
   blackjack: (t) => [0, 0.08, 0.16, 0.26].forEach((d, i) => bell(t + d, [523.25, 659.25, 783.99, 1318.51][i], 0.04)),
   // A hand lost: one low, soft note
   lose: (t) => tone(t, { type: 'sine', from: 330, to: 196, duration: 0.35, volume: 0.04 }),
+  // An emote popping up over a seat: two quick blips
+  emote: (t) => {
+    tone(t, { type: 'square', from: 880, to: 1175, duration: 0.05, volume: 0.02 })
+    tone(t + 0.06, { type: 'square', from: 1320, duration: 0.05, volume: 0.016 })
+  },
+  // Something from the bar set down on the table: a glass clinking
+  clink: (t) => {
+    bell(t, 2093, 0.022)
+    bell(t + 0.07, 2637, 0.016)
+  },
   // Neon Laps: a tyre squealing for a moment, louder the harder the car slides
   skid: (t, power = 0.5) => hiss(t, { duration: 0.16, volume: 0.012 + power * 0.022, type: 'bandpass', frequency: 900 + power * 400, to: 750, attack: 0.03 }),
   // A lap done: two bright notes

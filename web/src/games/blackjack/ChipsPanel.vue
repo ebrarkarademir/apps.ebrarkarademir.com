@@ -24,18 +24,21 @@ const rows = computed(() => [
   { label: props.t.bjStatBiggest, value: money(stats.value.biggestWin || 0) },
   { label: props.t.bjStatNet, value: money(stats.value.net || 0, { sign: true }) },
   { label: props.t.bjStatPeak, value: money(stats.value.peak || 0) },
+  { label: props.t.bjStatSideWins, value: stats.value.sideWins || 0 },
   { label: props.t.bjStatPushes, value: stats.value.pushes || 0 },
   { label: props.t.bjStatBusts, value: stats.value.busts || 0 },
+  { label: props.t.bjStatBarTab, value: money(stats.value.barTab || 0) },
+  { label: props.t.bjStatGifts, value: stats.value.gifts || 0 },
   { label: props.t.bjStatRefills, value: stats.value.refills || 0 }
 ])
 const broke = computed(() => props.wallet && props.wallet.balance < RULES.minBet)
 </script>
 
 <template>
-  <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-    <section class="term-panel border-term p-4 text-center flex flex-col justify-center" aria-labelledby="bj-balance">
+  <div class="grid gap-3 sm:gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+    <section class="term-panel border-term p-3 sm:p-4 text-center flex flex-col justify-center" aria-labelledby="bj-balance">
       <h2 id="bj-balance" class="term-label">{{ t.bjBalance }}</h2>
-      <p class="font-display text-6xl leading-none my-2 tabular-nums">{{ money(wallet?.balance || 0) }}</p>
+      <p class="font-display text-5xl sm:text-6xl leading-none my-1 sm:my-2 tabular-nums">{{ money(wallet?.balance || 0) }}</p>
       <p v-if="name" class="term-muted text-xs">{{ name }}</p>
       <div v-if="broke" class="mt-3 flex flex-col items-center gap-2">
         <span class="text-sm font-semibold">{{ t.bjBroke }}</span>
@@ -43,12 +46,12 @@ const broke = computed(() => props.wallet && props.wallet.balance < RULES.minBet
       </div>
     </section>
 
-    <section class="term-panel p-4" aria-labelledby="bj-stats">
-      <h2 id="bj-stats" class="term-label mb-3">{{ t.bjStats }}</h2>
-      <dl class="grid grid-cols-3 gap-x-3 gap-y-3">
+    <section class="term-panel p-3 sm:p-4" aria-labelledby="bj-stats">
+      <h2 id="bj-stats" class="term-label mb-2 sm:mb-3">{{ t.bjStats }}</h2>
+      <dl class="grid grid-cols-4 md:grid-cols-3 gap-x-2 sm:gap-x-3 gap-y-2 sm:gap-y-3">
         <div v-for="row in rows" :key="row.label" class="min-w-0">
-          <dt class="text-[10px] uppercase tracking-wider term-muted truncate">{{ row.label }}</dt>
-          <dd class="font-display text-2xl leading-none tabular-nums truncate">{{ row.value }}</dd>
+          <dt class="text-[9px] sm:text-[10px] uppercase tracking-wider term-muted truncate">{{ row.label }}</dt>
+          <dd class="font-display text-xl sm:text-2xl leading-none tabular-nums truncate">{{ row.value }}</dd>
         </div>
       </dl>
     </section>
