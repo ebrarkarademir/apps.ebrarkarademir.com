@@ -1,5 +1,6 @@
 import { W, H, TANK_R, BARREL, PAD_R, GIFT_R, mapOf } from './engine'
 import { SHIELD_COLOR, REPAIR_COLOR, PAD_COLOR, FIRE } from './effects'
+import { rgba, shade, drawBlob, drawParticles as paintParticles } from './glow'
 import { GREEN, GLOW, MONO, drawText, truncate } from '../ascii/paint'
 import { mulberry32 } from '../ascii/random'
 
@@ -20,35 +21,7 @@ const TAU = Math.PI * 2
 const FLOOR = '#051207'
 const TRACK_SIDE = 1.27 // how far each tread runs from the middle of the tank
 
-const rgbOf = (hex) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16))
-const rgba = (hex, a) => `rgba(${rgbOf(hex).join(', ')}, ${a})`
-const shade = (hex, f) => `rgb(${rgbOf(hex).map(v => Math.round(v * f)).join(', ')})`
 const easeOutBack = (t) => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2)
-
-// Soft round blobs of light (or of smoke), painted once per color and stretched to any size
-const blobs = new Map()
-function blobOf (color, kind) {
-  const key = `${color}${kind}`
-  let sprite = blobs.get(key)
-  if (!sprite) {
-    sprite = document.createElement('canvas')
-    sprite.width = sprite.height = 96
-    const g = sprite.getContext('2d')
-    const gradient = g.createRadialGradient(48, 48, 0, 48, 48, 48)
-    if (kind === 'smoke') {
-      gradient.addColorStop(0, rgba(color, 0.9))
-      gradient.addColorStop(0.5, rgba(color, 0.45))
-    } else {
-      gradient.addColorStop(0, rgba(color, 1))
-      gradient.addColorStop(0.22, rgba(color, 0.65))
-    }
-    gradient.addColorStop(1, rgba(color, 0))
-    g.fillStyle = gradient
-    g.fillRect(0, 0, 96, 96)
-    blobs.set(key, sprite)
-  }
-  return sprite
-}
 
 // A tank's colors, dimmer and dirtier the more damage it has taken
 const palettes = new Map()
@@ -129,13 +102,7 @@ export function createRenderer (canvas) {
   }
   const toScreen = (x, y) => (turn ? [(H - y) * unit, x * unit] : [x * unit, y * unit])
 
-  function blob (color, x, y, size, alpha, kind = 'glow') {
-    if (alpha <= 0.004 || size <= 0) return
-    const before = ctx.globalAlpha
-    ctx.globalAlpha = Math.min(1, alpha)
-    ctx.drawImage(blobOf(color, kind), x - size / 2, y - size / 2, size, size)
-    ctx.globalAlpha = before
-  }
+  const blob = (color, x, y, size, alpha, kind = 'glow') => drawBlob(ctx, color, x, y, size, alpha, kind)
 
   function roundRect (g, x, y, w, h, r) {
     g.beginPath()
@@ -873,63 +840,7 @@ export function createRenderer (canvas) {
     }
   }
 
-  function drawParticles (list) {
-    // Smoke and scraps of metal, then everything that glows, added on top
-    for (const p of list) {
-      const k = p.life / p.ttl
-      if (p.kind === 'smoke') {
-        const age = p.ttl - p.life
-        blob(p.color, p.x, p.y, p.size + p.grow * age, p.alpha * k * Math.min(1, age / 0.08), 'smoke')
-      } else if (p.kind === 'chunk') {
-        ctx.save()
-        ctx.translate(p.x, p.y)
-        ctx.rotate(p.angle || 0)
-        ctx.globalAlpha = Math.min(1, k * 3)
-        ctx.fillStyle = p.color
-        ctx.fillRect(-p.size / 2, -p.size * 0.3, p.size, p.size * 0.6)
-        ctx.restore()
-      }
-    }
-    ctx.globalAlpha = 1
-    ctx.globalCompositeOperation = 'lighter'
-    ctx.lineCap = 'round'
-    for (const p of list) {
-      const k = p.life / p.ttl
-      if (p.kind === 'flash') blob(p.color, p.x, p.y, p.size, k * k)
-      else if (p.kind === 'fire') blob(p.color, p.x, p.y, p.size * (0.35 + 0.65 * k), Math.min(1, k * 1.6))
-      else if (p.kind === 'chunk' && p.glow) blob(p.color, p.x, p.y, p.size * 2.4, k * 0.6)
-      else if (p.kind === 'plus') {
-        const s = p.size * 0.5
-        ctx.globalAlpha = Math.min(1, k * 1.5)
-        ctx.strokeStyle = p.color
-        ctx.lineWidth = p.size * 0.3
-        ctx.beginPath()
-        ctx.moveTo(p.x - s, p.y)
-        ctx.lineTo(p.x + s, p.y)
-        ctx.moveTo(p.x, p.y - s)
-        ctx.lineTo(p.x, p.y + s)
-        ctx.stroke()
-      } else if (p.kind === 'spark') {
-        ctx.globalAlpha = k
-        ctx.strokeStyle = p.color
-        ctx.lineWidth = 0.13
-        ctx.beginPath()
-        ctx.moveTo(p.x - p.vx * 0.025, p.y - p.vy * 0.025)
-        ctx.lineTo(p.x, p.y)
-        ctx.stroke()
-      } else if (p.kind === 'ring') {
-        ctx.globalAlpha = k
-        ctx.strokeStyle = p.color
-        ctx.lineWidth = 0.08 + 0.22 * k
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, Math.max(0.05, p.size + p.grow * (p.ttl - p.life)), 0, TAU)
-        ctx.stroke()
-      }
-    }
-    ctx.globalAlpha = 1
-    ctx.globalCompositeOperation = 'source-over'
-    ctx.lineCap = 'butt'
-  }
+  const drawParticles = (list) => paintParticles(ctx, list)
 
   // ---------- Text, upright on screen ----------
 

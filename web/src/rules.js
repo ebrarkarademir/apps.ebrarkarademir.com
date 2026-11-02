@@ -1147,6 +1147,76 @@ export const rules = {
       ]
     }
   },
+  race: {
+    EN: {
+      icon: '[>]',
+      title: 'Neon Laps',
+      players: '1 player against bots, or up to 6 online',
+      duration: '2–5 min',
+      goal: 'Be first over the line after the last lap.',
+      steps: [
+        'Race alone against bots, or online: one person creates a room and the others join with the code.',
+        'The car drives itself: steer with left and right (or A and D). On a phone, turn the wheel on screen. Turning slows the car down.',
+        'Turn hard at speed and the car drifts round the bend. Steer the other way to straighten up.',
+        'Pickups turn up anywhere on the track: a boost (longer the further back you are), a shield, or a shell to fire with Space. A shell bounces off walls and spins out the car it hits.'
+      ],
+      tips: [
+        'Every checkpoint counts, in order, so there are no shortcuts. The map in the corner shows everyone.',
+        'Your best lap on each track is saved on this device.'
+      ]
+    },
+    TR: {
+      icon: '[>]',
+      title: 'Neon Turlar',
+      players: 'Botlara karşı 1 oyuncu ya da çevrim içi 6 kişiye kadar',
+      duration: '2–5 dk',
+      goal: 'Son turdan sonra çizgiyi ilk sen geç.',
+      steps: [
+        'Botlara karşı tek başına yarış ya da çevrim içi: bir kişi oda oluşturur, diğerleri kodla katılır.',
+        'Araba kendi gider: sağ ve sol (ya da A ve D) ile yön ver. Telefonda ekrandaki direksiyonu çevir. Dönmek arabayı yavaşlatır.',
+        'Hızlıyken sert dönersen araba virajda drift atar. Düzelmek için ters yöne çevir.',
+        'Hediyeler pistin her yerinde çıkar: hız (ne kadar gerideysen o kadar uzun), kalkan ya da Boşluk ile atılan bir mermi. Mermi duvarlardan seker ve vurduğu arabayı döndürür.'
+      ],
+      tips: [
+        'Her kontrol noktası sırayla sayılır, yani kestirme yok. Köşedeki harita herkesi gösterir.',
+        'Her pistteki en iyi turun bu cihazda saklanır.'
+      ]
+    },
+    RU: {
+      icon: '[>]',
+      title: 'Неоновые гонки',
+      players: '1 игрок против ботов или до 6 онлайн',
+      duration: '2–5 мин',
+      goal: 'Первым пересеки черту после последнего круга.',
+      steps: [
+        'Гоняй один против ботов или онлайн: один создаёт комнату, остальные входят по коду.',
+        'Машина едет сама: рули влево и вправо (или A и D). На телефоне крути руль на экране. В повороте машина замедляется.',
+        'Резко поверни на скорости — и машина пойдёт в занос по повороту. Поверни руль обратно, чтобы выровняться.',
+        'Бонусы появляются по всей трассе: ускорение (чем дальше позади, тем дольше), щит или снаряд, который выпускается пробелом. Снаряд отскакивает от стен и закручивает машину, в которую попадёт.'
+      ],
+      tips: [
+        'Контрольные точки засчитываются только по порядку, так что срезать не выйдет. Карта в углу показывает всех.',
+        'Твой лучший круг на каждой трассе сохраняется на этом устройстве.'
+      ]
+    },
+    KK: {
+      icon: '[>]',
+      title: 'Неон жарыс',
+      players: 'Боттарға қарсы 1 ойыншы не онлайн 6-ға дейін',
+      duration: '2–5 мин',
+      goal: 'Соңғы айналымнан кейін мәре сызығынан бірінші өт.',
+      steps: [
+        'Боттарға қарсы жалғыз жарыс не онлайн: бір адам бөлме ашады, қалғандары кодпен кіреді.',
+        'Көлік өзі жүреді: солға және оңға (не A және D) бұр. Телефонда экрандағы рульді айналдыр. Бұрылыс көлікті баяулатады.',
+        'Жылдам келе жатып қатты бұрылсаң, көлік бұрылыста дрифтке түседі. Түзелу үшін рульді кері бұр.',
+        'Сыйлықтар трассаның кез келген жерінде шығады: үдеу (неғұрлым артта болсаң, соғұрлым ұзақ), қалқан не Бос орынмен атылатын снаряд. Снаряд қабырғадан серпіліп, тиген көлікті айналдырып жібереді.'
+      ],
+      tips: [
+        'Әр бақылау нүктесі ретімен саналады, сондықтан төте жол жоқ. Бұрыштағы карта бәрін көрсетеді.',
+        'Әр трассадағы ең жақсы айналымың осы құрылғыда сақталады.'
+      ]
+    }
+  },
   users: {
     EN: {
       icon: 'who',

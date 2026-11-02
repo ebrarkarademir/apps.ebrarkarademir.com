@@ -248,7 +248,76 @@ const patches = {
   win: (t) => [0, 0.09, 0.18].forEach((d, i) => bell(t + d, [659.25, 783.99, 1046.5][i], 0.035)),
   blackjack: (t) => [0, 0.08, 0.16, 0.26].forEach((d, i) => bell(t + d, [523.25, 659.25, 783.99, 1318.51][i], 0.04)),
   // A hand lost: one low, soft note
-  lose: (t) => tone(t, { type: 'sine', from: 330, to: 196, duration: 0.35, volume: 0.04 })
+  lose: (t) => tone(t, { type: 'sine', from: 330, to: 196, duration: 0.35, volume: 0.04 }),
+  // Neon Laps: a tyre squealing for a moment, louder the harder the car slides
+  skid: (t, power = 0.5) => hiss(t, { duration: 0.16, volume: 0.012 + power * 0.022, type: 'bandpass', frequency: 900 + power * 400, to: 750, attack: 0.03 }),
+  // A lap done: two bright notes
+  lap: (t) => {
+    tone(t, { type: 'triangle', from: 880, duration: 0.1, volume: 0.05 })
+    tone(t + 0.1, { type: 'triangle', from: 1318.51, duration: 0.2, volume: 0.05 })
+  },
+  // A boost: a rush of air, rising
+  boost: (t) => {
+    hiss(t, { duration: 0.45, volume: 0.09, type: 'bandpass', frequency: 600, to: 3200, attack: 0.04 })
+    tone(t, { type: 'sawtooth', from: 120, to: 340, duration: 0.4, volume: 0.02 })
+  },
+  // Spun round by a shell: a wobbling fall
+  spinout: (t) => {
+    tone(t, { type: 'sine', from: 900, to: 220, duration: 0.6, volume: 0.05 })
+    tone(t + 0.05, { type: 'triangle', from: 700, to: 180, duration: 0.55, volume: 0.025 })
+  }
+}
+
+// A racing engine: a soft whine (two smooth tones an octave apart, with a deep one under them)
+// through a filter that opens as it revs. Its pitch climbs through five gears and drops back at
+// each change, as a racing car's does. Made when it's first wanted, once the page may play
+// sound, and silent while muted.
+const GEARS = 5
+
+function engine () {
+  let nodes = null
+  return {
+    // rev: 0 idling to 1 flat out (a little more on a boost); load: 0 coasting to 1 driving
+    set (rev, load) {
+      if (!audio || audio.state !== 'running') return
+      if (!nodes) {
+        const tones = [['triangle', 1, 0.6], ['sine', 2, 0.35], ['sine', 0.5, 0.5]].map(([type, ratio, level]) => {
+          const osc = audio.createOscillator()
+          const mix = audio.createGain()
+          osc.type = type
+          mix.gain.value = level
+          return { osc, mix, ratio }
+        })
+        const filter = audio.createBiquadFilter()
+        const gain = audio.createGain()
+        filter.type = 'lowpass'
+        filter.Q.value = 0.8
+        gain.gain.value = 0
+        for (const tone of tones) {
+          tone.osc.connect(tone.mix).connect(filter)
+          tone.osc.start()
+        }
+        filter.connect(gain).connect(audio.destination)
+        nodes = { tones, filter, gain }
+      }
+      const t = audio.currentTime
+      // Within a gear the note rises; the next gear starts lower again
+      const r = Math.max(0, rev) * GEARS
+      const gear = Math.min(GEARS - 1, Math.floor(r))
+      const within = Math.min(1.2, r - gear)
+      const pitch = 70 + gear * 14 + within * 90
+      for (const tone of nodes.tones) tone.osc.frequency.setTargetAtTime(pitch * tone.ratio, t, 0.03)
+      nodes.filter.frequency.setTargetAtTime(500 + within * 500 + gear * 120, t, 0.05)
+      nodes.gain.gain.setTargetAtTime(muted ? 0 : 0.012 + load * 0.012, t, 0.08)
+    },
+    stop () {
+      if (!nodes) return
+      const t = audio.currentTime
+      nodes.gain.gain.setTargetAtTime(0, t, 0.04)
+      for (const tone of nodes.tones) tone.osc.stop(t + 0.3)
+      nodes = null
+    }
+  }
 }
 
 export const sound = {
@@ -275,5 +344,7 @@ export const sound = {
   play (name, ...args) {
     if (muted || !audio || audio.state !== 'running') return
     patches[name]?.(audio.currentTime, ...args)
-  }
+  },
+  // A car's engine that keeps running: set(rev, load) every frame, stop() when it's done
+  engine
 }

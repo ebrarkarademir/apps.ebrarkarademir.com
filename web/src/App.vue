@@ -14,6 +14,7 @@ import FlappyGame from './games/FlappyGame.vue'
 import TankGame from './games/TankGame.vue'
 import CraterGame from './games/CraterGame.vue'
 import FutsalGame from './games/FutsalGame.vue'
+import RaceGame from './games/RaceGame.vue'
 import DoodleGame from './games/DoodleGame.vue'
 import SudokuGame from './games/SudokuGame.vue'
 import ChessGame from './games/ChessGame.vue'
@@ -100,6 +101,17 @@ const games = computed(() => [
     duration: minutes('3–8'),
     mode: t.value.cardModeSoloOnline
 
+  },
+  {
+    id: 'race',
+    category: ['solo', 'online', 'party'],
+    title: t.value.raceTitle,
+    description: t.value.raceDesc,
+    icon: '[>]',
+    art: cardArt.race,
+    players: '1–6',
+    duration: minutes('2–5'),
+    mode: t.value.cardModeSoloOnline
   },
   {
     id: 'blackjack',
@@ -284,7 +296,7 @@ const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
 
 // An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
 // Older links used /?join=CODE&game=quiz-race.
-const ONLINE_GAMES = ['tanks', 'crater', 'blackjack', 'futsal', 'doodle', 'sudoku', 'chess', 'dama', 'quiz-race', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['tanks', 'crater', 'blackjack', 'futsal', 'race', 'doodle', 'sudoku', 'chess', 'dama', 'quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const initialRoute = parsePath(window.location.pathname)
 const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
@@ -886,6 +898,14 @@ onUnmounted(() => {
         :t="t"
         :initialCode="inviteCodeFor('crater')"
         :hostRoom="hostRoomFor('crater')"
+        @go-back="closeGame"
+      />
+
+      <RaceGame
+        v-else-if="selectedGame === 'race'"
+        :t="t"
+        :initialCode="inviteCodeFor('race')"
+        :hostRoom="hostRoomFor('race')"
         @go-back="closeGame"
       />
 
