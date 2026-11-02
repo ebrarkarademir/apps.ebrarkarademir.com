@@ -21,6 +21,8 @@ const emit = defineEmits(['go-back'])
 const COUNTDOWN_MS = 3000
 const ROUND_MS = 150000
 const ENDING_MS = 2600 // the winner banner shows in the arena before the results
+const NEXT_ROUND_MS = 8000 // the results show this long before the next round of a match starts
+const ROUND_CHOICES = [1, 3, 5, 10] // rounds in a match
 const LIVE_TIMEOUT_MS = 5000 // a tank that sends nothing this long is counted out
 const MAX_TANKS = mapOf(0).spawns.length
 const SETUP_KEY = 'tankSolo'
@@ -163,6 +165,7 @@ function onAction (s, playerId, action) {
     case 'settings':
       if (!isHost || !between(s)) return
       if (LEVEL_NAMES.includes(action.level)) s.level = action.level
+      if (ROUND_CHOICES.includes(action.rounds)) s.rounds = action.rounds
       break
     case 'start': {
       if (!isHost || !between(s)) return
@@ -170,6 +173,12 @@ function onAction (s, playerId, action) {
       // People first, then bots, up to eight tanks; anyone past that watches the round
       const fighters = [...s.players.map(p => ({ id: p.id, bot: 0 })), ...s.bots.map(b => ({ id: b.id, bot: b.n }))].slice(0, MAX_TANKS)
       if (fighters.length < 2) return
+      // From the lobby or after a match's last round a new match starts, with the wins at nought
+      if (s.phase === 'lobby' || s.played >= s.rounds) {
+        s.played = 0
+        s.wins = {}
+      }
+      s.played++
       const slots = shuffle(Array.from({ length: fighters.length }, (_, i) => i))
       s.round++
       s.map = Math.floor(Math.random() * MAPS.length)
@@ -242,11 +251,15 @@ function onTick (s, now) {
     }
   } else if (s.phase === 'ending' && now >= s.deadline) {
     s.phase = 'results'
+    // In the middle of a match the next round starts by itself
+    s.deadline = s.played < s.rounds ? now + NEXT_ROUND_MS : null
+  } else if (s.phase === 'results' && s.deadline && now >= s.deadline) {
     s.deadline = null
+    onAction(s, s.hostId, { type: 'start' })
   }
 }
 
-const initialState = () => ({ round: 0, map: 0, deadline: null, tanks: {}, gifts: [], giftSeq: 0, knockedOut: 0, standings: [], wins: {}, outcome: null, bots: [], botSeq: 0, level: 'normal', solo: false })
+const initialState = () => ({ round: 0, map: 0, deadline: null, tanks: {}, gifts: [], giftSeq: 0, knockedOut: 0, standings: [], wins: {}, outcome: null, bots: [], botSeq: 0, level: 'normal', rounds: 3, played: 0, solo: false })
 
 // ---------- Online ----------
 
@@ -302,10 +315,11 @@ const loadSetup = () => {
     const saved = JSON.parse(localStorage.getItem(SETUP_KEY) || '{}')
     return {
       bots: saved.bots >= 1 && saved.bots < MAX_TANKS ? saved.bots : 3,
-      level: LEVEL_NAMES.includes(saved.level) ? saved.level : 'normal'
+      level: LEVEL_NAMES.includes(saved.level) ? saved.level : 'normal',
+      rounds: ROUND_CHOICES.includes(saved.rounds) ? saved.rounds : 3
     }
   } catch {
-    return { bots: 3, level: 'normal' }
+    return { bots: 3, level: 'normal', rounds: 3 }
   }
 }
 
@@ -331,7 +345,7 @@ const savedName = () => {
 
 function startSolo () {
   const bots = Array.from({ length: setup.bots }, (_, i) => ({ id: `bot${i + 1}`, n: i + 1 }))
-  solo.open(savedName() || props.t.gameYou, { solo: true, level: setup.level, bots, botSeq: bots.length })
+  solo.open(savedName() || props.t.gameYou, { solo: true, level: setup.level, rounds: setup.rounds, bots, botSeq: bots.length })
   inbox.length = 0
   live.samples = {}
   solo.act('start')
@@ -393,6 +407,10 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
           <span class="term-label w-full sm:w-40">&gt; {{ t.botLevel }}</span>
           <button v-for="level in LEVEL_NAMES" :key="level" type="button" :class="optionClass(setup.level === level)" @click="setup.level = level">{{ levelName(level) }}</button>
         </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="term-label w-full sm:w-40">&gt; {{ t.tankRounds }}</span>
+          <button v-for="n in ROUND_CHOICES" :key="n" type="button" :class="optionClass(setup.rounds === n)" @click="setup.rounds = n">{{ n }}</button>
+        </div>
       </div>
 
       <p class="term-muted text-sm leading-relaxed">&gt; {{ fmt(t.tankSoloHint, { n: setup.bots }) }} {{ t.tankLobbyHint }}</p>
@@ -433,6 +451,10 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
         <div class="flex flex-wrap items-center gap-2">
           <span class="term-label w-full sm:w-36">&gt; {{ t.botLevel }}</span>
           <button v-for="level in LEVEL_NAMES" :key="level" type="button" :disabled="!isHost" :class="optionClass(lobby.level === level)" @click="room.act('settings', { level })">{{ levelName(level) }}</button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="term-label w-full sm:w-36">&gt; {{ t.tankRounds }}</span>
+          <button v-for="n in ROUND_CHOICES" :key="n" type="button" :disabled="!isHost" :class="optionClass(lobby.rounds === n)" @click="room.act('settings', { rounds: n })">{{ n }}</button>
         </div>
         <div class="space-y-2 text-sm leading-relaxed">
           <p class="term-muted">&gt; {{ t.tankLobbyHint }}</p>

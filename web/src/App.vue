@@ -56,30 +56,6 @@ const minutes = (n) => t.value.cardMinutes.replace('{n}', n)
 // Menu cards: `players`, `duration` and `mode` fill the info side of each card, and
 // `soon` marks games that still open the Coming Soon screen
 const games = computed(() => [
-  ...(worldOn
-    ? [{
-        id: 'world',
-        category: ['online', 'party'],
-        title: t.value.worldTitle,
-        description: t.value.worldDesc,
-        icon: '[3D]',
-        art: cardArt.world,
-        players: '1–30',
-        duration: t.value.cardUnlimited,
-        mode: t.value.cardModeOnline
-      }]
-    : []),
-  {
-    id: 'flappy',
-    category: 'solo',
-    title: t.value.flappyTitle,
-    description: t.value.flappyDesc,
-    icon: '[^]',
-    art: cardArt.flappy,
-    players: '1',
-    duration: minutes('1–5'),
-    mode: t.value.cardModeSolo
-  },
   {
     id: 'tanks',
     category: ['solo', 'online', 'party'],
@@ -90,6 +66,28 @@ const games = computed(() => [
     players: '1–8',
     duration: minutes('2–5'),
     mode: t.value.cardModeSoloOnline
+  },
+  {
+    id: 'futsal',
+    category: ['solo', 'online', 'party'],
+    title: t.value.futsalTitle,
+    description: t.value.futsalDesc,
+    icon: '[o]',
+    art: cardArt.futsal,
+    players: '1–10',
+    duration: minutes('3–8'),
+    mode: t.value.cardModeSoloOnline
+  },
+  {
+    id: 'flappy',
+    category: 'solo',
+    title: t.value.flappyTitle,
+    description: t.value.flappyDesc,
+    icon: '[^]',
+    art: cardArt.flappy,
+    players: '1',
+    duration: minutes('1–5'),
+    mode: t.value.cardModeSolo
   },
   {
     id: 'crater',
@@ -113,28 +111,6 @@ const games = computed(() => [
     players: '1–5',
     duration: minutes('1–2'),
     mode: t.value.cardModeSoloOnline
-  },
-  {
-    id: 'futsal',
-    category: ['solo', 'online', 'party'],
-    title: t.value.futsalTitle,
-    description: t.value.futsalDesc,
-    icon: '[o]',
-    art: cardArt.futsal,
-    players: '1–10',
-    duration: minutes('3–8'),
-    mode: t.value.cardModeSoloOnline
-  },
-  {
-    id: 'doodle',
-    category: ['online', 'party'],
-    title: t.value.doodleTitle,
-    description: t.value.doodleDesc,
-    icon: '[/]',
-    art: cardArt.doodle,
-    players: '2–10',
-    duration: minutes('10–20'),
-    mode: t.value.cardModeOnline
   },
   {
     id: 'sudoku',
@@ -167,6 +143,30 @@ const games = computed(() => [
     art: cardArt.dama,
     players: '2',
     duration: minutes('10–30'),
+    mode: t.value.cardModeOnline
+  },
+  ...(worldOn
+    ? [{
+        id: 'world',
+        category: ['online', 'party'],
+        title: t.value.worldTitle,
+        description: t.value.worldDesc,
+        icon: '[3D]',
+        art: cardArt.world,
+        players: '1–30',
+        duration: t.value.cardUnlimited,
+        mode: t.value.cardModeOnline
+      }]
+    : []),
+  {
+    id: 'doodle',
+    category: ['online', 'party'],
+    title: t.value.doodleTitle,
+    description: t.value.doodleDesc,
+    icon: '[/]',
+    art: cardArt.doodle,
+    players: '2–10',
+    duration: minutes('10–20'),
     mode: t.value.cardModeOnline
   },
   {

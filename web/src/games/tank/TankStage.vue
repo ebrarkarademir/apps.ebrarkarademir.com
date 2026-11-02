@@ -72,6 +72,7 @@ const GIFT_NAMES = { shield: 'tankGiftShield', speed: 'tankGiftSpeed', power: 't
 const FEED_LIFE = 4.5 // seconds a line stays in the list of who destroyed whom
 const FEED_MAX = 4
 const POP_LIFE = 1.8 // seconds "You destroyed ..." shows
+const DESTROYED_LIFE = 3 // seconds "Destroyed" shows, then it clears the way to watch the rest
 const YOU_SECONDS = 2 // YOU shows over your tank until this long into the fight
 
 const area = ref(null)
@@ -862,8 +863,12 @@ function banners (list) {
     return
   }
   if (me && !me.alive) {
-    banner(props.t.tankDestroyed, 21, 5, { display: true })
-    banner(props.t.tankWatching, 25, 1.15, { min: 12, color: DIM })
+    const age = clock - me.diedAt
+    if (age < DESTROYED_LIFE) {
+      const alpha = Math.min(1, (DESTROYED_LIFE - age) / 0.5)
+      banner(props.t.tankDestroyed, 21, 5, { display: true, alpha })
+      banner(props.t.tankWatching, 25, 1.15, { min: 12, color: DIM, alpha })
+    }
   } else if (!me && nowMs >= props.startAt) {
     banner(props.t.tankNextRound, 42, 2.6, { display: true })
   }

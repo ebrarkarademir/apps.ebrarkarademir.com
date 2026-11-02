@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import confetti from 'canvas-confetti'
 import TermWindow from '../../components/TermWindow.vue'
 import TankStage from './TankStage.vue'
@@ -74,6 +74,26 @@ const standings = computed(() => (view.value?.standings || []).map((entry, index
 })))
 const winner = computed(() => (view.value?.outcome?.winner ? standings.value.find(entry => entry.id === view.value.outcome.winner) : null))
 
+// A match is a few rounds in a row; the most wins takes it, and a tie at the top is a draw
+const rounds = computed(() => view.value?.rounds || 1)
+const matchOver = computed(() => (view.value?.played || 0) >= rounds.value)
+const matchWinner = computed(() => {
+  const [first, second] = [...standings.value].sort((a, b) => b.wins - a.wins)
+  return first?.wins && !(second && second.wins === first.wins) ? first : null
+})
+const heading = computed(() => (rounds.value > 1 ? fmt(props.t.tankRoundOf, { n: view.value.played, total: rounds.value }) : fmt(props.t.tankRoundResults, { n: view.value.round })))
+const summary = computed(() => {
+  if (rounds.value > 1 && matchOver.value) return matchWinner.value ? fmt(props.t.tankMatchWinner, { name: matchWinner.value.name }) : props.t.tankMatchDraw
+  return winner.value ? fmt(props.t.tankWinner, { name: winner.value.name }) : props.t.tankDraw
+})
+
+// Seconds until the next round of the match starts by itself
+const nowMs = ref(Date.now())
+let clockTimer = null
+onMounted(() => { clockTimer = setInterval(() => { nowMs.value = Date.now() }, 250) })
+onUnmounted(() => clearInterval(clockTimer))
+const nextIn = computed(() => (view.value?.phase === 'results' && view.value.deadline ? Math.max(0, Math.ceil((view.value.deadline - nowMs.value) / 1000)) : null))
+
 watch(() => (view.value?.phase === 'results' ? view.value.round : 0), (round) => {
   if (round && winner.value?.id === props.room.myId) {
     recordWin('tanks')
@@ -118,8 +138,9 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
     <div class="space-y-6">
       <div class="text-center">
         <span class="inline-block whitespace-pre text-left text-sm leading-tight mb-3" aria-hidden="true">{{ WINNER_ART }}</span>
-        <h2 class="font-display text-5xl leading-none uppercase">{{ fmt(t.tankRoundResults, { n: view.round }) }}</h2>
-        <p class="term-muted mt-2">&gt; {{ winner ? fmt(t.tankWinner, { name: winner.name }) : t.tankDraw }}</p>
+        <h2 class="font-display text-5xl leading-none uppercase">{{ heading }}</h2>
+        <p class="term-muted mt-2">&gt; {{ summary }}</p>
+        <p v-if="nextIn !== null" class="term-muted mt-1 text-sm" role="status">{{ fmt(t.tankNextRoundIn, { s: nextIn }) }}</p>
       </div>
 
       <div>
@@ -155,11 +176,11 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
       </div>
 
       <template v-if="room.isHost">
-        <button type="button" class="term-btn term-btn-primary w-full min-h-12" @click="room.act('start')">{{ t.playAgain }}</button>
+        <button type="button" class="term-btn term-btn-primary w-full min-h-12" @click="room.act('start')">{{ matchOver ? t.playAgain : t.tankNextRoundNow }}</button>
         <button v-if="solo" type="button" class="term-btn w-full" @click="emit('setup')">{{ t.gameChangeSetup }}</button>
         <button v-else type="button" class="term-btn w-full" @click="room.act('lobby')">{{ t.onlineBackToLobby }}</button>
       </template>
-      <p v-else class="term-muted text-center text-sm"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
+      <p v-else-if="matchOver" class="term-muted text-center text-sm"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
     </div>
   </component>
 </template>
