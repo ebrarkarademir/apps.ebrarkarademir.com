@@ -1,248 +1,250 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import TermWindow from '../components/TermWindow.vue'
+import OnlineRoom from '../online/OnlineRoom.vue'
+import { useOnlineRoom, currentRoom } from '../online/useOnlineRoom'
+import { useLocalRoom, LOCAL_ID } from '../online/useLocalRoom'
 import BlackjackTable from './blackjack/BlackjackTable.vue'
-import { useBlackjack } from './blackjack/useBlackjack'
+import ChipsPanel from './blackjack/ChipsPanel.vue'
 import { money } from './blackjack/chips'
+import { RULES } from './blackjack/table.js'
+import { initialState, onAction, onTick, onJoin, onLeave, project, loadChips, saveChips, refill } from './blackjack/room'
 import { profile as siteProfile } from '../online/profile'
 
-// Blackjack against the dealer, alone or at a table of up to five, with chips that last: the
-// tables run on the server (backend/src/blackjack), which keeps everyone's balance and stats.
-// This page is the lobby (your chips and stats, a table of your own, one to share, or a
-// friend's by code) and then the table itself.
+// Blackjack against the dealer: solo, or at one table of up to five in an online room, like
+// the other online games, with no server of our own (see blackjack/room.js). Chips and stats
+// stay on this device.
 const props = defineProps({
   t: { type: Object, required: true },
-  // A table code from a shared link
-  initialCode: { type: String, default: '' }
+  // Room code from a shared invite link
+  initialCode: { type: String, default: '' },
+  // Open a room straight away: a chat invite is waiting for its code
+  hostRoom: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['go-back'])
 
+const ERROR_MS = 3500
+const SOLO_ART = ['.------.        ', '|A     |  .----', '|  /\\  |  |?   ', "'------'  '----"].join('\n')
+const ONLINE_ART = [' o    o    o    o    o', '/|\\  /|\\  /|\\  /|\\  /|\\', '/ \\  / \\  / \\  / \\  / \\'].join('\n')
+const cardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
+
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 const nameOf = () => siteProfile.name || props.t.bjYou
 
-const bj = useBlackjack(nameOf)
-const { state } = bj
+// null while choosing, then solo or online; an invite goes straight online
+const mode = ref(props.initialCode || props.hostRoom || currentRoom.value?.game === 'blackjack' ? 'online' : null)
 
-const joinCode = ref((props.initialCode || '').toUpperCase())
-const listed = ref(true)
-const copied = ref(false)
-
-const atTable = computed(() => !!state.table)
-const stats = computed(() => state.profile?.stats || {})
-const winRate = computed(() => {
-  const decided = (stats.value.wins || 0) + (stats.value.losses || 0)
-  return decided ? `${Math.round(((stats.value.wins || 0) / decided) * 100)}%` : '–'
+const room = useOnlineRoom({
+  game: 'blackjack',
+  initialCode: props.initialCode,
+  hostRoom: props.hostRoom,
+  initialState,
+  project,
+  onAction,
+  onTick,
+  onJoin,
+  onLeave
 })
-const statRows = computed(() => [
-  { label: props.t.bjStatHands, value: stats.value.hands || 0 },
-  { label: props.t.bjStatWinRate, value: winRate.value },
-  { label: props.t.bjStatBlackjacks, value: stats.value.blackjacks || 0 },
-  { label: props.t.bjStatBiggest, value: money(stats.value.biggestWin || 0) },
-  { label: props.t.bjStatNet, value: money(stats.value.net || 0, { sign: true }) },
-  { label: props.t.bjStatPeak, value: money(stats.value.peak || 0) },
-  { label: props.t.bjStatPushes, value: stats.value.pushes || 0 },
-  { label: props.t.bjStatBusts, value: stats.value.busts || 0 },
-  { label: props.t.bjStatRefills, value: stats.value.refills || 0 }
-])
 
-const broke = computed(() => state.profile && state.profile.balance < state.rules.minBet)
+const solo = useLocalRoom({ initialState, onAction, onTick })
+
+// What this player sees of whichever room the page shows
+const view = computed(() => (mode.value === 'solo' ? (solo.view ? project(solo.view, LOCAL_ID) : null) : room.view))
+const act = (type, payload) => (mode.value === 'solo' ? solo.act(type, payload) : room.act(type, payload))
+
+// The table with its countdown as a time on this device
+const table = computed(() => {
+  const shown = view.value?.table
+  return shown ? { ...shown, deadline: shown.msLeft ? Date.now() + shown.msLeft : 0 } : null
+})
+const seated = computed(() => !!table.value?.seats.some(seat => seat?.me))
+const myChips = computed(() => view.value?.me || { balance: 0, stats: {} })
+
+// ---------- Chips on this device ----------
+
+// For the menu, read again whenever it shows
+const chips = ref(loadChips())
+watch(mode, (next) => {
+  if (next === null) chips.value = loadChips()
+})
+
+function refillHere () {
+  const err = refill(chips.value)
+  if (err) showError(err)
+  else saveChips(chips.value)
+}
+
+// Stakes still on the table: kept with the chips on this device, so a room that closes in the
+// middle of a hand gives them back
+const stake = computed(() => {
+  const shown = table.value
+  if (!shown || (shown.phase !== 'playing' && shown.phase !== 'dealer')) return 0
+  const seat = shown.seats.find(s => s?.me)
+  return seat ? seat.hands.filter(hand => !hand.outcome).reduce((sum, hand) => sum + hand.bet, 0) : 0
+})
+
+// The room's figure for this player is saved here as it changes
+watch(() => {
+  const me = view.value?.me
+  return me ? JSON.stringify({ balance: me.balance + stake.value, stats: me.stats }) : ''
+}, (json) => {
+  if (json) saveChips(JSON.parse(json))
+})
+
+// Online, this player brings their chips to the room; asked again until the host has them
+let askedAt = 0
+watch(() => room.now, () => {
+  if (mode.value !== 'online' || !room.view || room.view.me || Date.now() - askedAt < 2000) return
+  askedAt = Date.now()
+  room.act('wallet', { wallet: loadChips() })
+})
+
+// ---------- Errors ----------
+
+const error = ref('')
+let errorTimer = null
+
+function showError (err) {
+  error.value = err || 'unknown'
+  clearTimeout(errorTimer)
+  errorTimer = setTimeout(() => { error.value = '' }, ERROR_MS)
+}
+
+// The host notes what it refused this player
+watch(() => view.value?.note?.n || 0, (n, old) => {
+  if (n > (old || 0)) showError(view.value.note.err)
+})
+
 const errorText = computed(() => {
-  if (!state.error) return ''
-  const text = props.t[`bjErr_${state.error}`] || props.t.bjErr_unknown
-  return fmt(text, { min: money(state.rules.minBet), max: money(state.rules.maxBet) })
+  if (!error.value) return ''
+  const text = props.t[`bjErr_${error.value}`] || props.t.bjErr_unknown
+  return fmt(text, { min: money(RULES.minBet), max: money(RULES.maxBet) })
 })
 
-// A shared link brings a friend straight to the table, once the server knows them
-let usedCode = false
-watch(() => state.ready, (ready) => {
-  if (!ready || usedCode || !joinCode.value || joinCode.value.length !== 4) return
-  usedCode = true
-  bj.join(joinCode.value)
-})
+onUnmounted(() => clearTimeout(errorTimer))
 
-const shareLink = computed(() => (state.table?.code ? `${location.origin}/blackjack?join=${state.table.code}` : ''))
+// ---------- Playing ----------
 
-async function copyLink () {
-  const link = shareLink.value
-  if (!link) return
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: props.t.blackjackTitle, url: link })
-      return
-    } catch (err) {
-      if (err?.name === 'AbortError') return
-    }
+// The table shows a bet as it's being built until the room has it: at once on this device, or
+// once the host's next state arrives
+function bet (amount, done) {
+  act('bet', { amount })
+  if (mode.value === 'solo' || room.isHost) {
+    nextTick(done)
+    return
   }
-  try {
-    await navigator.clipboard.writeText(link)
-  } catch {
-    const area = document.createElement('textarea')
-    area.value = link
-    document.body.appendChild(area)
-    area.select()
-    document.execCommand('copy')
-    area.remove()
+  const timer = setTimeout(finish, 1500)
+  const stop = watch(view, finish)
+  function finish () {
+    clearTimeout(timer)
+    stop()
+    done()
   }
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 1800)
 }
 
-function onBack () {
-  if (state.practice) bj.stopPractice()
-  else if (atTable.value) bj.leave()
-  else emit('go-back')
+function startSolo () {
+  solo.open(nameOf(), { solo: true, wallets: { [LOCAL_ID]: loadChips() } })
+  solo.act('start')
+  mode.value = 'solo'
 }
 
-function onCodeInput (event) {
-  const code = event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)
-  joinCode.value = code
-  event.target.value = code
+function leaveSolo () {
+  solo.close()
+  mode.value = null
 }
-
-const statusText = computed(() => {
-  if (state.practice) return props.t.bjPracticeLabel
-  if (state.ready) return props.t.bjOnline
-  if (state.status === 'down') return props.t.bjOffline
-  return props.t.bjConnecting
-})
 </script>
 
 <template>
-  <TermWindow
-    :class="atTable ? 'max-w-6xl' : 'max-w-4xl'"
-    :title="t.blackjackTitle"
-    :backLabel="atTable ? t.bjLeave : t.back"
-    @back="onBack"
-  >
-    <template #status>
-      <span class="flex flex-wrap items-center justify-end gap-2">
-        <span v-if="state.table?.code && !state.practice" class="term-chip text-term">
-          {{ t.bjTableCode }}: <span class="font-mono tracking-[0.25em]">{{ state.table.code }}</span>
-        </span>
-        <button v-if="state.table?.kind === 'shared'" type="button" class="term-btn min-h-8 px-2 text-xs" @click="copyLink">
-          {{ copied ? t.bjCopied : t.bjCopyLink }}
-        </button>
-        <span class="term-chip">
-          <span :class="['term-dot', { 'is-off': !state.ready && !state.practice }]" aria-hidden="true"></span>
-          {{ statusText }}
-        </span>
-      </span>
-    </template>
+  <!-- Your chips, and solo or online -->
+  <TermWindow v-if="mode === null" class="max-w-4xl" :title="t.blackjackTitle" :backLabel="t.back" @back="emit('go-back')">
+    <div class="space-y-6">
+      <p v-if="errorText" role="alert" class="flex gap-3 border border-dashed border-term px-4 py-2 text-sm">
+        <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
+        <span>{{ errorText }}</span>
+      </p>
 
+      <ChipsPanel :t="t" :wallet="chips" :name="nameOf()" @refill="refillHere" />
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <button type="button" :class="cardClass" @click="startSolo">
+          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ SOLO_ART }}</span>
+          <span class="font-display text-3xl leading-none uppercase">{{ t.gameSolo }}</span>
+          <span class="term-muted text-sm leading-relaxed">{{ t.bjPlaySoloHint }}</span>
+          <span class="mt-auto flex items-center justify-end pt-1">
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+          </span>
+        </button>
+
+        <button type="button" :class="cardClass" @click="mode = 'online'">
+          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ ONLINE_ART }}</span>
+          <span class="font-display text-3xl leading-none uppercase">{{ t.gameOnline }}</span>
+          <span class="term-muted text-sm leading-relaxed">{{ t.bjOpenTableHint }}</span>
+          <span class="mt-auto flex items-center justify-end pt-1">
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+          </span>
+        </button>
+      </div>
+
+      <p class="term-muted text-xs leading-relaxed text-center">{{ t.bjChipsNote }}</p>
+    </div>
+  </TermWindow>
+
+  <!-- Solo: a table of your own -->
+  <TermWindow v-else-if="mode === 'solo'" class="max-w-6xl" :title="t.blackjackTitle" :backLabel="t.back" @back="leaveSolo">
     <p v-if="errorText" role="alert" class="mb-4 flex gap-3 border border-dashed border-term px-4 py-2 text-sm">
       <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
       <span>{{ errorText }}</span>
     </p>
+    <BlackjackTable
+      v-if="table"
+      :t="t"
+      :table="table"
+      :profile="myChips"
+      @bet="bet"
+      @deal="act('ready')"
+      @act="(action) => act('act', { action })"
+      @refill="act('refill')"
+    />
+  </TermWindow>
 
-    <!-- At a table -->
-    <template v-if="atTable && state.profile">
-      <p v-if="state.practice" class="mb-3 text-center text-xs term-muted">{{ t.bjPracticeNote }}</p>
-      <BlackjackTable
-        :t="t"
-        :table="state.table"
-        :profile="state.profile"
-        :busy="state.busy"
-        @bet="(amount, done) => bj.bet(amount).then(done)"
-        @deal="bj.deal"
-        @act="bj.act"
-        @refill="bj.refill"
-      />
+  <!-- Online: everyone in the room at one table -->
+  <OnlineRoom
+    v-else
+    :room="room"
+    :t="t"
+    :title="t.blackjackTitle"
+    wide
+    @go-back="mode = null"
+    @start="room.act('start')"
+  >
+    <template #lobby>
+      <div class="space-y-4">
+        <p v-if="errorText" role="alert" class="flex gap-3 border border-dashed border-term px-4 py-2 text-sm">
+          <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
+          <span>{{ errorText }}</span>
+        </p>
+        <ChipsPanel :t="t" :wallet="view?.me" :name="room.me?.name || ''" @refill="act('refill')" />
+        <p class="term-muted text-sm leading-relaxed">&gt; {{ t.bjLobbyHint }}</p>
+      </div>
     </template>
 
-    <!-- Not connected -->
-    <div v-else-if="!state.ready" class="py-10 flex flex-col items-center gap-4 text-center" role="status">
-      <template v-if="state.status === 'down'">
-        <p class="font-display text-5xl leading-none" aria-hidden="true">[x]</p>
-        <p class="max-w-md text-sm leading-relaxed term-muted">{{ t.bjOfflineText }}</p>
-        <div class="flex flex-wrap justify-center gap-3">
-          <button type="button" class="term-btn min-h-11" @click="bj.reconnect()">{{ t.bjRetry }}</button>
-          <button type="button" class="term-btn term-btn-primary min-h-11" @click="bj.startPractice()">{{ t.bjPractice }}</button>
-        </div>
-      </template>
-      <template v-else>
-        <span class="term-spinner font-display text-5xl leading-none" aria-hidden="true"></span>
-        <p class="term-muted uppercase tracking-widest text-sm">{{ t.bjConnecting }}</p>
-      </template>
+    <div v-if="table">
+      <p v-if="errorText" role="alert" class="mb-4 flex gap-3 border border-dashed border-term px-4 py-2 text-sm">
+        <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
+        <span>{{ errorText }}</span>
+      </p>
+      <p v-if="!seated" class="mb-3 text-center text-sm term-muted">{{ t.bjWatching }}</p>
+      <BlackjackTable
+        :t="t"
+        :table="table"
+        :profile="myChips"
+        @bet="bet"
+        @deal="act('ready')"
+        @act="(action) => act('act', { action })"
+        @refill="act('refill')"
+      />
+      <button v-if="room.isHost" type="button" class="term-btn w-full mt-4" @click="room.act('lobby')">{{ t.onlineBackToLobby }}</button>
     </div>
-
-    <!-- The lobby -->
-    <div v-else class="space-y-6">
-      <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-        <section class="term-panel border-term p-4 text-center flex flex-col justify-center" aria-labelledby="bj-balance">
-          <h2 id="bj-balance" class="term-label">{{ t.bjBalance }}</h2>
-          <p class="font-display text-6xl leading-none my-2 tabular-nums">{{ money(state.profile?.balance || 0) }}</p>
-          <p class="term-muted text-xs">{{ state.profile?.name }}</p>
-          <div v-if="broke" class="mt-3 flex flex-col items-center gap-2">
-            <span class="text-sm font-semibold">{{ t.bjBroke }}</span>
-            <button type="button" class="term-btn term-btn-primary min-h-10" @click="bj.refill()">{{ t.bjRefill }}</button>
-          </div>
-        </section>
-
-        <section class="term-panel p-4" aria-labelledby="bj-stats">
-          <h2 id="bj-stats" class="term-label mb-3">{{ t.bjStats }}</h2>
-          <dl class="grid grid-cols-3 gap-x-3 gap-y-3">
-            <div v-for="row in statRows" :key="row.label" class="min-w-0">
-              <dt class="text-[10px] uppercase tracking-wider term-muted truncate">{{ row.label }}</dt>
-              <dd class="font-display text-2xl leading-none tabular-nums truncate">{{ row.value }}</dd>
-            </div>
-          </dl>
-        </section>
-      </div>
-
-      <div class="grid gap-4 sm:grid-cols-3">
-        <div class="term-panel p-4 flex flex-col gap-3">
-          <h2 class="font-display text-2xl leading-none uppercase">[1] {{ t.bjPlaySolo }}</h2>
-          <p class="term-muted text-sm leading-relaxed">{{ t.bjPlaySoloHint }}</p>
-          <button type="button" class="term-btn term-btn-primary mt-auto" :disabled="state.busy" @click="bj.playSolo()">{{ t.bjPlaySolo }}</button>
-        </div>
-        <div class="term-panel p-4 flex flex-col gap-3">
-          <h2 class="font-display text-2xl leading-none uppercase">[5] {{ t.bjOpenTable }}</h2>
-          <p class="term-muted text-sm leading-relaxed">{{ t.bjOpenTableHint }}</p>
-          <label class="flex items-center gap-2 text-sm">
-            <input v-model="listed" type="checkbox" class="accent-[#00ff00]" />
-            <span>{{ t.bjPublic }}</span>
-          </label>
-          <button type="button" class="term-btn mt-auto" :disabled="state.busy" @click="bj.openTable(listed)">{{ t.bjOpenTable }}</button>
-        </div>
-        <div class="term-panel p-4 flex flex-col gap-3">
-          <h2 class="font-display text-2xl leading-none uppercase">[&gt;] {{ t.bjJoinTable }}</h2>
-          <p class="term-muted text-sm leading-relaxed">{{ t.bjJoinHint }}</p>
-          <input
-            :value="joinCode"
-            maxlength="4"
-            autocapitalize="characters"
-            autocomplete="off"
-            spellcheck="false"
-            :placeholder="t.bjCode"
-            :aria-label="t.bjCode"
-            class="term-input text-lg tracking-[0.4em] uppercase text-center"
-            @input="onCodeInput"
-            @keyup.enter="joinCode.length === 4 && bj.join(joinCode)"
-          />
-          <button type="button" class="term-btn mt-auto" :disabled="joinCode.length !== 4 || state.busy" @click="bj.join(joinCode)">{{ t.bjJoin }}</button>
-        </div>
-      </div>
-
-      <section aria-labelledby="bj-tables">
-        <div class="flex items-center justify-between gap-3 mb-2">
-          <h2 id="bj-tables" class="term-label">{{ t.bjOpenTables }} [{{ state.tables.length }}]</h2>
-          <button type="button" class="term-link text-xs" @click="bj.listTables()">[~] {{ t.bjRefresh }}</button>
-        </div>
-        <p v-if="!state.tables.length" class="term-panel border-dashed p-4 text-sm term-muted">{{ t.bjNoTables }}</p>
-        <ul v-else class="grid gap-2 sm:grid-cols-2">
-          <li v-for="table in state.tables" :key="table.code" class="term-panel p-3 flex items-center gap-3">
-            <span class="term-chip tracking-[0.2em]">{{ table.code }}</span>
-            <span class="min-w-0 flex-1">
-              <span class="block text-sm truncate">{{ table.names.join(', ') }}</span>
-              <span class="block text-xs term-muted">{{ fmt(t.bjSeatsTaken, { n: table.players, max: table.seats }) }}</span>
-            </span>
-            <button type="button" class="term-btn min-h-9 text-sm" @click="bj.join(table.code)">{{ t.bjJoin }}</button>
-          </li>
-        </ul>
-      </section>
-
-      <p class="term-muted text-xs leading-relaxed text-center">{{ t.bjLobbyNote }}</p>
-    </div>
-  </TermWindow>
+  </OnlineRoom>
 </template>

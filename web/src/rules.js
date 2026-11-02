@@ -1313,7 +1313,7 @@ export const rules = {
       duration: 'About a minute a hand',
       goal: 'Finish closer to 21 than the dealer without going over.',
       steps: [
-        'Play solo, open a table and share its code or link, or join a friend’s. You start with $1,000 in chips, and the server keeps your balance and stats for next time.',
+        'Play solo, or online: open a room and share its code or link, or join a friend’s, and everyone sits at one table. You start with $1,000 in chips, and this device keeps your balance and stats for next time.',
         'Place your bet with the chips ($5 to $500) and press Deal. At a shared table the cards come once everyone who bet is ready, or 15 seconds after the first one is.',
         'Number cards count their number, J, Q and K count 10, and an Ace counts 1 or 11, whichever helps. A hand with an Ace counted as 11 is soft (shown like 7/17).',
         'On your turn: Hit takes a card, Stand keeps your total, Double doubles your bet for exactly one more card, and Split turns a pair into two hands with a bet each.',
@@ -1335,7 +1335,7 @@ export const rules = {
       duration: 'El başına yaklaşık bir dakika',
       goal: 'Krupiyeden 21’e daha yakın bitir, ama 21’i geçme.',
       steps: [
-        'Tek başına oyna, bir masa açıp kodunu ya da bağlantısını paylaş veya bir arkadaşının masasına katıl. 1.000 $’lık fişle başlarsın; bakiyeni ve istatistiklerini sunucu bir dahaki sefere saklar.',
+        'Tek başına oyna ya da online: bir oda açıp kodunu ya da bağlantısını paylaş veya bir arkadaşının odasına katıl, herkes aynı masaya oturur. 1.000 $’lık fişle başlarsın; bakiyeni ve istatistiklerini bu cihaz bir dahaki sefere saklar.',
         'Fişlerle bahsini koy (5 $ ile 500 $ arası) ve Dağıt’a bas. Paylaşılan masada kartlar, bahis koyan herkes hazır olunca ya da ilk hazır olandan 15 saniye sonra gelir.',
         'Sayı kartları kendi değerindedir, J, Q ve K 10 sayılır, As ise işine hangisi yararsa 1 ya da 11’dir. Asın 11 sayıldığı el yumuşaktır (7/17 gibi gösterilir).',
         'Sıra sendeyken: Kart bir kart alır, Dur toplamını korur, İkiye katla bahsini ikiye katlayıp tam bir kart daha verir, Böl ise bir çifti her biri bahisli iki ele ayırır.',
@@ -1357,7 +1357,7 @@ export const rules = {
       duration: 'Около минуты на раздачу',
       goal: 'Набери ближе к 21, чем дилер, но не больше 21.',
       steps: [
-        'Играй один, открой стол и поделись его кодом или ссылкой либо сядь за стол друга. На старте у тебя фишки на $1 000, а баланс и статистику сервер сохраняет до следующего раза.',
+        'Играй один или онлайн: открой комнату и поделись её кодом или ссылкой либо зайди в комнату друга, и все сядут за один стол. На старте у тебя фишки на $1 000, а баланс и статистику это устройство сохраняет до следующего раза.',
         'Сделай ставку фишками (от $5 до $500) и нажми «Раздать». За общим столом карты раздаются, когда готовы все, кто поставил, или через 15 секунд после первого готового.',
         'Карты с цифрами стоят по номиналу, J, Q и K — по 10, а туз — 1 или 11, как выгоднее. Рука, где туз считается за 11, мягкая (показывается как 7/17).',
         'В свой ход: «Ещё» — взять карту, «Хватит» — остаться при своём, «Удвоить» — удвоить ставку и получить ровно одну карту, «Разделить» — превратить пару в две руки, на каждую своя ставка.',
@@ -1379,7 +1379,7 @@ export const rules = {
       duration: 'Бір үлестіруге шамамен бір минут',
       goal: 'Дилерден гөрі 21-ге жақынырақ жина, бірақ 21-ден асырма.',
       steps: [
-        'Жалғыз ойна, үстел ашып кодымен не сілтемесімен бөліс немесе досыңның үстеліне отыр. 1 000 $ фишкамен бастайсың, ал балансың мен статистикаңды сервер келесі жолға сақтайды.',
+        'Жалғыз ойна не онлайн: бөлме ашып кодымен не сілтемесімен бөліс немесе досыңның бөлмесіне кір, сонда бәрі бір үстелге отырады. 1 000 $ фишкамен бастайсың, ал балансың мен статистикаңды осы құрылғы келесі жолға сақтайды.',
         'Фишкалармен бәс тік (5 $-дан 500 $-ға дейін) және «Үлестіру» түймесін бас. Ортақ үстелде карталар бәс тіккендердің бәрі дайын болғанда не бірінші дайын болғаннан 15 секунд өткенде үлестіріледі.',
         'Сандық карталар өз мәнімен саналады, J, Q және K — 10, ал тұз пайдаңа қарай 1 не 11. Тұз 11 болып саналатын қол жұмсақ (7/17 сияқты көрсетіледі).',
         'Кезегің келгенде: «Тағы» карта алады, «Жетеді» жиынтығыңды қалдырады, «Екі есе» бәсті екі есе арттырып, тура бір карта береді, «Бөлу» жұпты әрқайсысына бөлек бәс тігілген екі қолға бөледі.',

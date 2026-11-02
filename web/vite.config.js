@@ -3,13 +3,10 @@ import vue from '@vitejs/plugin-vue'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-// Sunny Square, the 3D world, and Blackjack need their server (../backend). The dev server
-// starts it too and passes their WebSockets through, so the pages and the games share one
-// address, also for phones on the same Wi-Fi. WORLD_PORT moves the server off 8787;
-// WORLD_SERVER=off leaves starting it to you.
-//
-// Blackjack's rules live with the server (../backend/src/blackjack) and the page imports them
-// from there as @blackjack, to practise offline with the very same logic.
+// Sunny Square, the 3D world, needs its own server (../backend). The dev server starts it too
+// and passes the world's WebSocket through, so the page and the game share one address, also
+// for phones on the same Wi-Fi. WORLD_PORT moves the world server off 8787; WORLD_SERVER=off
+// leaves starting it to you.
 const WORLD_PORT = Number(process.env.WORLD_PORT) || 8787
 
 function worldServer () {
@@ -37,17 +34,11 @@ function worldServer () {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(), worldServer()],
-  resolve: {
-    alias: { '@blackjack': fileURLToPath(new URL('../backend/src/blackjack', import.meta.url)) }
-  },
   server: {
     // Listen on the local network so phones on the same Wi-Fi can open the dev server
     host: true,
-    // The page may import from ../backend (Blackjack's rules)
-    fs: { allow: [fileURLToPath(new URL('..', import.meta.url))] },
     proxy: {
-      '/world-socket': { target: `http://localhost:${WORLD_PORT}`, ws: true },
-      '/blackjack-socket': { target: `http://localhost:${WORLD_PORT}`, ws: true }
+      '/world-socket': { target: `http://localhost:${WORLD_PORT}`, ws: true }
     }
   },
 })

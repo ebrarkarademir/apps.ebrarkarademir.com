@@ -3,8 +3,8 @@
 //   npm test
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { handValue, newShoe, secureInt, canPair } from '../src/blackjack/cards.js'
-import { Table, RULES } from '../src/blackjack/table.js'
+import { handValue, newShoe, secureInt, canPair } from '../src/games/blackjack/cards.js'
+import { Table, RULES } from '../src/games/blackjack/table.js'
 
 // A wallet in memory, as the table expects one
 function makeWallet (balances = {}) {

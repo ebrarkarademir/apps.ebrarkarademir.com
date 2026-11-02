@@ -1,5 +1,5 @@
 // Cards for Blackjack: a shoe of standard 52-card decks, shuffled with a cryptographic random
-// source, and what a hand is worth. Pure functions, used by the server and the browser alike.
+// source, and what a hand is worth. Pure functions.
 //
 // A card is two characters: its rank (A 2 3 4 5 6 7 8 9 T J Q K) and its suit (S H D C), e.g.
 // 'AS' is the ace of spades and 'TD' the ten of diamonds.

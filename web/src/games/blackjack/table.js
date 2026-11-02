@@ -1,11 +1,11 @@
 // A Blackjack table: seats, bets, the deal, everyone's turns, the dealer and the payouts. Pure
-// game logic with no networking, used by the server (and the browser, to practise offline).
+// game logic with no networking. In an online room the host's browser runs it (see room.js).
 //
 // Money is whole cents, so 3:2 on any bet is exact. Chips come from a wallet the table is given
 // ({ balance, debit, credit, record }); the table takes a stake when the cards are dealt (and
 // when a hand doubles or splits) and pays out when the round settles.
 //
-// Time comes in from outside (`now`, ms) so the server and tests drive it: tick(now) runs
+// Time comes in from outside (`now`, ms) so the room and tests drive it: tick(now) runs
 // whatever is due, like a turn that ran out or the dealer's next card.
 //
 // The rules: a 6-deck shoe reshuffled when three quarters are dealt; the dealer draws to 17 and
@@ -65,10 +65,27 @@ export class Table {
     this.dealer = { cards: [], hidden: true }
     this.turn = null // { seat, hand }
     this.deadline = 0 // when the next timed step is due; 0 for none
-    this.seq = 0 // goes up on every change, so a server knows when to tell everyone
+    this.seq = 0 // goes up on every change, so the room knows when to tell everyone
     this.dealt = 0 // cards dealt this round, numbering them for the browsers' animations
     this.shuffled = 0 // rounds that started with a fresh shoe
     this.newShoe()
+  }
+
+  // ---------- Saving and loading ----------
+  // The room keeps a table as plain data in its state (which goes over the network and back),
+  // and the host turns it into a Table again for each move.
+
+  /** The table as plain data: everything but the wallet and the random source. */
+  save () {
+    const { wallet, randomInt, fixedShoe, ...data } = this
+    return JSON.parse(JSON.stringify(data))
+  }
+
+  /** A Table again from save(), with a wallet. */
+  static load (data, wallet, randomInt = secureInt) {
+    const table = Object.create(Table.prototype)
+    Object.assign(table, JSON.parse(JSON.stringify(data)), { wallet, randomInt, fixedShoe: null })
+    return table
   }
 
   // ---------- The shoe ----------

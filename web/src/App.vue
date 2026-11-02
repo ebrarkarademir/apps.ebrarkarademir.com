@@ -284,15 +284,13 @@ const categoryPath = (key) => (key === 'all' ? '/' : `/${key}`)
 
 // An invite link (/quiz-race?join=CODE) opens that online game with the room code filled in.
 // Older links used /?join=CODE&game=quiz-race.
-const ONLINE_GAMES = ['tanks', 'crater', 'futsal', 'doodle', 'sudoku', 'chess', 'dama', 'quiz-race', 'casus-kim', 'tabu']
+const ONLINE_GAMES = ['tanks', 'crater', 'blackjack', 'futsal', 'doodle', 'sudoku', 'chess', 'dama', 'quiz-race', 'casus-kim', 'tabu']
 const inviteParams = new URLSearchParams(window.location.search)
 const initialRoute = parsePath(window.location.pathname)
 const legacyInviteGame = ONLINE_GAMES.includes(inviteParams.get('game')) ? inviteParams.get('game') : null
 const inviteGame = legacyInviteGame || (ONLINE_GAMES.includes(initialRoute.game) ? initialRoute.game : null)
 const inviteCode = inviteGame ? (inviteParams.get('join') || '') : ''
 if (legacyInviteGame) initialRoute.game = legacyInviteGame
-// Blackjack's tables live on the server, outside the rooms above: its links carry a table code
-const blackjackInvite = ref(initialRoute.game === 'blackjack' ? (inviteParams.get('join') || '').toUpperCase().slice(0, 4) : '')
 
 const selectedGame = ref(initialRoute.game)
 const page = ref(initialRoute.page || null)
@@ -593,7 +591,6 @@ const applyRoute = ({ category, game, page: pageName }) => {
   // A launch, and an invite waiting for its room, only last while their game is open
   if (launch.value?.game !== game) launch.value = null
   if (inviting.value?.game !== game) inviting.value = null
-  if (game !== 'blackjack') blackjackInvite.value = ''
   showRules.value = false
   flippedGame.value = null
 }
@@ -892,7 +889,8 @@ onUnmounted(() => {
       <BlackjackGame
         v-else-if="selectedGame === 'blackjack'"
         :t="t"
-        :initialCode="blackjackInvite"
+        :initialCode="inviteCodeFor('blackjack')"
+        :hostRoom="hostRoomFor('blackjack')"
         @go-back="closeGame"
       />
 
