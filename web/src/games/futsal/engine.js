@@ -57,8 +57,11 @@ export const RESTART_TIME = 4 // a kick-off not taken this soon goes to the othe
 export const GOAL_TIME = 2.8 // celebrating, before the kick-off
 export const END_TIME = 3 // "full time" on screen before the results
 export const GOLDEN_TIME = 120 // a golden goal that doesn't come in this long leaves it a draw
-export const MINUTES = [2, 3, 5]
+export const MINUTES = [2, 3, 5, 8]
 export const GOAL_LIMITS = [0, 3, 5, 10] // 0: no limit
+// Game speed: how fast everyone runs and how hard the ball is kicked, as a share of normal
+export const PACES = { relaxed: 0.82, normal: 1, turbo: 1.2 }
+export const paceOf = (name) => PACES[name] || 1
 
 export const PHASES = ['ready', 'kickoff', 'play', 'goal', 'end']
 
@@ -84,9 +87,10 @@ export const formationSpot = (size, slot) => FORMATIONS[clamp(size, 1, MAX_TEAM)
 /**
  * A new match, waiting for its countdown. roster: [{ id, team, bot }] in an order every device
  * knows (snapshots list the players in this order). minutes: the length of play; goals: the
- * score that wins outright, 0 for none; kickoff: the team that kicks off first.
+ * score that wins outright, 0 for none; kickoff: the team that kicks off first; golden: a draw
+ * at full time goes to a golden goal (otherwise it stays a draw); pace: a name from PACES.
  */
-export function createMatch ({ roster, minutes = 4, goals = 0, kickoff = 0 }) {
+export function createMatch ({ roster, minutes = 4, goals = 0, kickoff = 0, golden = true, pace = 'normal' }) {
   const players = roster.map(entry => ({
     id: entry.id,
     team: entry.team === 1 ? 1 : 0,
@@ -119,6 +123,8 @@ export function createMatch ({ roster, minutes = 4, goals = 0, kickoff = 0 }) {
     timer: READY_TIME,
     clock: minutes * 60, // play left; it stops from a goal to the kick-off
     golden: false, // full time came with the scores level: the next goal wins
+    goldenGoal: golden !== false, // whether a draw at full time goes to one
+    pace: paceOf(pace),
     goalLimit: goals,
     score: [0, 0],
     kickoff, // the team whose kick-off it is
@@ -192,7 +198,7 @@ export function stepMatch (match) {
       ix /= length
       iy /= length
     }
-    const top = RUN_SPEED * (p.held ? HOLD_SPEED : 1)
+    const top = RUN_SPEED * match.pace * (p.held ? HOLD_SPEED : 1)
     const grip = 1 - Math.exp(-GRIP * dt)
     p.vx += (ix * top - p.vx) * grip
     p.vy += (iy * top - p.vy) * grip
@@ -205,7 +211,7 @@ export function stepMatch (match) {
   } else {
     const speed = Math.hypot(ball.vx, ball.vy)
     if (speed > 0) {
-      const next = Math.min(BALL_MAX, Math.max(0, speed * Math.exp(-BALL_DRAG * dt) - BALL_ROLL * dt))
+      const next = Math.min(BALL_MAX * match.pace, Math.max(0, speed * Math.exp(-BALL_DRAG * dt) - BALL_ROLL * dt))
       ball.vx *= next / speed
       ball.vy *= next / speed
     }
@@ -227,9 +233,9 @@ export function stepMatch (match) {
  * One STEP for a single player on their own, the way stepMatch moves them: running, posts and
  * nets, the kick-off rules and the walls, but not the other players or the ball. A guest uses
  * it to move its own player the moment the controls change, before the host's word comes back.
- * p: { x, y, vx, vy, team }; input: { x, y, held }.
+ * p: { x, y, vx, vy, team }; input: { x, y, held }; pace: the match's, from paceOf.
  */
-export function stepPlayer (p, input, phase, kickoff) {
+export function stepPlayer (p, input, phase, kickoff, pace = 1) {
   const dt = STEP
   const still = phase === 'ready' || phase === 'end'
   let ix = still ? 0 : finite(input.x, -1, 1)
@@ -239,7 +245,7 @@ export function stepPlayer (p, input, phase, kickoff) {
     ix /= length
     iy /= length
   }
-  const top = RUN_SPEED * (input.held ? HOLD_SPEED : 1)
+  const top = RUN_SPEED * pace * (input.held ? HOLD_SPEED : 1)
   const grip = 1 - Math.exp(-GRIP * dt)
   p.vx += (ix * top - p.vx) * grip
   p.vy += (iy * top - p.vy) * grip
@@ -444,7 +450,7 @@ function walls (match, events) {
   }
   if (hit > 6 && match.phase === 'play') {
     match.counts.bounces++
-    match.lastBounce = Math.min(1, hit / BALL_MAX)
+    match.lastBounce = Math.min(1, hit / (BALL_MAX * match.pace))
     events.push({ type: 'bounce' })
   }
   // A ball held against a line doesn't give way, so the player pressing it does
@@ -478,17 +484,18 @@ function kicks (match, events) {
     const ny = d > 1e-6 ? dy / d : 0
     // The kick adds to the ball's own pace: a ball rolling the way it's kicked flies, one
     // coming at the kicker is mostly stopped
-    ball.vx += nx * KICK
-    ball.vy += ny * KICK
+    const top = BALL_MAX * match.pace
+    ball.vx += nx * KICK * match.pace
+    ball.vy += ny * KICK * match.pace
     const speed = Math.hypot(ball.vx, ball.vy)
-    if (speed > BALL_MAX) {
-      ball.vx *= BALL_MAX / speed
-      ball.vy *= BALL_MAX / speed
+    if (speed > top) {
+      ball.vx *= top / speed
+      ball.vy *= top / speed
     }
     p.ready = false
     p.cooldown = KICK_COOLDOWN
     match.counts.kicks++
-    match.lastKick = Math.min(1, speed / BALL_MAX)
+    match.lastKick = Math.min(1, speed / top)
     match.lastTouch = i
     events.push({ type: 'kick', by: i, power: match.lastKick })
     if (phase === 'kickoff') startPlay(match)
@@ -535,7 +542,7 @@ function referee (match, events) {
       } else {
         match.clock = Math.max(0, match.clock - STEP)
         if (match.clock <= 0) {
-          if (match.score[0] !== match.score[1]) {
+          if (match.score[0] !== match.score[1] || !match.goldenGoal) {
             finish(match, events)
             return
           }

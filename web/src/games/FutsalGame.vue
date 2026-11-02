@@ -6,8 +6,10 @@ import TermWindow from '../components/TermWindow.vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom, currentRoom } from '../online/useOnlineRoom'
 import FutsalStage from './futsal/FutsalStage.vue'
-import { MAX_TEAM, MINUTES, GOAL_LIMITS } from './futsal/engine'
+import FutsalOptions from './futsal/FutsalOptions.vue'
+import { MAX_TEAM, MINUTES, GOAL_LIMITS, PACES } from './futsal/engine'
 import { LEVELS } from './futsal/bots'
+import { COURTS, DEFAULT_COURT, DEFAULT_KITS, pairKits, kitOf } from './futsal/looks'
 
 const props = defineProps({
   t: { type: Object, required: true },
@@ -51,24 +53,29 @@ const markOf = (name) => (String(name).match(/[\p{L}\p{N}]/u)?.[0] || '?').toLoc
 const clockText = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
 const teamName = (team) => [props.t.futsalHome, props.t.futsalAway][team]
-const levelName = (level) => props.t[`futsal${level[0].toUpperCase()}${level.slice(1)}`]
-const goalsName = (n) => (n ? String(n) : props.t.futsalNoLimit)
 
 // null while choosing, then setup (solo options), solo or online; an invite goes straight online
 const mode = ref(props.initialCode || props.hostRoom || currentRoom.value?.game === 'futsal' ? 'online' : null)
 
 // ---------- Solo ----------
 
+// Every option, checked: a stored setup or a host's change only keeps what makes sense
+const readOptions = (saved = {}) => ({
+  size: saved.size >= 1 && saved.size <= MAX_TEAM ? saved.size : 3,
+  level: LEVEL_NAMES.includes(saved.level) ? saved.level : 'normal',
+  minutes: MINUTES.includes(saved.minutes) ? saved.minutes : 3,
+  goals: GOAL_LIMITS.includes(saved.goals) ? saved.goals : 0,
+  golden: saved.golden !== false,
+  pace: saved.pace in PACES ? saved.pace : 'normal',
+  court: COURTS.includes(saved.court) ? saved.court : DEFAULT_COURT,
+  kits: pairKits(saved.kits || DEFAULT_KITS)
+})
+
 const loadSetup = () => {
   try {
-    const saved = JSON.parse(localStorage.getItem(SETUP_KEY) || '{}')
-    return {
-      size: saved.size >= 1 && saved.size <= MAX_TEAM ? saved.size : 3,
-      level: LEVEL_NAMES.includes(saved.level) ? saved.level : 'normal',
-      minutes: MINUTES.includes(saved.minutes) ? saved.minutes : 3
-    }
+    return readOptions(JSON.parse(localStorage.getItem(SETUP_KEY) || '{}'))
   } catch {
-    return { size: 3, level: 'normal', minutes: 3 }
+    return readOptions()
   }
 }
 
@@ -206,6 +213,10 @@ function onAction (s, playerId, action) {
       if (MINUTES.includes(action.minutes)) s.minutes = action.minutes
       if (GOAL_LIMITS.includes(action.goals)) s.goalLimit = action.goals
       if (LEVEL_NAMES.includes(action.level)) s.level = action.level
+      if (typeof action.golden === 'boolean') s.golden = action.golden
+      if (action.pace in PACES) s.pace = action.pace
+      if (COURTS.includes(action.court)) s.court = action.court
+      if (Array.isArray(action.kits)) s.kits = pairKits(action.kits)
       break
     case 'start': {
       if (!isHost || !between) return
@@ -245,6 +256,7 @@ const room = useOnlineRoom({
   liveMs: 50,
   initialState: () => ({
     teams: {}, bots: [], botSeq: 0, minutes: 3, goalLimit: 0, level: 'normal',
+    golden: true, pace: 'normal', court: DEFAULT_COURT, kits: [...DEFAULT_KITS],
     round: 0, roster: [], kickoff: 0, result: null, wins: [0, 0]
   }),
   onAction,
@@ -316,8 +328,13 @@ watch(() => view.value?.round, () => {
   inputs.clear()
 })
 
+// The room's options in the shape the options panel takes
+const lobbyOptions = (s) => ({ level: s.level, minutes: s.minutes, goals: s.goalLimit, golden: s.golden !== false, pace: s.pace || 'normal', court: s.court || DEFAULT_COURT, kits: pairKits(s.kits) })
+const roomKits = computed(() => pairKits(view.value?.kits))
+// A team's colour, as a small square beside its name
+const kitDot = (kits, team) => ({ background: kitOf(kits[team]).main, borderColor: kitOf(kits[team]).dark })
+
 const cardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
-const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold', { 'is-active': active }]
 </script>
 
 <template>
@@ -357,22 +374,9 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
     <div class="space-y-6">
       <h2 class="font-display text-4xl leading-none uppercase">{{ t.futsalSolo }}</h2>
 
-      <div class="space-y-4">
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-40">&gt; {{ t.futsalTeamSize }}</span>
-          <button v-for="size in MAX_TEAM" :key="size" type="button" :class="optionClass(setup.size === size)" @click="setup.size = size">{{ size }} v {{ size }}</button>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-40">&gt; {{ t.futsalLevel }}</span>
-          <button v-for="level in LEVEL_NAMES" :key="level" type="button" :class="optionClass(setup.level === level)" @click="setup.level = level">{{ levelName(level) }}</button>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-40">&gt; {{ t.futsalLength }}</span>
-          <button v-for="minutes in MINUTES" :key="minutes" type="button" :class="optionClass(setup.minutes === minutes)" @click="setup.minutes = minutes">{{ fmt(t.futsalMinutes, { n: minutes }) }}</button>
-        </div>
-      </div>
+      <FutsalOptions :t="t" :options="setup" show-size @change="Object.assign(setup, $event)" />
 
-      <p class="term-muted text-sm leading-relaxed">&gt; {{ setup.size > 1 ? fmt(t.futsalSoloTeamHint, { n: setup.size - 1 }) : t.futsalSoloAloneHint }} {{ t.futsalRulesHint }}</p>
+      <p class="term-muted text-sm leading-relaxed">&gt; {{ setup.size > 1 ? fmt(t.futsalSoloTeamHint, { n: setup.size - 1 }) : t.futsalSoloAloneHint }} {{ setup.golden ? t.futsalRulesHint : t.futsalRulesHintDraw }}</p>
 
       <button type="button" class="term-btn term-btn-primary w-full min-h-12" @click="kickOffSolo">{{ t.futsalKickOffButton }}</button>
       <p class="term-muted text-center text-xs sm:text-sm leading-relaxed">{{ t.futsalControls }}</p>
@@ -390,8 +394,13 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
     :roster="soloRoster"
     myId="me"
     :minutes="setup.minutes"
+    :goals="setup.goals"
     :level="setup.level"
     :kickoff="solo.kickoff"
+    :pace="setup.pace"
+    :golden="setup.golden"
+    :court="setup.court"
+    :kits="setup.kits"
     :paused="solo.paused"
     @exit="mode = 'setup'"
     @pause="togglePause"
@@ -414,7 +423,9 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
         <div class="term-window w-full max-w-sm max-h-full overflow-y-auto p-5 text-center" role="dialog" aria-modal="false" :aria-label="t.futsalFullTime">
           <h2 class="font-display text-5xl leading-none uppercase">{{ t.futsalFullTime }}</h2>
           <p class="mt-3 font-display text-5xl leading-none tabular-nums">{{ solo.result.score[0] }} : {{ solo.result.score[1] }}</p>
-          <p class="term-muted text-xs uppercase tracking-widest mt-1">{{ SHAPE[0] }} {{ t.futsalHome }} · {{ t.futsalAway }} {{ SHAPE[1] }}</p>
+          <p class="term-muted text-xs uppercase tracking-widest mt-1 flex items-center justify-center gap-2">
+            <span class="kit-dot" :style="kitDot(setup.kits, 0)" aria-hidden="true"></span>{{ SHAPE[0] }} {{ t.futsalHome }} · {{ t.futsalAway }} {{ SHAPE[1] }}<span class="kit-dot" :style="kitDot(setup.kits, 1)" aria-hidden="true"></span>
+          </p>
           <p :class="['inline-block mt-3 px-2 py-0.5 text-sm font-bold uppercase tracking-widest', { 'term-inverse': solo.result.winner === 0 }]">{{ soloVerdict }}</p>
 
           <ul v-if="soloGoals.length" class="mt-4 space-y-1 text-left text-sm">
@@ -459,7 +470,8 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
         <div class="grid grid-cols-2 gap-3">
           <div v-for="team in TEAMS" :key="team" :class="['term-panel p-3 space-y-2 min-w-0', { 'border-term': myTeam === team }]">
             <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-              <h2 class="font-display text-2xl leading-none uppercase whitespace-nowrap">
+              <h2 class="font-display text-2xl leading-none uppercase whitespace-nowrap flex items-center">
+                <span class="kit-dot mr-2" :style="kitDot(roomKits, team)" aria-hidden="true"></span>
                 <span class="mr-2" aria-hidden="true">{{ SHAPE[team] }}</span>{{ teamName(team) }}
                 <span class="text-base term-muted tabular-nums">{{ teamCount(team) }}/{{ MAX_TEAM }}</span>
               </h2>
@@ -521,22 +533,9 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
 
     <template #lobby="{ view: lobby, isHost }">
       <div class="space-y-4">
-        <div class="space-y-3">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="term-label w-full sm:w-36">&gt; {{ t.futsalLength }}</span>
-            <button v-for="minutes in MINUTES" :key="minutes" type="button" :disabled="!isHost" :class="optionClass(lobby.minutes === minutes)" @click="room.act('settings', { minutes })">{{ fmt(t.futsalMinutes, { n: minutes }) }}</button>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="term-label w-full sm:w-36">&gt; {{ t.futsalGoalsToWin }}</span>
-            <button v-for="goals in GOAL_LIMITS" :key="goals" type="button" :disabled="!isHost" :class="optionClass(lobby.goalLimit === goals)" @click="room.act('settings', { goals })">{{ goalsName(goals) }}</button>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="term-label w-full sm:w-36">&gt; {{ t.futsalLevel }}</span>
-            <button v-for="level in LEVEL_NAMES" :key="level" type="button" :disabled="!isHost" :class="optionClass(lobby.level === level)" @click="room.act('settings', { level })">{{ levelName(level) }}</button>
-          </div>
-        </div>
+        <FutsalOptions :t="t" :options="lobbyOptions(lobby)" :editable="isHost" @change="room.act('settings', $event)" />
         <div class="space-y-2 text-sm leading-relaxed">
-          <p class="term-muted">&gt; {{ t.futsalLobbyHint }}</p>
+          <p class="term-muted">&gt; {{ lobby.golden === false ? t.futsalLobbyHintDraw : t.futsalLobbyHint }}</p>
           <p class="term-muted">&gt; {{ t.futsalControls }}</p>
         </div>
       </div>
@@ -555,6 +554,10 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
       :goals="view.goalLimit"
       :level="view.level"
       :kickoff="view.kickoff"
+      :pace="view.pace || 'normal'"
+      :golden="view.golden !== false"
+      :court="view.court || DEFAULT_COURT"
+      :kits="roomKits"
       :online="online"
       :inputs="inputs"
       :snaps="snaps"
@@ -573,9 +576,13 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
         <span class="inline-block whitespace-pre text-left text-sm leading-tight mb-3" aria-hidden="true">{{ TROPHY_ART }}</span>
         <h2 class="font-display text-5xl leading-none uppercase">{{ t.futsalFullTime }}</h2>
         <div class="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <p :class="['text-right text-sm font-semibold uppercase tracking-wider', { 'term-inverse px-2 py-1 justify-self-end': result.winner === 0 }]">{{ SHAPE[0] }} {{ t.futsalHome }}</p>
+          <p :class="['flex items-center justify-end gap-2 text-right text-sm font-semibold uppercase tracking-wider', { 'term-inverse px-2 py-1 justify-self-end': result.winner === 0 }]">
+            <span class="kit-dot" :style="kitDot(roomKits, 0)" aria-hidden="true"></span>{{ SHAPE[0] }} {{ t.futsalHome }}
+          </p>
           <p class="font-display text-6xl leading-none tabular-nums">{{ result.score[0] }} : {{ result.score[1] }}</p>
-          <p :class="['text-left text-sm font-semibold uppercase tracking-wider', { 'term-inverse px-2 py-1 justify-self-start': result.winner === 1 }]">{{ t.futsalAway }} {{ SHAPE[1] }}</p>
+          <p :class="['flex items-center gap-2 text-left text-sm font-semibold uppercase tracking-wider', { 'term-inverse px-2 py-1 justify-self-start': result.winner === 1 }]">
+            {{ t.futsalAway }} {{ SHAPE[1] }}<span class="kit-dot" :style="kitDot(roomKits, 1)" aria-hidden="true"></span>
+          </p>
         </div>
         <p class="term-muted mt-3">&gt; {{ resultText }}</p>
       </div>
@@ -611,3 +618,15 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
     </div>
   </OnlineRoom>
 </template>
+
+<style scoped>
+/* A team's kit colour, beside its name */
+.kit-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 1px solid;
+  border-radius: 9999px;
+}
+</style>

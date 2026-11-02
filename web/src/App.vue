@@ -110,7 +110,7 @@ const games = computed(() => [
     icon: '[o]',
     art: cardArt.futsal,
     players: '1–10',
-    duration: minutes('3–8'),
+    duration: minutes('2–8'),
     mode: t.value.cardModeSoloOnline
   },
   {
