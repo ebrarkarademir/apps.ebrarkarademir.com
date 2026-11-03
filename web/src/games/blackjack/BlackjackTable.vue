@@ -1140,9 +1140,9 @@ button.plate:focus-visible {
 
 /* Each seat's share of the width goes by how many seats the table has */
 @supports (container-type: size) {
-  .dealer { --card-w: clamp(34px, min(10cqw, 15cqh), 124px); --av: clamp(44px, 14cqh, 124px); }
-  .seat { --card-w: clamp(26px, min(calc(30cqw / var(--seats, 5)), 11cqh), 86px); --spot: clamp(2.1rem, min(calc(25cqw / var(--seats, 5)), 9cqh), 3.6rem); --av: clamp(34px, 11cqh, 100px); }
-  .seat.me { --card-w: clamp(36px, min(calc(38cqw / var(--seats, 5)), 15cqh), 112px); --spot: clamp(2.5rem, min(calc(30cqw / var(--seats, 5)), 10cqh), 4.2rem); --av: clamp(40px, 15cqh, 132px); }
+  .dealer { --card-w: clamp(34px, min(10cqw, 15cqh), 124px); --av: clamp(48px, 15.5cqh, 150px); }
+  .seat { --card-w: clamp(26px, min(calc(30cqw / var(--seats, 5)), 11cqh), 86px); --spot: clamp(2.1rem, min(calc(25cqw / var(--seats, 5)), 9cqh), 3.6rem); --av: clamp(36px, 12.5cqh, 120px); }
+  .seat.me { --card-w: clamp(36px, min(calc(38cqw / var(--seats, 5)), 15cqh), 112px); --spot: clamp(2.5rem, min(calc(30cqw / var(--seats, 5)), 10cqh), 4.2rem); --av: clamp(44px, 17.5cqh, 170px); }
   .seat-0-of-5, .seat-4-of-5 { transform: translateY(-9cqh); }
   .seat-1-of-5, .seat-3-of-5 { transform: translateY(-2.6cqh); }
 }

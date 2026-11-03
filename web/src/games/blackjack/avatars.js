@@ -1,59 +1,74 @@
 // The people at the table, in pixel art: each player sits on a chair at the table's padded rail,
-// and the dealer stands behind the cards. A look (skin, hair, clothes) comes from the player's id,
-// so everyone at the table sees the same person for the same player.
+// and the dealer stands behind the cards. A look (skin, hair, eyes, clothes) comes from the
+// player's id, so everyone at the table sees the same person for the same player.
 //
-// Each picture is drawn on a 28×30 grid in layers: the chair, the body, the rail in front of it,
-// and the arm with whatever the player has in hand from the bar, once resting on the rail and once
-// raised to the mouth. Parts are filled with materials of three tones (light, base, shadow) and
-// shaded as if lit from the top left, and every layer gets a dark outline in its own colours, so
-// the figures read round rather than flat. The table swaps the arm's two poses and the eyes to
+// Each picture is drawn on a 40×44 grid in layers: the chair, the person, the rail in front of
+// them, and the near arm with whatever they have in hand from the bar, once resting on the rail and
+// once raised to the mouth. Parts are filled with materials of three tones (light, base, shadow)
+// and shaded as if lit from the top left, and every layer gets a dark outline in its own colours,
+// so the figures read round rather than flat. The table swaps the arm's two poses and the eyes to
 // make someone sip a beer or draw on a cigarette (see SeatAvatar.vue).
+//
+// The grid, for drawing a new person (or tracing one from a picture in the same style):
+//   head x 11..28, y 1..22, the eyes on rows 11..13, the mouth on row 18
+//   neck y 22..25, shoulders y 25..27, the body down to the rail
+//   the chair's back y 14..19 behind the shoulders; the rail y 38..43 in front of the body
+//   the near arm's hand on the rail at x 22..25, y 33..37, or up at the mouth at x 23..27, y 16..21
 
-export const W = 28
-export const H = 30
+export const W = 40
+export const H = 44
 
 // ---------- Colours ----------
 
 const SKINS = [
-  ['#ffe3c8', '#f6c79c', '#d39566'],
-  ['#f6d0aa', '#e3aa7a', '#b47448'],
-  ['#dfa77a', '#bf7f52', '#8d5532'],
-  ['#b27b52', '#8f5a37', '#633a21'],
-  ['#8a5a3a', '#6b4129', '#472716']
+  ['#ffe6cf', '#f7cba2', '#d8986a', '#b5764c'],
+  ['#f7d3ae', '#e6ad7e', '#bb7a4c', '#955a33'],
+  ['#e3ab7e', '#c48255', '#965a35', '#73401f'],
+  ['#b88159', '#935d3a', '#6a3f23', '#4f2c16'],
+  ['#8e5e3d', '#6e432a', '#4c2b18', '#371c0e']
 ]
 
 const HAIRS = [
-  ['#5a4b63', '#2f2738', '#18131e'], // black
-  ['#a6713f', '#714524', '#4b2b13'], // brown
-  ['#fff0a0', '#ecc54c', '#b98f24'], // blond
-  ['#f39a5b', '#cc5d27', '#8c3814'], // red
-  ['#ececf0', '#bcc0c8', '#868b96'], // grey
-  ['#ffc0e0', '#f07ab8', '#b04582'], // pink
-  ['#9fdcff', '#4c9fe8', '#2b62b0'] // blue
+  ['#5f5068', '#30283a', '#18131f'], // black
+  ['#b07a44', '#7a4b26', '#4f2d14'], // brown
+  ['#fff3a8', '#efc84e', '#b88d22'], // blond
+  ['#f7a265', '#d0602a', '#8e3a14'], // red
+  ['#f2f2f6', '#c1c5cd', '#868b96'], // grey
+  ['#ffc6e3', '#f07ab8', '#ac4280'], // pink
+  ['#a8e0ff', '#4c9fe8', '#2a5fae'], // blue
+  ['#c9a6ff', '#8a5ad6', '#55308f'] // purple
 ]
+
+const EYES = ['#5a3a22', '#3d6fd1', '#3f9a4f', '#2b2b33', '#8a5a2b', '#6a8fa8']
 
 const CLOTHES = [
-  ['#ff8a80', '#e04848', '#a42a33'],
-  ['#8fd0ff', '#3f8fe0', '#24589c'],
-  ['#a6ec8a', '#4cab52', '#2b6d3a'],
-  ['#ffe17a', '#e8a92c', '#a86b14'],
-  ['#d9a8ff', '#9b5cd6', '#63358f'],
-  ['#9ff0e6', '#2fb3a6', '#1b6f6a'],
-  ['#ffb3d1', '#e8659c', '#a63a6a'],
-  ['#e8e8ee', '#b4b8c4', '#787d8c'],
-  ['#5f6675', '#3a404c', '#22262e'],
-  ['#ffc49a', '#f07b38', '#ad4d1c']
+  ['#ff8f85', '#e04848', '#a12a33'],
+  ['#94d4ff', '#3f8fe0', '#24589c'],
+  ['#acee8f', '#4cab52', '#2b6d3a'],
+  ['#ffe27e', '#e8a92c', '#a86b14'],
+  ['#ddb0ff', '#9b5cd6', '#61348c'],
+  ['#a3f2e8', '#2fb3a6', '#1b6f6a'],
+  ['#ffb8d4', '#e8659c', '#a33a69'],
+  ['#ececf2', '#b8bcc8', '#7a7f8e'],
+  ['#66707f', '#3b414d', '#22262e'],
+  ['#ffc89f', '#f07b38', '#ab4b1b'],
+  ['#8fa8ff', '#4458c8', '#283380'],
+  ['#d7c19a', '#a68a5b', '#6d5733']
 ]
 
-const INNER = ['#fffaf0', '#f4ecd8', '#cfc4a8']
-const WOOD = ['#d49a5e', '#9a6232', '#64391a']
-const LEATHER = ['#c4554a', '#8c2f2b', '#561817']
-const BRASS = ['#fff1a8', '#e9c55a', '#a8801f']
-const DEALER_VEST = ['#4a4f5c', '#2b2f38', '#16181e']
+const INNER = ['#fffdf6', '#f1ead8', '#c9bea2']
+const WOOD = ['#d9a066', '#9c6434', '#643a1a']
+const LEATHER = ['#cf5e52', '#93322d', '#581918']
+const BRASS = ['#fff4b0', '#e9c55a', '#a8801f']
+const VEST = ['#545a68', '#2d313b', '#16181e']
 const OUTLINE = '#21160f'
-const EYE = '#21160f'
-const BLUSH = '#f4918a'
-const MOUTH = '#9a3b32'
+const LASH = '#24170f'
+const SCLERA = '#fbf8f2'
+const GLINT = '#ffffff'
+const BLUSH = '#f39a8f'
+const LIP = '#b8484a'
+const MOUTH = '#7a2a2a'
+const TEETH = '#fbf3e6'
 
 // ---------- A grid of materials ----------
 
@@ -61,6 +76,7 @@ const MOUTH = '#9a3b32'
 const mat = (tones, toneAt = null) => ({ tones, toneAt })
 // A cell of one fixed colour, left out of the shading
 const flat = (color) => ({ color })
+const mirror = (x) => W - 1 - x
 
 class Grid {
   constructor () {
@@ -86,6 +102,39 @@ class Grid {
   // Rows of [y, x0, x1]
   rows (list, cell) {
     for (const [y, x0, x1] of list) this.span(y, x0, x1, cell)
+  }
+
+  // Rows of [y, x0, x1] on the left, and the same on the right, mirrored
+  both (list, cell) {
+    for (const [y, x0, x1] of list) {
+      this.span(y, x0, x1, cell)
+      this.span(y, mirror(x1), mirror(x0), cell)
+    }
+  }
+
+  // A point on the left, and its mirror
+  pair (x, y, cell) {
+    this.set(x, y, cell)
+    this.set(mirror(x), y, cell)
+  }
+
+  // A thick line through points [x, y], round at the joints: an arm, a leg of a chair
+  limb (points, r, cell) {
+    for (let i = 1; i < points.length; i++) {
+      const [ax, ay] = points[i - 1]
+      const [bx, by] = points[i]
+      const dx = bx - ax
+      const dy = by - ay
+      const len = dx * dx + dy * dy || 1
+      for (let y = Math.floor(Math.min(ay, by) - r); y <= Math.ceil(Math.max(ay, by) + r); y++) {
+        for (let x = Math.floor(Math.min(ax, bx) - r); x <= Math.ceil(Math.max(ax, bx) + r); x++) {
+          const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len))
+          const px = ax + t * dx - x
+          const py = ay + t * dy - y
+          if (px * px + py * py <= r * r) this.set(x, y, cell)
+        }
+      }
+    }
   }
 
   // A small picture in letters (see HELD), with its top left at x, y
@@ -138,9 +187,11 @@ function paint (grid) {
 // A colour darkened by a share (0..1)
 function shade (hex, share) {
   const n = parseInt(hex.slice(1), 16)
-  const part = (v) => Math.round(v * (1 - share)).toString(16).padStart(2, '0')
+  const part = (v) => Math.max(0, Math.min(255, Math.round(v * (1 - share)))).toString(16).padStart(2, '0')
   return `#${part(n >> 16)}${part((n >> 8) & 255)}${part(n & 255)}`
 }
+
+const darker = (tones, share) => tones.map(c => shade(c, share))
 
 /** Painted layers (colour or null for each cell), each over the ones before. */
 function stack (layers) {
@@ -168,10 +219,11 @@ export function toUrl (cells) {
 
 // ---------- Who looks like what ----------
 
-const HAIR_STYLES = ['short', 'long', 'bun', 'spiky', 'cap', 'bob', 'mohawk', 'curly']
-const OUTFITS = ['tee', 'vneck', 'jacket', 'stripes', 'hoodie']
+const HAIR_STYLES = ['short', 'long', 'bun', 'spiky', 'cap', 'bob', 'mohawk', 'curly', 'ponytail', 'side']
+const OUTFITS = ['tee', 'vneck', 'jacket', 'stripes', 'hoodie', 'shirt']
+const FACIAL = ['none', 'none', 'none', 'stubble', 'mustache', 'beard']
 
-// The same number for the same id, everywhere
+// The same number for the same text, everywhere
 function hash (text) {
   let h = 2166136261
   for (const ch of String(text)) {
@@ -192,207 +244,358 @@ export function lookOf (id) {
   return {
     skin: pick('skin', SKINS.length),
     hair: pick('hair', HAIRS.length),
+    eyes: pick('eyes', EYES.length),
     style: HAIR_STYLES[pick('style', HAIR_STYLES.length)],
     outfit: OUTFITS[pick('outfit', OUTFITS.length)],
     clothes: pick('clothes', CLOTHES.length),
     accent: pick('accent', CLOTHES.length),
-    glasses: pick('glasses', 5) === 0
+    facial: FACIAL[pick('facial', FACIAL.length)],
+    glasses: pick('glasses', 5) === 0,
+    earring: pick('earring', 4) === 0
   }
 }
 
-export const DEALER_LOOK = Object.freeze({ skin: 1, hair: 0, style: 'slick', outfit: 'dealer', clothes: 7, accent: 0, glasses: false })
+export const DEALER_LOOK = Object.freeze({ skin: 1, hair: 0, eyes: 0, style: 'slick', outfit: 'dealer', clothes: 7, accent: 0, facial: 'mustache', glasses: false, earring: false })
 
-// ---------- Drawing a person ----------
+// ---------- The head ----------
 
-const HEAD = [[3, 10, 17], [4, 9, 18], [5, 8, 19], [6, 8, 19], [7, 8, 19], [8, 8, 19], [9, 8, 19], [10, 8, 19], [11, 8, 19], [12, 8, 19], [13, 9, 18], [14, 10, 17]]
-const TORSO = [[17, 8, 19], [18, 6, 21], ...Array.from({ length: 11 }, (_, i) => [19 + i, 5, 22])]
+const HEAD = [
+  [3, 15, 24], [4, 13, 26], [5, 12, 27],
+  ...Array.from({ length: 12 }, (_, i) => [6 + i, 11, 28]),
+  [18, 12, 27], [19, 12, 27], [20, 13, 26], [21, 14, 25], [22, 16, 23]
+]
 
-function drawHair (g, style, hair) {
-  const back = hair // behind the head, in the same material
+function drawHead (g, look, skin, closed) {
+  const tones = SKINS[look.skin]
+  g.rows(HEAD, skin)
+  // Ears, with their inside in shadow
+  g.both([[11, 9, 10], [12, 9, 10], [13, 9, 10], [14, 10, 10]], skin)
+  g.pair(10, 12, flat(tones[2]))
+  g.pair(10, 13, flat(tones[2]))
+  if (look.earring) g.set(mirror(10), 15, flat(BRASS[1]))
+  // The light on the left cheek, the shadow under the jaw
+  g.rows([[13, 12, 13], [14, 12, 13]], flat(tones[0]))
+  g.span(21, 15, 24, flat(tones[2]))
+  // Eyebrows
+  const brow = flat(look.style === 'slick' ? HAIRS[0][2] : HAIRS[look.hair][2])
+  g.both([[9, 13, 16], [10, 12, 12]], brow)
+  // Eyes: a lash line over white, a coloured iris with a glint, looking a little to the left
+  const iris = EYES[look.eyes]
+  if (closed) {
+    g.both([[12, 13, 16]], flat(LASH))
+    g.pair(12, 11, flat(LASH))
+    g.pair(17, 11, flat(LASH))
+  } else {
+    g.both([[11, 13, 16]], flat(LASH))
+    g.pair(12, 11, flat(LASH))
+    for (const [x0, flip] of [[13, false], [23, true]]) {
+      const col = (i) => (flip ? x0 + 3 - i : x0 + i)
+      g.set(col(0), 12, flat(SCLERA))
+      g.set(col(0), 13, flat(SCLERA))
+      g.set(col(3), 12, flat(SCLERA))
+      g.set(col(3), 13, flat(shade(SCLERA, 0.12)))
+      g.set(x0 + 1, 12, flat(GLINT))
+      g.set(x0 + 2, 12, flat(iris))
+      g.set(x0 + 1, 13, flat(iris))
+      g.set(x0 + 2, 13, flat(shade(iris, 0.45)))
+    }
+    g.both([[14, 14, 15]], flat(tones[2])) // the shadow under each eye
+  }
+  // The nose: a light on its bridge and a shadow under it
+  g.set(19, 14, flat(tones[0]))
+  g.set(19, 15, flat(tones[0]))
+  g.set(20, 15, flat(tones[2]))
+  g.rows([[16, 18, 20]], flat(tones[2]))
+  g.set(19, 16, flat(tones[3]))
+  // Cheeks
+  g.both([[16, 12, 13]], flat(BLUSH))
+  // The mouth: a smile with a glimpse of teeth, and the lower lip
+  g.pair(16, 17, flat(MOUTH))
+  g.span(18, 17, 22, flat(MOUTH))
+  g.span(18, 18, 21, flat(TEETH))
+  g.span(19, 18, 21, flat(LIP))
+  g.set(18, 19, flat(shade(LIP, 0.2)))
+}
+
+function drawFacialHair (g, look) {
+  const hair = HAIRS[look.style === 'slick' ? 0 : look.hair]
+  if (look.facial === 'mustache') {
+    g.rows([[17, 16, 23]], flat(hair[1]))
+    g.pair(16, 18, flat(hair[1]))
+    g.span(17, 18, 21, flat(hair[2]))
+  } else if (look.facial === 'beard') {
+    const beard = mat(hair, (x) => (x >= 24 ? 2 : 1))
+    g.rows([[17, 15, 24], [20, 13, 26], [21, 14, 25], [22, 15, 24], [23, 17, 22]], beard)
+    g.both([[18, 12, 16], [19, 12, 16], [14, 11, 11], [15, 11, 12], [16, 11, 13], [17, 12, 14]], beard)
+    g.span(18, 17, 22, flat(MOUTH))
+    g.span(19, 18, 21, flat(LIP))
+  } else if (look.facial === 'stubble') {
+    const dot = flat(shade(SKINS[look.skin][1], 0.22))
+    for (let y = 17; y <= 21; y++) {
+      for (let x = 13; x <= 26; x++) {
+        if ((x + y) % 2 === 0 && g.get(x, y)?.tones && (y >= 20 || x <= 15 || x >= 24)) g.set(x, y, dot)
+      }
+    }
+  }
+}
+
+function drawGlasses (g) {
+  const rim = flat('#2a2a35')
+  const lens = flat('#cfe8f5')
+  for (const x0 of [12, 22]) {
+    g.span(10, x0, x0 + 5, rim)
+    g.span(14, x0, x0 + 5, rim)
+    g.rect(x0, 11, x0, 13, rim)
+    g.rect(x0 + 5, 11, x0 + 5, 13, rim)
+  }
+  g.span(11, 18, 21, rim)
+  g.set(13, 11, lens) // a shine on each lens
+  g.set(23, 11, lens)
+}
+
+// ---------- Hair ----------
+
+// Hair is shaded in bands: a shine across the crown, strands darker towards the ends
+const hairMaterial = (tones) => mat(tones, (x, y) => {
+  if (y >= 4 && y <= 5 && x >= 13 && x <= 18) return 0
+  if (x >= 25) return 2
+  if (y >= 9 && (x % 3 === 0)) return 2
+  return 1
+})
+
+// Long hair behind the shoulders goes in before the body
+function drawHairBack (g, style, hair) {
+  if (style === 'long') g.both([...Array.from({ length: 20 }, (_, i) => [8 + i, 7, 11])], hair)
+  if (style === 'ponytail') g.limb([[30, 8], [33, 14], [33, 22], [31, 28]], 2.2, hair)
+  if (style === 'curly') g.both([[16, 8, 11], [17, 8, 11], [18, 9, 11]], hair)
+}
+
+function drawHair (g, look, hair) {
+  const style = look.style
+  const crown = [[2, 15, 19], [3, 12, 19], [4, 11, 19], [5, 10, 19], [6, 10, 19], [7, 10, 19]]
   switch (style) {
     case 'long':
-      g.rows([[2, 10, 17], [3, 8, 19], [4, 7, 20], [5, 7, 20], [6, 7, 9], [6, 17, 20], [7, 7, 8], [7, 19, 20]], hair)
-      for (let y = 8; y <= 19; y++) {
-        g.span(y, 6, 7, back)
-        g.span(y, 20, 21, back)
-      }
-      g.span(6, 10, 16, hair)
-      break
     case 'bob':
-      g.rows([[2, 10, 17], [3, 8, 19], [4, 7, 20], [5, 7, 20], [6, 7, 20], [7, 7, 8], [7, 19, 20]], hair)
-      for (let y = 8; y <= 13; y++) {
-        g.span(y, 7, 7, hair)
-        g.span(y, 20, 20, hair)
-      }
-      g.span(14, 7, 9, hair)
-      g.span(14, 18, 20, hair)
+      g.both([[1, 15, 19], ...crown.slice(1), [8, 9, 12]], hair)
+      g.rows([[8, 13, 17]], hair) // a fringe swept to one side
+      g.both(Array.from({ length: style === 'bob' ? 11 : 14 }, (_, i) => [9 + i, 9, 11]), hair)
+      if (style === 'bob') g.both([[20, 9, 13], [21, 10, 12]], hair)
       break
     case 'bun':
-      g.rows([[0, 12, 15], [1, 11, 16], [2, 10, 17], [3, 8, 19], [4, 7, 20], [5, 7, 20], [6, 7, 10], [6, 15, 20], [7, 7, 8], [7, 19, 20], [8, 7, 7], [8, 20, 20]], hair)
+      g.both([[0, 17, 19], [1, 16, 19], ...crown, [8, 10, 11], [9, 10, 10]], hair)
+      g.both([[2, 18, 19]], flat(HAIRS[look.hair][2])) // the band round the bun
       break
     case 'spiky':
-      g.rows([[0, 9, 9], [0, 13, 13], [0, 17, 17], [1, 9, 10], [1, 12, 14], [1, 16, 18], [2, 8, 19], [3, 7, 20], [4, 7, 20], [5, 7, 20], [6, 7, 11], [6, 13, 14], [6, 16, 20], [7, 7, 8], [7, 19, 20]], hair)
+      g.both([[0, 12, 12], [0, 16, 17], [1, 11, 13], [1, 15, 19], ...crown.slice(1), [8, 10, 11], [9, 10, 11], [10, 10, 10]], hair)
+      g.rows([[8, 14, 15], [8, 19, 20], [8, 24, 25]], hair) // spikes over the forehead
       break
     case 'mohawk':
-      g.rows([[0, 12, 15], [1, 12, 15], [2, 12, 15], [3, 11, 16], [4, 12, 15], [5, 8, 8], [5, 19, 19], [6, 8, 8], [6, 19, 19]], hair)
+      g.rows([[0, 18, 21], [1, 17, 22], [2, 17, 22], [3, 17, 22], [4, 18, 21], [5, 18, 21], [6, 18, 21]], hair)
+      g.both([[7, 11, 12], [8, 11, 11], [9, 11, 11]], flat(shade(SKINS[look.skin][1], 0.25))) // shaved sides
       break
     case 'curly':
-      g.rows([[1, 9, 11], [1, 13, 15], [1, 17, 18], [2, 8, 19], [3, 7, 20], [4, 6, 21], [5, 6, 21], [6, 6, 9], [6, 11, 12], [6, 15, 16], [6, 18, 21], [7, 6, 8], [7, 19, 21], [8, 6, 7], [8, 20, 21], [9, 6, 7], [9, 20, 21], [10, 7, 7], [10, 20, 20]], hair)
+      g.both([[0, 14, 16], [1, 12, 19], [2, 10, 19], [3, 9, 19], [4, 8, 19], [5, 8, 19], [6, 8, 19], [7, 8, 19], [8, 8, 13], [9, 8, 11], [10, 8, 11], [11, 8, 10], [12, 8, 10], [13, 8, 10], [14, 8, 10], [15, 9, 10]], hair)
+      g.rows([[8, 16, 17], [8, 22, 23]], hair)
+      for (let y = 1; y <= 14; y++) {
+        for (let x = 8; x <= 31; x++) if ((x * 3 + y * 5) % 7 === 0 && g.get(x, y) === hair) g.set(x, y, flat(HAIRS[look.hair][2]))
+      }
       break
-    case 'cap':
-      break // drawn with the clothes, see drawCap
+    case 'ponytail':
+      g.both([[1, 15, 19], ...crown.slice(1), [8, 10, 11], [9, 10, 10]], hair)
+      g.rows([[8, 12, 16]], hair)
+      g.set(29, 7, flat(BRASS[1])) // the tie
+      break
+    case 'side':
+      g.both([[1, 16, 19], ...crown.slice(1), [8, 10, 11], [9, 10, 10]], hair)
+      g.rows([[8, 12, 22], [9, 12, 18], [10, 12, 14]], hair) // a long fringe swept across
+      break
+    case 'cap': {
+      g.both([[8, 10, 11], [9, 10, 11], [10, 10, 10]], hair)
+      const tones = CLOTHES[look.accent]
+      const cap = mat(tones, (x) => (x >= 25 ? 2 : 1))
+      g.both([[1, 15, 19], [2, 13, 19], [3, 11, 19], [4, 10, 19], [5, 10, 19], [6, 10, 19]], cap)
+      g.rows([[7, 8, 30]], mat(darker(tones, 0.25))) // the peak
+      g.rows([[8, 9, 29]], flat(shade(tones[2], 0.4))) // its shadow on the forehead
+      g.rect(18, 3, 21, 5, flat(INNER[1])) // a badge on the front
+      g.set(19, 4, flat(tones[1]))
+      g.set(19, 0, flat(tones[2]))
+      g.set(20, 0, flat(tones[2]))
+      break
+    }
     case 'slick':
-      g.rows([[2, 10, 17], [3, 8, 19], [4, 8, 19], [5, 8, 19], [6, 8, 9], [6, 18, 19], [7, 8, 8], [7, 19, 19]], hair)
-      g.span(5, 12, 13, flat(HAIRS[0][0])) // the shine of the gel
+      g.both([[2, 15, 19], [3, 12, 19], [4, 11, 19], [5, 10, 19], [6, 10, 19], [7, 10, 11], [8, 10, 10], [9, 10, 10]], hair)
+      g.rows([[7, 12, 17]], hair)
+      g.set(16, 4, flat(HAIRS[0][0])) // the shine of the gel, and the parting
+      g.set(17, 4, flat(HAIRS[0][0]))
+      g.set(15, 5, flat(HAIRS[0][0]))
+      g.rect(14, 2, 14, 6, flat(HAIRS[0][2]))
       break
     default: // short
-      g.rows([[2, 10, 17], [3, 8, 19], [4, 7, 20], [5, 7, 20], [6, 7, 12], [6, 14, 20], [7, 7, 8], [7, 19, 20], [8, 7, 7], [8, 20, 20]], hair)
+      g.both([[1, 15, 19], ...crown.slice(1), [8, 10, 11], [9, 10, 11], [10, 10, 10]], hair)
+      g.rows([[8, 13, 16], [8, 20, 21]], hair)
   }
 }
 
-function drawCap (g, hair, colour) {
-  // Hair showing under the cap at the sides, then the cap and its peak
-  g.rows([[6, 7, 8], [6, 19, 20], [7, 7, 8], [7, 19, 20], [8, 7, 7], [8, 20, 20]], hair)
-  const cap = mat(colour, (x) => (x >= 17 ? 2 : 1))
-  g.rows([[1, 11, 16], [2, 9, 18], [3, 8, 19], [4, 7, 20], [5, 7, 20]], cap)
-  g.rows([[6, 6, 15]], mat(colour.map(c => shade(c, 0.2))))
-  g.set(13, 1, flat('#ffffff'))
-}
+// ---------- The body ----------
 
-function drawFace (g, look, closed, skin) {
-  const eyes = [11, 16]
-  for (const x of eyes) {
-    if (closed) {
-      g.set(x, 10, flat(EYE))
-      g.set(x - 1, 10, flat(shade(skin.tones[2], 0.2)))
-    } else {
-      g.set(x, 9, flat(EYE))
-      g.set(x, 10, flat(EYE))
-      g.set(x + 1, 9, flat('#ffffff'))
-    }
-  }
-  if (look.glasses) {
-    const rim = flat('#2a2a33')
-    for (const x of eyes) {
-      g.rows([[8, x - 1, x + 1], [11, x - 1, x + 1]], rim)
-      g.set(x - 2, 9, rim)
-      g.set(x - 2, 10, rim)
-      g.set(x + 2, 9, rim)
-      g.set(x + 2, 10, rim)
-    }
-    g.set(13, 9, rim)
-    g.set(14, 9, rim)
-  }
-  g.set(10, 12, flat(BLUSH))
-  g.set(17, 12, flat(BLUSH))
-  g.set(13, 11, flat(skin.tones[2])) // the nose's shadow
-  g.span(12, 13, 14, flat(MOUTH))
-}
+const TORSO = [[25, 14, 25], [26, 10, 29], [27, 8, 31], ...Array.from({ length: 16 }, (_, i) => [28 + i, 7, 32])]
 
-function drawOutfit (g, look, skinMat) {
+function drawOutfit (g, look, skin) {
   const tones = CLOTHES[look.clothes]
-  const accent = CLOTHES[look.accent === look.clothes ? (look.accent + 3) % CLOTHES.length : look.accent]
-  // Round: the right of the body and the bottom in shadow, the left of the chest in the light
-  const round = (x, y) => (x >= 19 || y >= 27 ? 2 : x <= 8 && y <= 22 ? 0 : 1)
-  const body = mat(tones, round)
+  const accentTones = CLOTHES[look.accent === look.clothes ? (look.accent + 4) % CLOTHES.length : look.accent]
+  // Round: the right of the body and its bottom in shadow, the left of the chest in the light
+  const round = (x, y) => (x >= 27 || y >= 36 ? 2 : x <= 11 && y <= 31 ? 0 : 1)
+  const fold = flat(tones[2]) // creases in the cloth
   if (look.outfit === 'dealer') {
     g.rows(TORSO, mat(INNER, round))
-    const vest = mat(DEALER_VEST, round)
+    const vest = mat(VEST, round)
     for (const [y, x0, x1] of TORSO) {
-      if (y < 19) continue
-      const open = Math.max(0, 23 - y) // the vest's V, narrowing down the chest
-      g.span(y, x0, 13 - Math.ceil(open / 2), vest)
-      g.span(y, 14 + Math.ceil(open / 2), x1, vest)
+      if (y < 27) continue
+      const open = Math.max(0, 34 - y) // the vest's V, narrowing down the chest
+      g.span(y, x0, 19 - Math.ceil(open / 2), vest)
+      g.span(y, 20 + Math.ceil(open / 2), x1, vest)
     }
-    g.rows([[17, 12, 15], [18, 12, 15]], mat(INNER))
-    // A bow tie
-    g.rows([[17, 11, 12], [18, 11, 12], [17, 15, 16], [18, 15, 16]], flat('#c8283a'))
-    g.span(17, 13, 14, flat('#8e1626'))
-    g.span(18, 13, 14, flat('#8e1626'))
-    g.set(13, 22, flat(BRASS[1]))
-    g.set(13, 25, flat(BRASS[1]))
+    g.rows([[25, 16, 23], [26, 16, 23]], mat(INNER))
+    g.both([[25, 16, 17], [26, 17, 17]], flat(INNER[2])) // collar points
+    // A bow tie, with a knot
+    g.rows([[25, 14, 17], [26, 14, 18], [27, 15, 17], [25, 22, 25], [26, 21, 25], [27, 22, 24]], flat('#d02c40'))
+    g.rows([[25, 18, 21], [26, 19, 20], [27, 19, 20]], flat('#8e1626'))
+    g.set(14, 25, flat('#ff6a7a'))
+    for (const y of [32, 35]) g.set(19, y, flat(BRASS[1]))
+    g.rows([[30, 24, 27]], flat(BRASS[1])) // a name badge
+    g.rows([[31, 24, 27]], flat(INNER[1]))
     return
   }
-  g.rows(TORSO, body)
+  g.rows(TORSO, mat(tones, round))
   switch (look.outfit) {
     case 'vneck':
-      g.rows([[17, 12, 15], [18, 12, 15], [19, 13, 14]], skinMat)
+      g.rows([[25, 16, 23], [26, 17, 22], [27, 18, 21], [28, 19, 20]], skin)
+      g.both([[26, 16, 16], [27, 17, 17], [28, 18, 18]], flat(tones[2]))
       break
     case 'jacket': {
-      const inner = mat(accent, round)
-      for (let y = 17; y <= 29; y++) g.span(y, 11, 16, inner)
-      g.rows([[17, 10, 10], [18, 10, 11], [19, 10, 11], [17, 17, 17], [18, 16, 17], [19, 16, 17]], mat(tones.map(c => shade(c, 0.15))))
-      g.set(13, 23, flat(BRASS[1]))
-      g.set(13, 26, flat(BRASS[1]))
+      const inner = mat(accentTones, round)
+      for (let y = 25; y <= 43; y++) g.span(y, 16, 23, inner)
+      // Lapels
+      const lapel = mat(darker(tones, 0.12))
+      g.both([[25, 14, 15], [26, 14, 16], [27, 15, 17], [28, 15, 17], [29, 16, 17], [30, 16, 16]], lapel)
+      g.both([[31, 15, 15], [32, 15, 15], [33, 15, 15], [34, 15, 15], [35, 15, 15], [36, 15, 15], [37, 15, 15]], flat(tones[2]))
+      for (const y of [32, 35]) g.set(14, y, flat(BRASS[1]))
+      g.rows([[30, 25, 28]], flat(accentTones[0])) // a pocket square
+      g.rows([[31, 25, 28]], flat(tones[2]))
       break
     }
     case 'stripes':
-      for (const y of [20, 23, 26, 29]) g.span(y, 5, 22, mat(accent, round))
-      g.span(17, 11, 16, skinMat)
+      for (const y of [29, 32, 35, 38, 41]) g.span(y, 7, 32, mat(accentTones, round))
+      g.rows([[25, 16, 23]], skin)
+      g.both([[26, 16, 16]], flat(tones[2]))
       break
-    case 'hoodie':
-      g.rows([[16, 9, 18], [17, 7, 20]], mat(tones.map(c => shade(c, 0.12)), (x) => (x >= 17 ? 2 : 1)))
-      g.set(11, 19, flat(INNER[1]))
-      g.set(11, 20, flat(INNER[1]))
-      g.set(16, 19, flat(INNER[1]))
-      g.set(16, 20, flat(INNER[1]))
-      g.rows([[24, 9, 18], [25, 9, 18]], mat(tones.map(c => shade(c, 0.1))))
+    case 'hoodie': {
+      const hood = mat(darker(tones, 0.1), (x) => (x >= 26 ? 2 : 1))
+      g.rows([[23, 13, 26], [24, 11, 28], [25, 10, 29]], hood)
+      g.rows([[24, 16, 23], [25, 17, 22]], flat(shade(tones[2], 0.2))) // the hood's opening
+      g.rect(16, 26, 16, 31, flat(INNER[1])) // drawstrings
+      g.rect(23, 26, 23, 30, flat(INNER[1]))
+      g.set(16, 32, flat(INNER[2]))
+      g.set(23, 31, flat(INNER[2]))
+      g.rows([[34, 12, 27], [35, 11, 28]], mat(darker(tones, 0.08))) // the front pocket
+      g.span(34, 12, 27, fold)
       break
-    default: // tee, with a collar
-      g.span(17, 11, 16, skinMat)
-      g.span(17, 11, 11, mat(tones.map(c => shade(c, 0.2))))
-      g.span(17, 16, 16, mat(tones.map(c => shade(c, 0.2))))
+    }
+    case 'shirt': {
+      // A shirt with a collar, a button line and a pocket
+      g.rows([[25, 16, 23]], skin)
+      g.both([[25, 14, 16], [26, 14, 17], [27, 16, 18]], mat(darker(tones, -0.15)))
+      g.rect(19, 27, 19, 43, flat(tones[2]))
+      for (const y of [29, 32, 35]) g.set(20, y, flat(INNER[0]))
+      g.rows([[30, 23, 27]], flat(tones[2]))
+      g.rect(23, 31, 23, 33, flat(tones[2]))
+      g.rect(27, 31, 27, 33, flat(tones[2]))
+      break
+    }
+    default: { // tee, with a round collar and a print on the chest
+      g.rows([[25, 16, 23]], skin)
+      g.both([[25, 14, 15], [26, 15, 17]], flat(tones[2]))
+      g.span(26, 18, 21, flat(tones[2]))
+      g.rect(17, 30, 22, 33, flat(accentTones[1]))
+      g.rect(18, 31, 21, 32, flat(accentTones[0]))
+    }
   }
+  // Creases where the arms meet the body
+  g.rows([[33, 10, 11], [34, 11, 12], [33, 28, 29], [34, 27, 28]], fold)
+}
+
+// A hand, its fingers drawn in: knuckles in the light, the gaps between fingers in shadow
+function drawHand (g, x, y, skin, tones, { flip = false } = {}) {
+  g.rect(x, y, x + 3, y + 3, skin)
+  g.set(flip ? x + 3 : x, y + 3, null)
+  const gap = flat(tones[2])
+  g.set(x + 1, y + 3, gap)
+  g.set(x + 2, y + 3, gap)
+  g.set(flip ? x : x + 3, y, flat(tones[0]))
+}
+
+function sleeveOf (look) {
+  const tones = look.outfit === 'dealer' ? INNER : CLOTHES[look.clothes]
+  return { tones, cuff: look.outfit === 'dealer' ? flat(INNER[2]) : flat(tones[2]) }
 }
 
 // The arm on the left (the player's right), resting with its hand on the rail
-function drawFarArm (g, look, skinMat) {
-  const tones = look.outfit === 'dealer' ? INNER : CLOTHES[look.clothes]
-  const sleeve = mat(tones, (x, y) => (y >= 23 ? 2 : 1))
-  g.rows([[18, 4, 6], [19, 3, 6], [20, 3, 6], [21, 3, 6], [22, 3, 6], [23, 3, 7], [24, 4, 8]], sleeve)
-  g.rows([[24, 8, 10], [25, 7, 10]], skinMat)
+function drawFarArm (g, look, skin) {
+  const { tones, cuff } = sleeveOf(look)
+  g.limb([[9, 28], [7, 33], [9, 35]], 2.6, mat(tones, (x, y) => (y >= 33 ? 2 : 1)))
+  g.set(10, 34, cuff)
+  g.set(10, 35, cuff)
+  g.set(10, 36, cuff)
+  drawHand(g, 11, 34, skin, SKINS[look.skin])
 }
 
 // ---------- What's in hand ----------
 
-// Little versions of the bar's things, as they look in a hand: letters are colours in HELD_COLORS
+// The bar's things as they look in a hand: letters are colours in HELD_COLORS. A cigarette's lit
+// end is its last letter, so it can glow.
 const HELD = {
-  beer: ['WWWW.', 'yyyys', 'yYyy.', 'yyyys', 'yyyy.'],
-  wine: ['s.s', 'RRR', '.R.', '.s.', 'sss'],
-  champagne: ['sys', 'sys', '.y.', '.s.', 'sss'],
-  cocktail: ['ppppp', '.ppp.', '..s..', '..s..', '.sss.'],
-  whiskey: ['s...s', 'sOOOs', 'sOOOs', 'sssss'],
-  raki: ['sWWs', 'sWWs', 'sWWs', 'ssss'],
-  tea: ['aaaa', '.aa.', 'aaaa'],
-  coffee: ['TTT.', 'WWWW', 'WWW.'],
-  cola: ['rrr', 'rWr', 'rrr', 'rrr'],
-  cigarette: ['tWWWWo'],
-  cigar: ['TTTTTo'],
-  hookah: ['GGGGb'],
-  burger: ['.ttt.', 'ttttt', 'eeeee', 'TTTTT', 'ttttt'],
-  pizza: ['tttt', 'yry.', 'yy..', 'y...'],
-  fries: ['y.y.y', 'yyyyy', 'rrrrr', 'rrrrr'],
-  doner: ['WtW', 'tTt', 'tTt', 'WtW'],
-  simit: ['.tt.', 't..t', 't..t', '.tt.'],
-  nuts: ['.tO.', 'tOtO']
+  beer: ['.WWWW...', 'WWwWWW..', 'shyyysSS', 'shyYys.S', 'shyyYs.S', 'shyyysSS', 'syyyys..', 'sSSSSs..'],
+  wine: ['s...s', 'sRrRs', 'shRRs', '.sRs.', '..s..', '..s..', '..s..', '.sss.'],
+  champagne: ['s.s', 'sys', 'hys', 'sys', 'sYs', '.s.', '.s.', '.s.', 'sss'],
+  cocktail: ['spppeps', '.sppps.', '..sps..', '...s...', '...s...', '..sss..'],
+  whiskey: ['s....s', 'sOOOOs', 'shOcOs', 'sOOOOs', 'ssssss'],
+  raki: ['s..s', 'sWWs', 'shWs', 'sWWs', 'sWWs', 'sWWs', 'ssss'],
+  tea: ['.saas.', '.haas.', '..aa..', '.saas.', 'YYYYYY'],
+  coffee: ['WTTTW..', 'WWWWWWW', 'WwWWW.W', 'WWWWWWW', 'wWWWw..'],
+  cola: ['gGGg', 'rrrr', 'rWWr', 'rrrr', 'hrrr', 'rrrr', 'gGGg'],
+  cigarette: ['ooWWWWWWWf', 'OOwwwwwwwF'],
+  cigar: ['TTTTTTTTYtf', 'tttttttttTF'],
+  hookah: ['YGGGGGGG', 'YgggggggG'],
+  burger: ['.ttWttt.', 'tWttttWt', 'eeeeeeee', 'yyyyyyyy', 'TTTTTTTT', 'tttttttt'],
+  pizza: ['TTTTTTT', 'yyryyry', '.yyyry.', '..yry..', '...y...'],
+  fries: ['y.yy.y.', 'yyyyyyy', 'yyyyyyy', 'rrrrrrr', 'rWrrWrr', 'rrrrrrr'],
+  doner: ['eWeWe', 'TtTtT', 'WtttW', 'WWWWW', 'WwWwW', 'WWWWW', '.WWW.'],
+  simit: ['..ttt..', '.tTtTt.', 'tt...tt', 'tt...tt', '.tTtTt.', '..ttt..'],
+  nuts: ['OtOtOtO', 'sssssss', '.sssss.', '..sss..']
 }
 
 const HELD_COLORS = {
-  W: '#fbf6e8',
-  y: '#ffd84a',
-  Y: '#d19b1d',
-  s: '#cfe3ee',
-  R: '#a01f2b',
+  W: '#fffaf0',
+  w: '#e3dccb',
+  y: '#ffcc33',
+  Y: '#d99a1a',
+  s: '#d4ecf6',
+  S: '#9fc3d4',
+  h: '#ffffff',
+  R: '#8e1730',
+  r: '#d8343c',
   p: '#ff8fc0',
+  e: '#5bbd4f',
   O: '#e08a2b',
+  c: '#e8f8ff',
   a: '#a33a1c',
   T: '#5e3519',
-  r: '#e8463c',
   t: '#d0904e',
-  o: '#ff6a2b',
+  o: '#e8a04a',
+  f: '#ff6a1f', // the lit end
+  F: '#c0341a',
   G: '#6a7280',
-  b: '#4aa3e8',
-  e: '#5bbd4f'
+  g: '#4a505c'
 }
 
 /** What a player does with a thing from the bar: drink it, smoke it, eat it, or nothing. */
@@ -405,36 +608,85 @@ export function heldKind (id) {
 /** Whether a thing from the bar can be held. */
 export const canHold = (id) => Object.hasOwn(HELD, id)
 
+// Where the held thing goes, its top left on the grid, in each pose
+function placeHeld (held, pose) {
+  const art = HELD[held]
+  const w = art[0].length
+  const h = art.length
+  const smoke = heldKind(held) === 'smoke'
+  if (pose === 'up') {
+    if (smoke) return { x: 21, y: 18, art } // from the corner of the mouth, out to the right
+    if (heldKind(held) === 'eat') return { x: 24 - w, y: 19 - Math.ceil(h / 2), art }
+    return { x: 24 - w, y: 16, art } // the rim at the lips
+  }
+  // Between draws a cigarette is held up in front of the chest, the elbow on the rail, its lit
+  // end out to the left; anything else stands on the rail by the hand
+  if (smoke) return { x: 23 - w, y: 29, art: art.map(row => [...row].reverse().join('')) }
+  return { x: 24 - w, y: 38 - h, art }
+}
+
+/**
+ * Where the lit end of a cigarette is, as a share of the picture (0..1) for each pose, so the
+ * table can put the glow and the smoke on it; null for anything else.
+ */
+export function emberOf (held) {
+  if (held !== 'cigarette' && held !== 'cigar') return null
+  const at = (pose) => {
+    const { x, y, art } = placeHeld(held, pose)
+    const i = pose === 'up' ? art[0].length - 1 : 0
+    return { x: (x + i + 0.5) / W, y: (y + 0.5) / H }
+  }
+  return { down: at('down'), up: at('up') }
+}
+
+/** Where the mouth is, as a share of the picture: smoke comes out of it. */
+export const MOUTH_AT = Object.freeze({ x: 19.5 / W, y: 18.5 / H })
+
 // The arm on the right (the player's left), with what it holds: down on the rail, or up at the
 // mouth for a sip, a bite or a draw
-function drawNearArm (g, look, skinMat, pose, held) {
-  const tones = look.outfit === 'dealer' ? INNER : CLOTHES[look.clothes]
-  const sleeve = mat(tones, (x) => (x >= 22 ? 2 : 1))
-  const art = HELD[held]
+function drawNearArm (g, look, skin, pose, held) {
+  const { tones, cuff } = sleeveOf(look)
+  const tonesSkin = SKINS[look.skin]
+  const sleeve = mat(tones, (x) => (x >= 32 ? 2 : 1))
+  const place = HELD[held] ? placeHeld(held, pose) : null
   if (pose === 'up') {
-    g.rows([[18, 21, 23], [19, 20, 24], [20, 20, 24], [21, 20, 23]], sleeve)
-    g.rows([[15, 18, 20], [16, 18, 21], [17, 19, 22], [18, 19, 21]], sleeve)
-    g.rows([[13, 17, 19], [14, 17, 19]], skinMat)
-    if (art) {
-      const smoke = heldKind(held) === 'smoke'
-      // A cigarette sits at the corner of the mouth; a glass or a bite is held up to it
-      const x = smoke ? 14 : 16 - art[0].length
-      const y = smoke ? 12 : 14 - art.length + 1
-      g.sprite(art, x, y, HELD_COLORS)
-      g.set(17, 13, skinMat) // the fingers over the glass
+    const smoke = heldKind(held) === 'smoke'
+    const wrist = smoke ? [27, 22] : [26, 23]
+    g.limb([[30, 28], [32, 33]], 2.6, sleeve) // the upper arm, down to the elbow
+    g.limb([[32, 33], wrist], 2.4, mat(tones, (x) => (x >= 30 ? 2 : 1))) // the forearm, up to the face
+    g.rect(wrist[0] - 1, wrist[1] - 1, wrist[0] + 1, wrist[1], cuff)
+    if (smoke) {
+      // The cigarette held at the lips between two fingers, one over it and one under, the whole
+      // of it in sight with its lit end out past the hand
+      g.rect(24, 16, 27, 17, skin)
+      g.rect(24, 20, 27, 20, skin)
+      g.rect(26, 16, 28, 21, skin)
+      g.set(24, 16, flat(tonesSkin[0]))
+      g.set(28, 21, flat(tonesSkin[2]))
+      g.set(27, 21, flat(tonesSkin[2]))
+      if (place) g.sprite(place.art, place.x, place.y, HELD_COLORS)
+    } else {
+      if (place) g.sprite(place.art, place.x, place.y, HELD_COLORS)
+      drawHand(g, 22, 18, skin, tonesSkin, { flip: true })
     }
     return
   }
-  g.rows([[18, 21, 23], [19, 21, 24], [20, 21, 24], [21, 21, 24], [22, 20, 24], [23, 18, 23], [24, 17, 21]], sleeve)
-  g.rows([[24, 15, 17], [25, 15, 17]], skinMat)
-  if (art) {
-    const smoke = heldKind(held) === 'smoke'
-    const x = smoke ? 15 - art[0].length + 2 : 16 - art[0].length
-    const y = smoke ? 24 : 26 - art.length
-    // Down in the hand, a cigarette points away from it, its lit end out to the left
-    g.sprite(smoke ? art.map(row => [...row].reverse().join('')) : art, x, y, HELD_COLORS)
-    g.set(15, 24, skinMat)
+  if (heldKind(held) === 'smoke') {
+    g.limb([[30, 28], [32, 35], [27, 31]], 2.6, mat(tones, (x, y) => (y >= 34 ? 2 : x >= 32 ? 2 : 1)))
+    g.rect(25, 29, 26, 31, cuff)
+    if (place) g.sprite(place.art, place.x, place.y, HELD_COLORS)
+    drawHand(g, 21, 28, skin, tonesSkin, { flip: true })
+    g.set(21, 29, null) // the gap between the fingers it's held in
+    g.set(21, 30, null)
+    if (place) g.sprite(place.art.map(row => row.slice(-2)), place.x + place.art[0].length - 2, place.y, HELD_COLORS)
+    return
   }
+  g.limb([[30, 28], [32, 34], [27, 35]], 2.6, mat(tones, (x, y) => (y >= 33 ? 2 : x >= 32 ? 2 : 1)))
+  g.set(26, 34, cuff)
+  g.set(26, 35, cuff)
+  g.set(26, 36, cuff)
+  if (place) g.sprite(place.art, place.x, place.y, HELD_COLORS)
+  drawHand(g, 22, 34, skin, tonesSkin, { flip: true })
 }
 
 // ---------- The pictures ----------
@@ -442,62 +694,64 @@ function drawNearArm (g, look, skinMat, pose, held) {
 const cache = new Map()
 
 function build (look, { pose = 'down', held = '', closed = false, part = 'all' }) {
-  const skinMat = mat(SKINS[look.skin], (x) => (x >= 18 ? 2 : 1))
-  const hairMat = mat(look.style === 'slick' ? HAIRS[0] : HAIRS[look.hair], (x, y) => (y <= 3 && x <= 12 ? 0 : x >= 18 ? 2 : 1))
+  const skin = mat(SKINS[look.skin], (x) => (x >= 26 ? 2 : 1))
+  const hairTones = look.style === 'slick' ? HAIRS[0] : HAIRS[look.hair]
+  const hair = hairMaterial(hairTones)
   const dealer = look.outfit === 'dealer'
   const layers = []
   const has = (name) => part === 'all' || part === name
 
-  // The chair's back, behind the shoulders
+  // The chair's back, padded and studded, behind the shoulders
   if (has('chair') && !dealer) {
     const chair = new Grid()
-    const wood = mat(WOOD, (x) => (x >= 22 ? 2 : 1))
-    chair.rows([[11, 4, 23], [12, 3, 24], [13, 3, 24]], mat(LEATHER, (x) => (x >= 20 ? 2 : 1)))
-    chair.rect(3, 14, 4, 29, wood)
-    chair.rect(23, 14, 24, 29, wood)
-    chair.set(3, 12, flat(BRASS[1]))
-    chair.set(24, 12, flat(BRASS[1]))
+    const wood = mat(WOOD, (x) => (x >= 35 || (x >= 5 && x <= 6) ? 2 : 1))
+    chair.rect(3, 19, 6, 43, wood)
+    chair.rect(33, 19, 36, 43, wood)
+    const pad = mat(LEATHER, (x, y) => (y >= 18 || x >= 32 ? 2 : y <= 14 ? 0 : 1))
+    chair.rows([[13, 5, 34], [14, 3, 36], [15, 2, 37], [16, 2, 37], [17, 2, 37], [18, 3, 36]], pad)
+    for (let x = 5; x <= 34; x += 5) chair.set(x, 16, flat(BRASS[1]))
+    chair.rows([[19, 3, 36]], mat(WOOD))
     layers.push(paint(chair))
   }
 
   if (has('person')) {
     const body = new Grid()
+    drawHairBack(body, look.style, hair)
     // The neck, in the shadow of the chin
-    body.rect(12, 15, 15, 17, mat(SKINS[look.skin].map(c => shade(c, 0.12))))
-    drawOutfit(body, look, skinMat)
-    body.rows(HEAD, skinMat)
-    body.set(7, 9, skinMat)
-    body.set(7, 10, skinMat)
-    body.set(20, 9, skinMat)
-    body.set(20, 10, skinMat)
-    drawHair(body, look.style, hairMat)
-    if (look.style === 'cap') drawCap(body, hairMat, CLOTHES[look.accent])
+    body.rect(16, 21, 23, 26, mat(darker(SKINS[look.skin], 0.1), (x) => (x >= 22 ? 2 : 1)))
+    body.span(22, 16, 23, flat(SKINS[look.skin][2]))
+    drawOutfit(body, look, skin)
+    drawHead(body, look, skin, closed)
+    drawHair(body, look, hair)
     // A shadow under the hair across the forehead
-    for (let x = 8; x <= 19; x++) {
-      for (let y = 4; y <= 9; y++) {
+    for (let x = 11; x <= 28; x++) {
+      for (let y = 3; y <= 12; y++) {
         const cell = body.get(x, y)
-        if (cell === skinMat && (body.get(x, y - 1) === hairMat || body.get(x, y - 1)?.tones === CLOTHES[look.accent])) {
+        const above = body.get(x, y - 1)
+        if (cell === skin && above && above !== skin && (above === hair || above.tones)) {
           body.set(x, y, flat(SKINS[look.skin][2]))
           break
         }
       }
     }
-    drawFace(body, look, closed, skinMat)
-    drawFarArm(body, look, skinMat)
+    drawFacialHair(body, look)
+    if (look.glasses) drawGlasses(body)
+    drawFarArm(body, look, skin)
     layers.push(paint(body))
   }
 
-  // The table's padded rail in front of them, with its brass trim
+  // The table's padded rail in front of them, with studs and its brass trim
   if (has('rail') && !dealer) {
     const rail = new Grid()
-    rail.rect(0, 26, W - 1, 28, mat(LEATHER, (x, y) => (y === 26 ? 0 : y >= 28 ? 2 : 1)))
-    rail.span(29, 0, W - 1, mat(BRASS))
+    rail.rect(0, 38, W - 1, 42, mat(LEATHER, (x, y) => (y === 38 ? 0 : y >= 41 ? 2 : 1)))
+    for (let x = 2; x < W; x += 6) rail.set(x, 40, flat(BRASS[2]))
+    rail.span(43, 0, W - 1, mat(BRASS))
     layers.push(paint(rail))
   }
 
   if (has('arm')) {
     const arm = new Grid()
-    drawNearArm(arm, look, skinMat, pose, held)
+    drawNearArm(arm, look, skin, pose, held)
     layers.push(paint(arm))
   }
   return stack(layers)
@@ -512,3 +766,4 @@ export function avatarUrl (look, options = {}) {
   if (!cache.has(key)) cache.set(key, toUrl(build(look, options)))
   return cache.get(key)
 }
+

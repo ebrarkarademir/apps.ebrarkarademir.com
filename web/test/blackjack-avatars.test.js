@@ -3,7 +3,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { lookOf, avatarUrl, heldKind, canHold, DEALER_LOOK, W, H } from '../src/games/blackjack/avatars.js'
+import { lookOf, avatarUrl, heldKind, canHold, emberOf, DEALER_LOOK, W, H } from '../src/games/blackjack/avatars.js'
 import { MENU } from '../src/games/blackjack/social.js'
 import { chipLabel, CHIP_LOOKS } from '../src/games/blackjack/chips.js'
 import { CHIPS, RULES } from '../src/games/blackjack/table.js'
@@ -42,6 +42,19 @@ test('drinks, smokes and food from the bar can be held, and are used the right w
   const look = lookOf('x')
   assert.notEqual(avatarUrl(look, { part: 'arm', pose: 'up', held: 'beer' }), avatarUrl(look, { part: 'arm', pose: 'down', held: 'beer' }))
   assert.notEqual(avatarUrl(look, { part: 'person', closed: true }), avatarUrl(look, { part: 'person' }))
+})
+
+test('a cigarette has a lit end to glow and smoke, in both poses, on the picture', () => {
+  for (const id of ['cigarette', 'cigar']) {
+    const ember = emberOf(id)
+    for (const pose of ['down', 'up']) {
+      assert.ok(ember[pose].x > 0 && ember[pose].x < 1 && ember[pose].y > 0 && ember[pose].y < 1, `${id} ${pose}`)
+    }
+    // Up at the lips it's higher than down in the hand
+    assert.ok(ember.up.y < ember.down.y)
+  }
+  assert.equal(emberOf('beer'), null)
+  assert.equal(emberOf('hookah'), null)
 })
 
 test('everyone starts with $100,000, and chips read in dollars', () => {

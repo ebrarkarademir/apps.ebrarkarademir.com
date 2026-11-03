@@ -1,11 +1,13 @@
 <script setup>
 import { computed } from 'vue'
-import { avatarUrl, heldKind, canHold } from './avatars'
+import { avatarUrl, heldKind, canHold, emberOf, MOUTH_AT, W, H } from './avatars'
 
 // Someone at the table in pixel art (see avatars.js): a player on their chair behind the rail, or
 // the dealer. Whatever they hold from the bar they use, the way a person at a bar does: a sip of
-// beer every few seconds with their eyes shut, a draw on a cigarette and a puff of smoke after,
-// a bite of a burger. They blink, and breathe. `size` is the picture's width (any CSS length).
+// beer every few seconds with their eyes shut, a bite of a burger, or a cigarette: its lit end
+// glowing and smoking in their hand, then up to the lips for a long draw that makes it glow
+// brighter, and a big cloud of smoke breathed out after. They blink, and breathe.
+// `size` is the picture's width (any CSS length).
 const props = defineProps({
   look: { type: Object, required: true },
   held: { type: String, default: '' }, // a bar item id
@@ -15,6 +17,7 @@ const props = defineProps({
 
 const item = computed(() => (canHold(props.held) ? props.held : ''))
 const kind = computed(() => (item.value ? heldKind(item.value) : ''))
+const ember = computed(() => emberOf(item.value))
 
 const layers = computed(() => {
   const url = (options) => avatarUrl(props.look, options)
@@ -28,7 +31,15 @@ const layers = computed(() => {
   }
 })
 
-const style = computed(() => ({ '--seed': props.seed % 7, ...(props.size ? { '--av': props.size } : {}) }))
+const at = (point) => ({ left: `${point.x * 100}%`, top: `${point.y * 100}%` })
+const mouth = at(MOUTH_AT)
+
+const style = computed(() => ({
+  '--seed': props.seed % 7,
+  '--gw': W,
+  '--gh': H,
+  ...(props.size ? { '--av': props.size } : {})
+}))
 </script>
 
 <template>
@@ -41,11 +52,20 @@ const style = computed(() => ({ '--seed': props.seed % 7, ...(props.size ? { '--
     <img class="layer" :src="layers.rail" alt="" draggable="false" />
     <img :class="['layer breathe', { rest: kind }]" :src="layers.down" alt="" draggable="false" />
     <img v-if="kind" class="layer breathe lift" :src="layers.up" alt="" draggable="false" />
-    <span v-if="kind === 'smoke'" class="puff">
-      <i v-for="i in 4" :key="i" :style="{ '--i': i - 1 }"></i>
+
+    <!-- The lit end, glowing and smoking while it's down in the hand... -->
+    <span v-if="ember" class="ember at-rest" :style="at(ember.down)">
+      <b class="glow"></b>
+      <i v-for="i in 4" :key="i" class="wisp" :style="{ '--i': i - 1 }"></i>
     </span>
-    <span v-if="kind === 'smoke'" class="wisp">
-      <i v-for="i in 2" :key="i" :style="{ '--i': i - 1 }"></i>
+    <!-- ...and glowing bright during a draw -->
+    <span v-if="ember" class="ember at-lips" :style="at(ember.up)">
+      <b class="glow"></b>
+      <i v-for="i in 2" :key="i" class="wisp" :style="{ '--i': i - 1 }"></i>
+    </span>
+    <!-- The cloud breathed out after it -->
+    <span v-if="kind === 'smoke'" class="exhale" :style="mouth">
+      <i v-for="i in 7" :key="i" :style="{ '--i': i - 1 }"></i>
     </span>
   </div>
 </template>
@@ -53,13 +73,13 @@ const style = computed(() => ({ '--seed': props.seed % 7, ...(props.size ? { '--
 <style scoped>
 .avatar {
   --w: var(--av, 72px);
-  --p: calc(var(--w) / 28);
+  --p: calc(var(--w) / var(--gw, 40));
   --cycle: 7s;
   --offset: calc(var(--seed) * -1.37s);
   position: relative;
   flex: none;
   width: var(--w);
-  height: calc(var(--w) * 30 / 28);
+  height: calc(var(--w) * var(--gh, 44) / var(--gw, 40));
   pointer-events: none;
 }
 
@@ -165,69 +185,122 @@ const style = computed(() => ({ '--seed': props.seed % 7, ...(props.size ? { '--
   84%, 100% { opacity: 0; }
 }
 
-/* The puff of smoke after a draw, out of the mouth and up */
-.puff i,
-.wisp i {
+/* ---------- Smoke ---------- */
+
+/* The lit end: a glow over its pixel, and smoke curling up off it. It's where the cigarette is:
+   in the hand while it rests, at the lips during a draw. */
+.ember {
   position: absolute;
-  width: calc(var(--p) * 2);
-  height: calc(var(--p) * 2);
-  background: #e6eaee;
-  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
-.puff i {
-  left: 50%;
-  top: 40%;
-  animation: puff var(--cycle) steps(1, end) infinite;
-  animation-delay: calc(var(--offset) - var(--i) * 0.08s);
-}
-
-@keyframes puff {
-  0%, 84% { opacity: 0; transform: none; }
-  85% { opacity: 0.9; transform: translate(calc(var(--p) * 1), calc(var(--p) * -1)) scale(1); }
-  88% { opacity: 0.85; transform: translate(calc(var(--p) * 3), calc(var(--p) * -3)) scale(1.4); }
-  91% { opacity: 0.7; transform: translate(calc(var(--p) * 4), calc(var(--p) * -6)) scale(1.9); }
-  94% { opacity: 0.45; transform: translate(calc(var(--p) * 3), calc(var(--p) * -9)) scale(2.4); }
-  97% { opacity: 0.2; transform: translate(calc(var(--p) * 4), calc(var(--p) * -12)) scale(2.8); }
-  100% { opacity: 0; }
-}
-
-.puff i:nth-child(2) { margin-left: calc(var(--p) * -2); }
-.puff i:nth-child(3) { margin-top: calc(var(--p) * 1); }
-.puff i:nth-child(4) { margin-left: calc(var(--p) * 2); margin-top: calc(var(--p) * -1); }
-
-/* A thin line of smoke off the lit end, while it rests in the hand */
-.wisp {
+.ember.at-rest {
   animation: rest var(--cycle) steps(1, end) infinite;
   animation-delay: var(--offset);
 }
 
-.wisp i {
-  left: 39%;
-  top: 76%;
-  width: var(--p);
-  height: calc(var(--p) * 2);
-  animation: wisp 2.2s steps(6) infinite;
-  animation-delay: calc(var(--i) * -1.1s);
+.ember.at-lips {
+  opacity: 0;
+  animation: lift var(--cycle) steps(1, end) infinite;
+  animation-delay: var(--offset);
+}
+
+.glow {
+  position: absolute;
+  left: calc(var(--p) * -2.5);
+  top: calc(var(--p) * -2.5);
+  width: calc(var(--p) * 5);
+  height: calc(var(--p) * 5);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 235 150 / 0.95) 0 18%, rgb(255 120 40 / 0.7) 35%, rgb(255 80 20 / 0) 70%);
+  animation: smoulder 1.6s ease-in-out infinite;
+}
+
+/* At the lips it burns bright with the draw */
+.at-lips .glow {
+  left: calc(var(--p) * -3.5);
+  top: calc(var(--p) * -3.5);
+  width: calc(var(--p) * 7);
+  height: calc(var(--p) * 7);
+  animation: draw 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes smoulder {
+  0%, 100% { opacity: 0.55; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes draw {
+  from { opacity: 0.8; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1.3); }
+}
+
+.wisp {
+  position: absolute;
+  left: calc(var(--p) * -1.5);
+  top: calc(var(--p) * -3);
+  width: calc(var(--p) * 3);
+  height: calc(var(--p) * 3);
+  border-radius: 30%;
+  background: #f3f5f7;
+  box-shadow: 0 0 0 calc(var(--p) * 0.5) rgb(255 255 255 / 0.3);
+  opacity: 0;
+  animation: wisp 2.8s steps(14) infinite;
+  animation-delay: calc(var(--i) * -0.7s);
 }
 
 @keyframes wisp {
-  0% { opacity: 0; transform: none; }
-  20% { opacity: 0.8; }
-  50% { transform: translate(calc(var(--p) * -1), calc(var(--p) * -4)); }
-  100% { opacity: 0; transform: translate(calc(var(--p) * 1), calc(var(--p) * -9)); }
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  12% { opacity: 0.95; }
+  35% { transform: translate(calc(var(--p) * 1.5), calc(var(--p) * -5)) scale(1); }
+  65% { opacity: 0.7; transform: translate(calc(var(--p) * -1.5), calc(var(--p) * -10)) scale(1.6); }
+  100% { opacity: 0; transform: translate(calc(var(--p) * 1), calc(var(--p) * -16)) scale(2.2); }
+}
+
+/* The cloud breathed out after a draw: puffs out of the mouth, swelling as they rise and drift */
+.exhale {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.exhale i {
+  position: absolute;
+  left: calc(var(--p) * -1.5);
+  top: calc(var(--p) * -1.5);
+  width: calc(var(--p) * 3);
+  height: calc(var(--p) * 3);
+  border-radius: 30%;
+  background: #f1f4f6;
+  box-shadow: 0 0 0 calc(var(--p) * 0.5) rgb(255 255 255 / 0.35);
+  opacity: 0;
+  animation: exhale var(--cycle) linear infinite;
+  animation-delay: calc(var(--offset) - var(--i) * 0.12s);
+}
+
+.exhale i:nth-child(odd) { margin-left: calc(var(--p) * -2); }
+.exhale i:nth-child(3n) { margin-top: calc(var(--p) * 1.5); }
+
+@keyframes exhale {
+  0%, 83.5% { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  85% { opacity: 0.95; transform: translate(calc(var(--p) * -2), calc(var(--p) * -1)) scale(1); }
+  89% { opacity: 0.85; transform: translate(calc(var(--p) * -5), calc(var(--p) * -4)) scale(1.8); }
+  94% { opacity: 0.55; transform: translate(calc(var(--p) * -7), calc(var(--p) * -9)) scale(2.6); }
+  99% { opacity: 0.1; transform: translate(calc(var(--p) * -6), calc(var(--p) * -15)) scale(3.4); }
+  100% { opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .layer {
+  .layer, .glow {
     animation: none !important;
   }
 
-  .blink, .savour, .lift {
+  .blink, .savour, .lift, .at-lips {
     opacity: 0;
   }
 
-  .puff, .wisp {
+  .wisp, .exhale {
     display: none;
   }
 }
