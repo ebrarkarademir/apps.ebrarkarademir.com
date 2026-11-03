@@ -728,6 +728,23 @@ export const ITEM_ART = {
 // ---------- Buttons ----------
 
 export const UI_ART = {
+  chat: [
+    BLANK,
+    '..kkkkkkkkkkkk..',
+    '.kWwwwwwwwwwwWk.',
+    'kWwwwwwwwwwwwwWk',
+    'kwwwwwwwwwwwwwwk',
+    'kwwkkwwkkwwkkwwk',
+    'kwwkkwwkkwwkkwwk',
+    'kwwwwwwwwwwwwwwk',
+    'kWwwwwwwwwwwwwWk',
+    '.kWWWWWWWWWWWWk.',
+    '..kkkkWWkkkkkk..',
+    '.....kWWk.......',
+    '.....kWk........',
+    '.....kk.........',
+    BLANK, BLANK
+  ],
   gift: [
     BLANK, BLANK,
     '....kkk..kkk....',

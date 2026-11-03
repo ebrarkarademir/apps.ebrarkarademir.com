@@ -248,6 +248,7 @@ function leaveSolo () {
       :can-lobby="room.isHost"
       :error="errorText"
       :watching="seated ? '' : t.bjWatching"
+      online
       @exit="room.leave()"
       @lobby="room.act('lobby')"
       @bet="bet"

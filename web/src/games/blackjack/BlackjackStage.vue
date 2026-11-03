@@ -1,12 +1,15 @@
 <script setup>
-import { ref, reactive, computed, watch, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
 import FullscreenButton from '../ascii/FullscreenButton.vue'
 import { useFullscreen } from '../ascii/fullscreen'
 import BlackjackTable from './BlackjackTable.vue'
 import TableSheet from './TableSheet.vue'
 import FlyingSprite from './FlyingSprite.vue'
-import { itemUrl } from './pixels'
+import TableChat from './TableChat.vue'
+import { itemUrl, iconUrl } from './pixels'
+import { money } from './chips'
+import { session, CHAT_TEXT } from '../../online/session'
 import { DEALER, itemOf } from './social'
 import { sound } from '../ascii/sound'
 
@@ -14,7 +17,9 @@ import { sound } from '../ascii/sound'
 // full-screen switch), whatever the device. Round the table it shows what the room's `social`
 // feed says is happening: emotes popping up over seats, orders and gifts flying from the bar or
 // from whoever sent them to the seat they're for, with a note of each at the top. The sheet for
-// sending emotes and ordering slides up over it.
+// sending emotes and ordering slides up over it. Beside the table on a big screen, or over it at
+// the press of a button, the chat: what everyone says (the room's chat, online), with the
+// table's announcements in between: who won what, the dealer's hand, gifts, who sat down.
 const props = defineProps({
   t: { type: Object, required: true },
   table: { type: Object, required: true },
@@ -25,7 +30,8 @@ const props = defineProps({
   exitLabel: { type: String, required: true },
   canLobby: { type: Boolean, default: false },
   error: { type: String, default: '' },
-  watching: { type: String, default: '' }
+  watching: { type: String, default: '' },
+  online: { type: Boolean, default: false } // the chat is the room's; solo it stays here
 })
 
 const emit = defineEmits(['exit', 'lobby', 'bet', 'deal', 'act', 'refill', 'emote', 'buy'])
@@ -121,6 +127,7 @@ function show (event) {
   else if (event.from === props.myId) text = fmt(props.t.bjToastOrderMe, { item: name })
   else text = fmt(props.t.bjToastOrder, { name: nameOf(event.from), item: name })
   toast({ id: event.n, icon: itemUrl(event.k), text, note: gift ? props.t[`bjGiftNote_${event.k}`] || '' : '' })
+  news(gift ? fmt(props.t.bjToastGift, { from: realName(event.from), to: realName(event.to), item: name }) : fmt(props.t.bjToastOrder, { name: realName(event.from), item: name }), { icon: itemUrl(event.k), tone: gift ? 'good' : '' })
   fly(event)
 }
 
@@ -149,6 +156,139 @@ function landed (id) {
   flights.value = flights.value.filter(flight => flight.id !== id)
   flying.delete(id)
   sound.play('clink')
+}
+
+// ---------- The chat, and the table's announcements in it ----------
+
+const LINES_MAX = 120
+const BIG_WIN = 500000 // $5,000 and up is a big win
+const lines = ref([])
+let lineId = 0
+
+function addLine (line) {
+  lines.value = [...lines.value.slice(1 - LINES_MAX), { id: `l${++lineId}`, ...line }]
+}
+
+const news = (text, { tone = '', icon = '' } = {}) => addLine({ kind: 'news', text, tone, icon })
+
+// Beside the table when the screen is big enough, otherwise over it when asked for
+const BESIDE = '(min-width: 1100px) and (min-height: 560px)'
+const beside = ref(false)
+const chatOpen = ref(false)
+const unread = ref(0)
+const chatShown = computed(() => beside.value || chatOpen.value)
+const chatBox = ref(null)
+let wideQuery = null
+const onWide = () => { beside.value = !!wideQuery?.matches }
+
+onMounted(() => {
+  wideQuery = window.matchMedia?.(BESIDE) || null
+  onWide()
+  wideQuery?.addEventListener?.('change', onWide)
+})
+onUnmounted(() => wideQuery?.removeEventListener?.('change', onWide))
+
+watch(chatShown, (shown) => {
+  if (!shown) return
+  unread.value = 0
+  if (props.online) session.markChatSeen()
+})
+
+// Names as they are, the way everyone at the table reads them (not "You")
+function realName (id) {
+  if (id === DEALER) return props.t.bjDealer
+  return props.names[id] || props.table.seats.find(seat => seat?.pid === id)?.name || '?'
+}
+
+// A round's results, once it's settled: the dealer's hand, then everyone's, side bets included
+function announceRound (table) {
+  const d = table.dealer
+  if (d.blackjack) news(props.t.bjNewsDealerBJ, { tone: 'bad', icon: iconUrl('skull') })
+  else if (d.bust) news(fmt(props.t.bjNewsDealerBust, { n: d.total }), { tone: 'good' })
+  else if (d.cards.length) news(fmt(props.t.bjNewsDealerStands, { n: d.total }))
+  for (const seat of table.seats) {
+    if (!seat?.hands.length) continue
+    const name = seat.name || realName(seat.pid)
+    for (const side of seat.sides || []) {
+      if (!side.kind) continue
+      const bet = side.key === 'pp' ? props.t.bjSidePP : props.t.bjSide21
+      news(fmt(props.t.bjNewsSide, { name, kind: props.t[`bjSideWin_${side.kind}`] || side.kind, bet, amount: money(side.payout - side.bet) }), { tone: 'good', icon: iconUrl('money') })
+    }
+    const net = seat.hands.reduce((sum, hand) => sum + hand.payout - hand.bet, 0)
+    const blackjack = seat.hands.some(hand => hand.outcome === 'blackjack')
+    const bust = seat.hands.every(hand => hand.outcome === 'bust')
+    let key = 'bjNewsPush'
+    if (blackjack && net > 0) key = 'bjNewsBlackjack'
+    else if (net > 0) key = 'bjNewsWin'
+    else if (bust) key = 'bjNewsBust'
+    else if (net < 0) key = 'bjNewsLose'
+    const big = net >= BIG_WIN || (blackjack && net > 0)
+    news(fmt(props.t[key], { name, amount: money(Math.abs(net)) }), {
+      tone: big ? 'big' : net > 0 ? 'good' : net < 0 ? 'bad' : '',
+      icon: big ? iconUrl(blackjack ? 'party' : 'money') : ''
+    })
+  }
+}
+
+// Only what happens while this page is open: a round already over when it opened isn't news
+let announced = null
+watch(() => `${props.table.round}:${props.table.phase}`, () => {
+  const table = props.table
+  if (announced === null) {
+    announced = table.round
+    return
+  }
+  if (table.phase === 'settled' && table.round !== announced) {
+    announced = table.round
+    announceRound(table)
+  }
+}, { immediate: true })
+
+// Who sits down and who goes
+let sitting = null
+watch(() => props.table.seats.map(seat => seat?.pid || '').join('|'), () => {
+  const now = new Map(props.table.seats.filter(Boolean).map(seat => [seat.pid, seat.name]))
+  if (sitting) {
+    for (const [pid, name] of now) if (!sitting.has(pid)) news(fmt(props.t.bjNewsSit, { name }))
+    for (const [pid, name] of sitting) if (!now.has(pid)) news(fmt(props.t.bjNewsLeave, { name }))
+  }
+  sitting = now
+}, { immediate: true })
+
+// Online, what people say is the room's chat (session.js): the last few lines when the table
+// opens, then each one as it comes
+const seenChat = new Set()
+function takeChat (quiet) {
+  for (const line of session.chat) {
+    if (seenChat.has(line.id)) continue
+    seenChat.add(line.id)
+    if (line.sys || !line.text) continue
+    addLine({ kind: 'chat', name: line.name, text: line.text, mine: line.from === props.myId })
+    if (!quiet && line.from !== props.myId && !chatShown.value) unread.value++
+  }
+  if (chatShown.value) session.markChatSeen()
+}
+
+watch(() => (props.online ? session.chat[session.chat.length - 1]?.id || '' : ''), (last, before) => {
+  if (last) takeChat(before === undefined)
+}, { immediate: true })
+
+function say (text) {
+  if (props.online) {
+    session.sendChat(text)
+    return
+  }
+  addLine({ kind: 'chat', name: nameOf(props.myId), text: text.slice(0, CHAT_TEXT), mine: true })
+}
+
+function toggleChat () {
+  chatOpen.value = !chatOpen.value
+  if (chatOpen.value) setTimeout(() => chatBox.value?.focus(), 50)
+}
+
+function openChat () {
+  if (beside.value) chatBox.value?.focus()
+  else toggleChat()
 }
 
 // ---------- The sheet ----------
@@ -185,7 +325,7 @@ function buy (order) {
       <FullscreenButton :t="t" :full="full" @toggle="toggleFull" />
     </template>
 
-    <div ref="area" :class="['stage', { 'is-full': full }]">
+    <div ref="area" :class="['stage', { 'is-full': full, 'with-chat': beside }]">
       <BlackjackTable
         :t="t"
         :table="table"
@@ -196,11 +336,27 @@ function buy (order) {
         :name-of="nameOf"
         :keys="!sheet"
         :watching="watching"
+        :chat-beside="beside"
+        :unread="unread"
         @bet="(bet, done) => emit('bet', bet, done)"
         @deal="emit('deal')"
         @act="(action) => emit('act', action)"
         @refill="emit('refill')"
         @social="openSheet"
+        @chat="openChat"
+      />
+
+      <!-- The chat: beside the table, or over it while open -->
+      <TableChat
+        v-if="chatShown"
+        ref="chatBox"
+        :class="beside ? 'side-chat' : 'over-chat'"
+        :t="t"
+        :lines="lines"
+        :max-length="CHAT_TEXT"
+        :closable="!beside"
+        @send="say"
+        @close="chatOpen = false"
       />
 
       <!-- In full screen there's no header: the way back out -->
@@ -248,6 +404,40 @@ function buy (order) {
   min-height: 0;
   padding: 0.5rem;
   overflow: hidden;
+}
+
+/* A big screen: the table and the chat side by side */
+.stage.with-chat {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.stage.with-chat > :first-child {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.side-chat {
+  flex: 0 0 clamp(16rem, 22vw, 21rem);
+}
+
+/* Otherwise over the top of the table */
+.over-chat {
+  position: absolute;
+  z-index: 24;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: min(calc(100% - 1.2rem), 24rem);
+  height: min(60%, 26rem);
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .over-chat {
+    height: calc(100% - 1.2rem);
+    width: min(calc(100% - 17rem), 22rem);
+    right: auto;
+    left: 0.6rem;
+  }
 }
 
 .stage.is-full {

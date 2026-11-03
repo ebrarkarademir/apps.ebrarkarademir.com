@@ -72,7 +72,7 @@ test('what a player sees: no shoe, no face-down card, and only their own chips',
   assert.ok(!JSON.stringify(seen).includes('"shoe":['))
   assert.equal(seen.me.balance, 49500)
   assert.equal(seen.table.seats.find(seat => seat?.me).name, 'B')
-  assert.deepEqual(seen.balances, { a: 99500, b: 49500 })
+  assert.deepEqual(seen.balances, { a: RULES.startBalance - 500, b: 49500 })
   // The room's own fields stay, for the lobby around the game
   assert.equal(seen.hostId, 'a')
   assert.equal(seen.players.length, 2)
@@ -147,7 +147,7 @@ test('back to the lobby in the middle of a hand gives the stakes back', () => {
   onAction(s, 'b', { type: 'bet', amount: 500 })
   onAction(s, 'a', { type: 'ready' })
   onAction(s, 'b', { type: 'ready' })
-  assert.equal(s.wallets.a.balance, 97500)
+  assert.equal(s.wallets.a.balance, RULES.startBalance - 2500)
 
   // Only the host can end the table
   onAction(s, 'b', { type: 'lobby' })
@@ -155,8 +155,8 @@ test('back to the lobby in the middle of a hand gives the stakes back', () => {
   onAction(s, 'a', { type: 'lobby' })
   assert.equal(s.phase, 'lobby')
   assert.equal(s.bj, null)
-  assert.equal(s.wallets.a.balance, 100000)
-  assert.equal(s.wallets.b.balance, 100000)
+  assert.equal(s.wallets.a.balance, RULES.startBalance)
+  assert.equal(s.wallets.b.balance, RULES.startBalance)
 })
 
 test('chips from a device are checked: anything odd starts over at $1,000', () => {

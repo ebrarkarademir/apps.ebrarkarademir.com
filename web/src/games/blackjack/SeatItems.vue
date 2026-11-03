@@ -14,7 +14,8 @@ const props = defineProps({
   hidden: { type: Object, default: null }, // numbers of the ones still flying in
   nameOf: { type: Function, default: null }, // id -> name, for who it's from
   max: { type: Number, default: 3 },
-  over: { type: Boolean, default: false }
+  over: { type: Boolean, default: false },
+  except: { type: Number, default: null } // the one someone holds, drawn in their hand instead
 })
 
 const FADE_MS = 3000
@@ -30,7 +31,7 @@ const EMIT = {
 }
 const PARTS = { steam: 3, smoke: 3, hookah: 5, fizz: 4, sparkle: 3, hearts: 2, stink: 3, rain: 6 }
 
-const live = computed(() => props.items.filter(item => item.until > props.now && !props.hidden?.has(item.n) && !!itemOf(item.k)?.over === props.over))
+const live = computed(() => props.items.filter(item => item.until > props.now && item.n !== props.except && !props.hidden?.has(item.n) && !!itemOf(item.k)?.over === props.over))
 const shown = computed(() => live.value.slice(-props.max))
 const extra = computed(() => live.value.length - shown.value.length)
 

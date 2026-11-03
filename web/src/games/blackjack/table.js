@@ -26,10 +26,10 @@ export const RULES = Object.freeze({
   penetration: 0.75, // share of the shoe dealt before it's shuffled again
   seats: 5,
   minBet: 500, // $5
-  maxBet: 50000, // $500
+  maxBet: 1000000, // $10,000
   sideMin: 500, // $5, each side bet
-  sideMax: 10000, // $100
-  startBalance: 100000, // $1,000
+  sideMax: 100000, // $1,000
+  startBalance: 10000000, // $100,000
   maxHands: 4,
   betMs: 15000, // a shared table deals this long after the first player is ready
   turnMs: 20000, // a turn not taken in time stands
@@ -40,7 +40,7 @@ export const RULES = Object.freeze({
 })
 
 // Chips to bet with, in cents
-export const CHIPS = [500, 2500, 10000, 50000]
+export const CHIPS = [2500, 10000, 50000, 100000, 500000] // $25, $100, $500, $1K, $5K
 
 export const PHASES = ['betting', 'playing', 'dealer', 'settled']
 const ACTIONS = ['hit', 'stand', 'double', 'split']

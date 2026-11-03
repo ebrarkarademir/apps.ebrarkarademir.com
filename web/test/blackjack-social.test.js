@@ -157,6 +157,6 @@ test('side bets go through the room with a key', () => {
   onAction(s, 'a', { type: 'bet', key: 'pp', amount: 500 })
   onAction(s, 'a', { type: 'bet', key: 't3', amount: 2500 })
   assert.deepEqual(project(s, 'a').table.seats[0].side, { pp: 500, t3: 2500 })
-  onAction(s, 'a', { type: 'bet', key: 't3', amount: 50000 })
+  onAction(s, 'a', { type: 'bet', key: 't3', amount: RULES.sideMax + 500 })
   assert.equal(s.notes.a.err, 'sideMax')
 })

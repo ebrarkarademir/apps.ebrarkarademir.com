@@ -18,13 +18,14 @@ import { socialState, sendEmote, placeOrder, pruneSocial, projectSocial } from '
 
 const CHIPS_KEY = 'blackjackChips'
 const OLD_CHIPS_KEY = 'blackjackPractice' // the practice table's chips, from before rooms
+const BANK_KEY = 'blackjackBank100k' // set once a wallet from the $1,000 days has been topped up
 const MAX_CENTS = 1e11
 const STAT_KEYS = ['hands', 'wins', 'losses', 'pushes', 'blackjacks', 'busts', 'net', 'biggestWin', 'peak', 'refills', 'wagered', 'doubles', 'splits', 'sideBets', 'sideWins', 'barTab', 'gifts']
 const MAX_KEYS = ['biggestWin', 'peak'] // the best so far, not a running total
 
 // ---------- This player's chips, on this device ----------
 
-/** Chips and stats as the room may keep them; anything odd starts over at $1,000. */
+/** Chips and stats as the room may keep them; anything odd starts over at $100,000. */
 export function cleanWallet (raw) {
   const ok = Number.isInteger(raw?.balance) && raw.balance >= 0 && raw.balance <= MAX_CENTS
   const balance = ok ? raw.balance : RULES.startBalance
@@ -38,15 +39,35 @@ export function cleanWallet (raw) {
 }
 
 export function loadChips () {
+  let wallet = null
   try {
     for (const key of [CHIPS_KEY, OLD_CHIPS_KEY]) {
       const saved = localStorage.getItem(key)
-      if (saved) return cleanWallet(JSON.parse(saved))
+      if (saved) {
+        wallet = cleanWallet(JSON.parse(saved))
+        break
+      }
     }
   } catch {
     // Start over
   }
-  return cleanWallet(null)
+  return topUp(wallet || cleanWallet(null))
+}
+
+// Everyone starts with $100,000 now: a wallet saved when it was $1,000 is brought up to that once
+function topUp (wallet) {
+  try {
+    if (localStorage.getItem(BANK_KEY)) return wallet
+    localStorage.setItem(BANK_KEY, '1')
+  } catch {
+    return wallet
+  }
+  if (wallet.balance < RULES.startBalance) {
+    wallet.balance = RULES.startBalance
+    wallet.stats.peak = Math.max(wallet.stats.peak || 0, wallet.balance)
+    saveChips(wallet)
+  }
+  return wallet
 }
 
 export function saveChips (wallet) {
@@ -57,7 +78,7 @@ export function saveChips (wallet) {
   }
 }
 
-/** Out of chips: another $1,000, counted in the stats. Returns the error, if refused. */
+/** Out of chips: another $100,000, counted in the stats. Returns the error, if refused. */
 export function refill (wallet) {
   if (wallet.balance >= RULES.minBet) return 'notBroke'
   wallet.balance = RULES.startBalance

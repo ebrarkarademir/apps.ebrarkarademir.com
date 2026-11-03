@@ -4,6 +4,8 @@ import PlayingCard from './PlayingCard.vue'
 import ChipStack from './ChipStack.vue'
 import SeatItems from './SeatItems.vue'
 import EmoteBubble from './EmoteBubble.vue'
+import SeatAvatar from './SeatAvatar.vue'
+import { lookOf, DEALER_LOOK, canHold } from './avatars'
 import { CHIP_LOOKS, money, chipLabel } from './chips'
 import { iconUrl, itemUrl } from './pixels'
 import { DEALER } from './social'
@@ -24,10 +26,12 @@ const props = defineProps({
   bubbles: { type: Object, default: () => ({}) }, // player id or 'dealer' -> { k, id }
   nameOf: { type: Function, default: (id) => id },
   keys: { type: Boolean, default: true }, // off while the sheet is open
-  watching: { type: String, default: '' } // why this player has no seat
+  watching: { type: String, default: '' }, // why this player has no seat
+  chatBeside: { type: Boolean, default: false }, // the chat is up beside the table already
+  unread: { type: Number, default: 0 } // chat lines not seen yet
 })
 
-const emit = defineEmits(['bet', 'deal', 'act', 'refill', 'social'])
+const emit = defineEmits(['bet', 'deal', 'act', 'refill', 'social', 'chat'])
 
 const STAGGER = 260 // ms between cards of one deal
 const MOVES = [
@@ -259,6 +263,12 @@ const spotLabel = (spot) => {
 // ---------- The social side ----------
 
 const itemsOf = (id) => props.items[id] || []
+// What someone has in hand: the newest drink, smoke or bite at their seat that has arrived
+function heldOf (id) {
+  const list = itemsOf(id).filter(item => item.until > now.value && !props.hidden?.has(item.n) && canHold(item.k))
+  return list[list.length - 1] || null
+}
+const lookFor = (id) => lookOf(id)
 // Emotes from people watching, who have no seat for them to show over
 const railBubbles = computed(() => Object.entries(props.bubbles)
   .filter(([pid]) => pid !== DEALER && !seats.value.some(seat => seat?.pid === pid))
@@ -289,7 +299,7 @@ function onKey (event) {
   } else if ((key === 'enter' || key === ' ') && canDeal.value && !event.target.closest?.('button')) {
     event.preventDefault()
     deal()
-  } else if (/^[1-4]$/.test(key) && phase.value === 'betting') {
+  } else if (/^[1-9]$/.test(key) && rules.value.chips[Number(key) - 1] && phase.value === 'betting') {
     addChip(rules.value.chips[Number(key) - 1])
   } else if ((key === 'arrowleft' || key === 'arrowright') && canBetNow.value && hasSides.value) {
     event.preventDefault()
@@ -300,6 +310,9 @@ function onKey (event) {
     emit('social', { tab: 'emote' })
   } else if (key === 'b') {
     emit('social', { tab: 'bar' })
+  } else if (key === 't') {
+    event.preventDefault()
+    emit('chat')
   }
 }
 
@@ -330,8 +343,9 @@ onUnmounted(() => {
       <!-- The dealer, with whatever they've been given -->
       <section class="dealer" data-pid="dealer" :aria-label="t.bjDealer">
         <button type="button" class="who" :title="t.bjGiftDealer" @click="giftTo(DEALER)">{{ t.bjDealer }}</button>
+        <SeatAvatar class="dealer-avatar" :look="DEALER_LOOK" :held="heldOf(DEALER)?.k || ''" :seed="3" />
         <div class="dealer-row">
-          <SeatItems class="dealer-items" :t="t" :items="itemsOf(DEALER)" :now="now" :hidden="hidden" :name-of="nameOf" :max="4" />
+          <SeatItems class="dealer-items" :t="t" :items="itemsOf(DEALER)" :now="now" :hidden="hidden" :name-of="nameOf" :max="4" :except="heldOf(DEALER)?.n" />
           <div class="dealer-hand">
             <SeatItems class="over-items" :t="t" :items="itemsOf(DEALER)" :now="now" :hidden="hidden" :name-of="nameOf" :max="1" over />
             <div class="hand-cards dealer-cards" :style="{ '--n': table.dealer.cards.length }">
@@ -389,43 +403,48 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="spots-row">
-              <div class="spots">
+            <div class="seat-base">
+              <div class="spots-row">
+                <div class="spots">
+                  <component
+                    :is="seat.me && canBetNow ? 'button' : 'div'"
+                    v-for="spot in spotsOf(seat)"
+                    :key="spot.key"
+                    :type="seat.me && canBetNow ? 'button' : undefined"
+                    :class="['spot', spot.key === 'main' ? 'main-spot' : 'side-spot', {
+                      aimed: seat.me && canBetNow && hasSides && aimedAt === spot.key,
+                      win: spot.win,
+                      lost: spot.lost
+                    }]"
+                    :aria-label="seat.me ? spotLabel(spot) : undefined"
+                    :aria-pressed="seat.me && canBetNow ? aimedAt === spot.key : undefined"
+                    @click="seat.me && aim(spot.key)"
+                  >
+                    <span v-if="SPOT_NAMES[spot.key]" class="spot-name" aria-hidden="true">{{ SPOT_NAMES[spot.key] }}</span>
+                    <ChipStack :amount="spot.amount" :max="spot.key === 'main' ? 6 : 3" />
+                    <span v-if="spot.win" class="spot-win">×{{ spot.win.odds }}</span>
+                    <span v-if="spot.amount && (spot.key === 'main' || seat.me)" class="spot-amount">{{ money(spot.amount) }}</span>
+                  </component>
+                </div>
+                <SeatItems class="seat-items" :t="t" :items="itemsOf(seat.pid)" :now="now" :hidden="hidden" :name-of="nameOf" :max="seat.me ? 4 : 3" :except="heldOf(seat.pid)?.n" />
+              </div>
+              <!-- The player in their chair, with their name on the rail -->
+              <div class="sitter">
+                <SeatAvatar :look="lookFor(seat.pid)" :held="heldOf(seat.pid)?.k || ''" :seed="index" />
                 <component
-                  :is="seat.me && canBetNow ? 'button' : 'div'"
-                  v-for="spot in spotsOf(seat)"
-                  :key="spot.key"
-                  :type="seat.me && canBetNow ? 'button' : undefined"
-                  :class="['spot', spot.key === 'main' ? 'main-spot' : 'side-spot', {
-                    aimed: seat.me && canBetNow && hasSides && aimedAt === spot.key,
-                    win: spot.win,
-                    lost: spot.lost
-                  }]"
-                  :aria-label="seat.me ? spotLabel(spot) : undefined"
-                  :aria-pressed="seat.me && canBetNow ? aimedAt === spot.key : undefined"
-                  @click="seat.me && aim(spot.key)"
+                  :is="seat.me ? 'p' : 'button'"
+                  :type="seat.me ? undefined : 'button'"
+                  class="plate"
+                  :title="seat.me ? undefined : fmt(t.bjGiftTo, { name: seat.name })"
+                  @click="!seat.me && giftTo(seat.pid)"
                 >
-                  <span v-if="SPOT_NAMES[spot.key]" class="spot-name" aria-hidden="true">{{ SPOT_NAMES[spot.key] }}</span>
-                  <ChipStack :amount="spot.amount" :max="spot.key === 'main' ? 6 : 3" />
-                  <span v-if="spot.win" class="spot-win">×{{ spot.win.odds }}</span>
-                  <span v-if="spot.amount && (spot.key === 'main' || seat.me)" class="spot-amount">{{ money(spot.amount) }}</span>
+                  <span class="plate-name">{{ seat.me ? t.bjYou : seat.name }}</span>
+                  <span v-if="seat.away" class="plate-tag">{{ t.bjAway }}</span>
+                  <span v-else-if="phase === 'betting' && seat.ready" class="plate-tag is-ready">{{ t.bjReady }}</span>
+                  <span v-else-if="!seat.me" class="plate-gift" aria-hidden="true"><img :src="iconUrl('gift')" alt="" /></span>
                 </component>
               </div>
-              <SeatItems class="seat-items" :t="t" :items="itemsOf(seat.pid)" :now="now" :hidden="hidden" :name-of="nameOf" :max="seat.me ? 4 : 3" />
             </div>
-
-            <component
-              :is="seat.me ? 'p' : 'button'"
-              :type="seat.me ? undefined : 'button'"
-              class="plate"
-              :title="seat.me ? undefined : fmt(t.bjGiftTo, { name: seat.name })"
-              @click="!seat.me && giftTo(seat.pid)"
-            >
-              <span class="plate-name">{{ seat.me ? t.bjYou : seat.name }}</span>
-              <span v-if="seat.away" class="plate-tag">{{ t.bjAway }}</span>
-              <span v-else-if="phase === 'betting' && seat.ready" class="plate-tag is-ready">{{ t.bjReady }}</span>
-              <span v-else-if="!seat.me" class="plate-gift" aria-hidden="true"><img :src="iconUrl('gift')" alt="" /></span>
-            </component>
             <span v-if="phase === 'playing' && turn?.seat === index" class="turn-bar" aria-hidden="true"><span :style="{ width: `${timerShare * 100}%` }"></span></span>
           </template>
           <span v-else class="open-seat">{{ t.bjOpenSeat }}</span>
@@ -442,6 +461,10 @@ onUnmounted(() => {
         </p>
 
         <div class="social" role="group" :aria-label="t.bjSocial">
+          <button v-if="!chatBeside" type="button" class="px-btn" :title="`${t.bjChat} (T)`" :aria-label="t.bjChat" @click="emit('chat')">
+            <img :src="iconUrl('chat')" alt="" draggable="false" />
+            <span v-if="unread" class="badge">{{ unread > 9 ? '9+' : unread }}</span>
+          </button>
           <button type="button" class="px-btn" :title="`${t.bjTab_emote} (E)`" :aria-label="t.bjTab_emote" @click="emit('social', { tab: 'emote' })">
             <img :src="iconUrl('laugh')" alt="" draggable="false" />
           </button>
@@ -543,7 +566,7 @@ onUnmounted(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 0.6rem 0.75rem 1rem;
+  padding: 0.6rem 1.6rem 1rem;
   border: 12px solid #3a2414;
   border-radius: 28px 28px 50% 50% / 28px 28px 30% 30%;
   background:
@@ -608,7 +631,8 @@ onUnmounted(() => {
 /* ---------- The dealer ---------- */
 
 .dealer {
-  --card-w: clamp(28px, 7vw, 78px);
+  --card-w: clamp(34px, 9vw, 110px);
+  --av: clamp(44px, 7vw, 92px);
   flex: none;
   display: flex;
   flex-direction: column;
@@ -629,8 +653,14 @@ onUnmounted(() => {
   color: #ffe58a;
 }
 
+/* The dealer stands behind the cards, which lie on the felt in front of them */
+.dealer-avatar {
+  margin-bottom: calc(var(--av) * -0.3);
+}
+
 .dealer-row {
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -761,12 +791,13 @@ onUnmounted(() => {
 }
 
 .seat {
-  --card-w: clamp(24px, 4.4vw, 58px);
+  --card-w: clamp(30px, 6vw, 80px);
   --spot: clamp(2.4rem, 4.6vw, 3.6rem);
+  --av: clamp(36px, 5vw, 76px);
   position: relative;
   flex: 1 1 0;
   min-width: 0;
-  max-width: 16rem;
+  max-width: 22rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -777,12 +808,13 @@ onUnmounted(() => {
 }
 
 .seat.me {
-  --card-w: clamp(32px, 5.6vw, 68px);
+  --card-w: clamp(40px, 8vw, 100px);
   --spot: clamp(2.8rem, 5.4vw, 4rem);
+  --av: clamp(44px, 6.5vw, 96px);
 }
 
-.seat-0-of-5, .seat-4-of-5 { transform: translateY(-2.6rem); }
-.seat-1-of-5, .seat-3-of-5 { transform: translateY(-0.8rem); }
+.seat-0-of-5, .seat-4-of-5 { transform: translateY(-4.4rem); }
+.seat-1-of-5, .seat-3-of-5 { transform: translateY(-1.3rem); }
 
 .seat.active {
   background: rgb(255 229 138 / 0.08);
@@ -885,6 +917,27 @@ onUnmounted(() => {
   top: -0.4rem;
   transform: translateX(-50%);
   pointer-events: none;
+}
+
+/* ---------- The player in their chair, behind their bets ---------- */
+
+/* Beside the bets where there's room; where there isn't, the line breaks and the player sits
+   under them (the lines go upwards, the player's first) */
+.seat-base {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1rem 0.6rem;
+  max-width: 100%;
+}
+
+.sitter {
+  order: -1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* ---------- The betting circles: the main bet, a side bet either side ---------- */
@@ -1008,11 +1061,13 @@ button.spot:hover {
 }
 
 .plate {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.35rem;
   max-width: 100%;
-  margin-top: 0.75rem;
+  margin-top: calc(var(--av) * -0.16);
   padding: 0.1rem 0.6rem;
   border-radius: 9999px;
   background: rgb(0 0 0 / 0.45);
@@ -1085,19 +1140,24 @@ button.plate:focus-visible {
 
 /* Each seat's share of the width goes by how many seats the table has */
 @supports (container-type: size) {
-  .dealer { --card-w: clamp(26px, min(7.5cqw, 12.5cqh), 80px); }
-  .seat { --card-w: clamp(20px, min(calc(23cqw / var(--seats, 5)), 9cqh), 60px); --spot: clamp(2.1rem, min(calc(25cqw / var(--seats, 5)), 9.5cqh), 3.6rem); }
-  .seat.me { --card-w: clamp(28px, min(calc(29cqw / var(--seats, 5)), 12cqh), 72px); --spot: clamp(2.5rem, min(calc(30cqw / var(--seats, 5)), 11cqh), 4.2rem); }
-  .seat-0-of-5, .seat-4-of-5 { transform: translateY(-5cqh); }
-  .seat-1-of-5, .seat-3-of-5 { transform: translateY(-1.6cqh); }
+  .dealer { --card-w: clamp(34px, min(10cqw, 15cqh), 124px); --av: clamp(44px, 14cqh, 124px); }
+  .seat { --card-w: clamp(26px, min(calc(30cqw / var(--seats, 5)), 11cqh), 86px); --spot: clamp(2.1rem, min(calc(25cqw / var(--seats, 5)), 9cqh), 3.6rem); --av: clamp(34px, 11cqh, 100px); }
+  .seat.me { --card-w: clamp(36px, min(calc(38cqw / var(--seats, 5)), 15cqh), 112px); --spot: clamp(2.5rem, min(calc(30cqw / var(--seats, 5)), 10cqh), 4.2rem); --av: clamp(40px, 15cqh, 132px); }
+  .seat-0-of-5, .seat-4-of-5 { transform: translateY(-9cqh); }
+  .seat-1-of-5, .seat-3-of-5 { transform: translateY(-2.6cqh); }
 }
 
 /* A short, wide felt (a phone held sideways): the cards take more of the height there is, with
    less room round them */
 @container felt (max-height: 340px) and (min-aspect-ratio: 1 / 1) {
   .dealer {
-    --card-w: clamp(24px, min(7.5cqw, 15cqh), 64px);
+    --card-w: clamp(30px, min(9cqw, 19cqh), 84px);
     gap: 0.1rem;
+  }
+
+  /* No height to spare for the dealer standing there */
+  .dealer-avatar {
+    display: none;
   }
 
   .who {
@@ -1105,16 +1165,18 @@ button.plate:focus-visible {
   }
 
   .seat {
-    --card-w: clamp(20px, min(calc(23cqw / var(--seats, 5)), 12cqh), 56px);
+    --card-w: clamp(24px, min(calc(28cqw / var(--seats, 5)), 15cqh), 72px);
     --spot: clamp(1.9rem, min(calc(25cqw / var(--seats, 5)), 12cqh), 3rem);
+    --av: clamp(30px, 15cqh, 56px);
     gap: 0.15rem;
     padding: 0.15rem 0.2rem 0.25rem;
     transform: none !important;
   }
 
   .seat.me {
-    --card-w: clamp(26px, min(calc(29cqw / var(--seats, 5)), 15cqh), 64px);
+    --card-w: clamp(32px, min(calc(36cqw / var(--seats, 5)), 18cqh), 84px);
     --spot: clamp(2.2rem, min(calc(30cqw / var(--seats, 5)), 13cqh), 3.4rem);
+    --av: clamp(34px, 18cqh, 64px);
   }
 
   .hands {
@@ -1136,7 +1198,7 @@ button.plate:focus-visible {
 /* Taller than wide (a phone upright): the others in a row of small seats, this player's seat a
    row of its own at the bottom, bigger */
 @container felt (max-aspect-ratio: 1 / 1) {
-  .dealer { --card-w: clamp(26px, min(13cqw, 10cqh), 64px); }
+  .dealer { --card-w: clamp(36px, min(19cqw, 12.5cqh), 100px); --av: clamp(48px, 13cqh, 100px); }
 
   .seats {
     flex-wrap: wrap;
@@ -1144,16 +1206,18 @@ button.plate:focus-visible {
   }
 
   .seat {
-    --card-w: clamp(18px, min(8.5cqw, 6.6cqh), 44px);
+    --card-w: clamp(24px, min(11cqw, 7.5cqh), 58px);
     --spot: clamp(1.9rem, min(10cqw, 7cqh), 3rem);
+    --av: clamp(32px, 8cqh, 60px);
     flex: 1 1 22%;
     padding: 0.25rem 0.1rem 0.3rem;
     transform: none !important;
   }
 
   .seat.me {
-    --card-w: clamp(28px, min(15cqw, 12cqh), 74px);
+    --card-w: clamp(40px, min(23cqw, 15cqh), 112px);
     --spot: clamp(2.5rem, min(14cqw, 9.5cqh), 4rem);
+    --av: clamp(56px, 16cqh, 112px);
     order: 9;
     flex-basis: 100%;
     max-width: none;
@@ -1164,7 +1228,6 @@ button.plate:focus-visible {
   }
 
   .seat:not(.me) .plate {
-    margin-top: 0.15rem;
     font-size: 0.68rem;
   }
 
@@ -1178,24 +1241,23 @@ button.plate:focus-visible {
 
   /* Others at the table too: a row of them above this player's seat, so all of it a size down */
   .felt.crowded .dealer {
-    --card-w: clamp(24px, min(11cqw, 8cqh), 56px);
+    --card-w: clamp(30px, min(14cqw, 9cqh), 76px);
+    --av: clamp(36px, 8.5cqh, 72px);
     gap: 0.15rem;
   }
 
   .felt.crowded .seat {
-    --card-w: clamp(18px, min(7.5cqw, 5.6cqh), 40px);
+    --card-w: clamp(22px, min(10cqw, 6.4cqh), 52px);
     --spot: clamp(1.8rem, min(9cqw, 6.2cqh), 2.6rem);
+    --av: clamp(30px, 6.5cqh, 52px);
     gap: 0.15rem;
     padding: 0.1rem 0.1rem 0.15rem;
   }
 
   .felt.crowded .seat.me {
-    --card-w: clamp(28px, min(13cqw, 9.5cqh), 66px);
+    --card-w: clamp(36px, min(18cqw, 11.5cqh), 92px);
     --spot: clamp(2.3rem, min(12cqw, 8.5cqh), 3.4rem);
-  }
-
-  .felt.crowded .seat.me .plate {
-    margin-top: 0.6rem;
+    --av: clamp(44px, 12cqh, 90px);
   }
 
   .felt.crowded .center {
@@ -1217,10 +1279,6 @@ button.plate:focus-visible {
     display: none;
   }
 
-  .plate {
-    margin-top: 0.15rem;
-  }
-
   .center {
     margin: 0.15rem 0;
   }
@@ -1230,8 +1288,8 @@ button.plate:focus-visible {
 @supports not (container-type: size) {
   @media (max-width: 640px) {
     .seats { flex-wrap: wrap; gap: 0.4rem 0.25rem; }
-    .seat { --card-w: 30px; --spot: 2.4rem; flex: 1 1 22%; transform: none !important; }
-    .seat.me { --card-w: 54px; --spot: 3.2rem; order: 9; flex-basis: 100%; max-width: none; }
+    .seat { --card-w: 40px; --spot: 2.4rem; --av: 36px; flex: 1 1 22%; transform: none !important; }
+    .seat.me { --card-w: 72px; --spot: 3.2rem; --av: 56px; order: 9; flex-basis: 100%; max-width: none; }
     .seat.empty { display: none; }
   }
 }
@@ -1286,6 +1344,7 @@ button.plate:focus-visible {
 }
 
 .px-btn {
+  position: relative;
   display: grid;
   place-items: center;
   width: 2.6rem;
@@ -1299,6 +1358,24 @@ button.plate:focus-visible {
   width: 1.65rem;
   height: auto;
   image-rendering: pixelated;
+}
+
+/* Chat lines not read yet */
+.badge {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.45rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.25rem;
+  border-radius: 9999px;
+  background: #e8463c;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.15rem;
+  text-align: center;
+  box-shadow: 0 0 0 2px #000;
 }
 
 .px-btn:hover,
@@ -1372,11 +1449,12 @@ button.plate:focus-visible {
 }
 
 .chip-button {
+  --cs: 2.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.9rem;
-  height: 2.9rem;
+  width: var(--cs);
+  height: var(--cs);
   border-radius: 9999px;
   background:
     radial-gradient(circle, var(--face) 0 50%, transparent 51%),
@@ -1384,7 +1462,8 @@ button.plate:focus-visible {
   box-shadow: 0 3px 0 rgb(0 0 0 / 0.5), inset 0 0 0 3px rgb(0 0 0 / 0.2);
   color: var(--ink);
   font-weight: 800;
-  font-size: 0.9rem;
+  font-size: calc(var(--cs) * 0.24);
+  letter-spacing: -0.05em;
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
   transition: transform 0.1s ease, filter 0.1s ease;
 }
@@ -1393,8 +1472,8 @@ button.plate:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 62%;
-  height: 62%;
+  width: 74%;
+  height: 74%;
   border: 2px dashed rgb(255 255 255 / 0.55);
   border-radius: 9999px;
 }
@@ -1429,6 +1508,7 @@ button.plate:focus-visible {
 .deal-btn {
   flex: 1 1 100%;
   min-height: 2.9rem;
+  white-space: nowrap;
 }
 
 .moves {
@@ -1478,8 +1558,38 @@ button.plate:focus-visible {
   font-weight: 700;
 }
 
-/* A narrow phone: the moves lose their key letters to keep their words */
+/* A narrow phone: the moves lose their key letters to keep their words, and the buttons and
+   chips are a size down so the balance and a row of chips still fit */
 @container dock (max-width: 420px) {
+  .px-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .px-btn img {
+    width: 1.4rem;
+  }
+
+  .social {
+    gap: 0.25rem;
+  }
+
+  .bank-amount {
+    font-size: 1.35rem;
+  }
+
+  .tray {
+    gap: 0.3rem;
+  }
+
+  .chip-button {
+    --cs: 2.55rem;
+  }
+
+  .aim-btn {
+    min-width: 3.1rem;
+  }
+
   .move .key {
     display: none;
   }
@@ -1490,7 +1600,7 @@ button.plate:focus-visible {
 }
 
 /* A wide screen: everything on one line, balance on the left and the bar on the right */
-@container dock (min-width: 760px) {
+@container dock (min-width: 900px) {
   .dock-inner {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: "bank main social";
@@ -1554,8 +1664,7 @@ button.plate:focus-visible {
   }
 
   .chip-button {
-    width: 2.45rem;
-    height: 2.45rem;
+    --cs: 2.45rem;
   }
 
   .aim-btn {

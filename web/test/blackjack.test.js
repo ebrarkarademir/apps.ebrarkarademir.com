@@ -164,7 +164,7 @@ test('bets and moves are checked: limits, money, phase and turn', () => {
   table.sit('p', 'Pat')
   table.sit('q', 'Quinn')
   assert.equal(table.bet('p', 200).err, 'min')
-  assert.equal(table.bet('p', 60000).err, 'max')
+  assert.equal(table.bet('p', RULES.maxBet + 100).err, 'max')
   assert.equal(table.bet('p', 5000).err, 'funds')
   assert.equal(table.bet('p', 1550).err, 'amount')
   assert.equal(table.act('p', 'hit').err, 'phase')

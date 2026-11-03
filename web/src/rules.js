@@ -1085,7 +1085,7 @@ export const rules = {
       duration: 'About a minute a hand',
       goal: 'Get closer to 21 than the dealer without going over.',
       steps: [
-        'Play alone, or online at one table with up to 5 players. You start with $1,000 in chips.',
+        'Play alone, or online at one table with up to 5 players. You start with $100,000 in chips.',
         'Place your bet and press Deal.',
         'Hit takes a card, Stand keeps your total, Double doubles your bet for one more card, and Split turns a pair into two hands.',
         'Over 21 loses. Beat the dealer to win your bet; a Blackjack pays 3 to 2.',
@@ -1093,8 +1093,9 @@ export const rules = {
       ],
       tips: [
         'J, Q and K count as 10; an Ace counts as 1 or 11.',
-        'Out of chips? Get $1,000 more from the lobby or the table.',
+        'Out of chips? Get $100,000 more from the lobby or the table.',
         'Send emotes, order drinks, smokes or food from the bar, or buy someone at the table (or the dealer) a gift. Tap a name to send them one.',
+        'The table chat (T) shows who won what, and lets you talk to the others at the table.',
         '[FULL] gives the table the whole screen.'
       ]
     },
@@ -1105,7 +1106,7 @@ export const rules = {
       duration: 'El başına yaklaşık bir dakika',
       goal: 'Krupiyeden 21’e daha yakın ol, ama 21’i geçme.',
       steps: [
-        'Tek başına ya da çevrim içi, en fazla 5 kişilik bir masada oyna. 1.000 $’lık fişle başlarsın.',
+        'Tek başına ya da çevrim içi, en fazla 5 kişilik bir masada oyna. 100.000 $’lık fişle başlarsın.',
         'Bahsini koy ve Dağıt’a bas.',
         'Kart bir kart alır, Dur toplamını korur, İkiye katla bahsi ikiye katlayıp bir kart daha verir, Böl bir çifti iki ele ayırır.',
         '21’i geçen kaybeder. Krupiyeyi geçersen bahsin kadar kazanırsın; Blackjack 3’e 2 öder.',
@@ -1113,8 +1114,9 @@ export const rules = {
       ],
       tips: [
         'J, Q ve K 10 sayılır; As 1 ya da 11 sayılır.',
-        'Fişin mi bitti? Lobiden ya da masadan 1.000 $ daha al.',
+        'Fişin mi bitti? Lobiden ya da masadan 100.000 $ daha al.',
         'İfade gönder, bardan içecek, sigara, nargile ya da yemek sipariş et; masadaki birine (ya da krupiyeye) hediye al. Birine göndermek için adına dokun.',
+        'Masa sohbetinde (T) kimin ne kazandığı görünür, masadakilerle konuşabilirsin.',
         '[FULL] masayı tam ekran yapar.'
       ]
     },
@@ -1125,7 +1127,7 @@ export const rules = {
       duration: 'Около минуты на раздачу',
       goal: 'Набери ближе к 21, чем дилер, но не больше 21.',
       steps: [
-        'Играй один или онлайн за одним столом, до 5 игроков. На старте у тебя фишки на $1 000.',
+        'Играй один или онлайн за одним столом, до 5 игроков. На старте у тебя фишки на $100 000.',
         'Сделай ставку и нажми «Раздать».',
         '«Ещё» — взять карту, «Хватит» — остановиться, «Удвоить» — удвоить ставку и взять одну карту, «Разделить» — разбить пару на две руки.',
         'Больше 21 — проигрыш. Обыграл дилера — выиграл ставку; блэкджек платит 3 к 2.',
@@ -1133,8 +1135,9 @@ export const rules = {
       ],
       tips: [
         'J, Q и K стоят по 10, туз — 1 или 11.',
-        'Кончились фишки? Возьми ещё $1 000 в лобби или за столом.',
+        'Кончились фишки? Возьми ещё $100 000 в лобби или за столом.',
         'Отправляй эмоции, заказывай в баре напитки, сигареты, кальян или еду, дари подарки игрокам за столом или дилеру. Нажми на имя, чтобы сделать подарок.',
+        'В чате стола (T) видно, кто сколько выиграл, и можно поговорить с соседями.',
         '[FULL] — стол на весь экран.'
       ]
     },
@@ -1145,7 +1148,7 @@ export const rules = {
       duration: 'Бір үлестіруге шамамен бір минут',
       goal: 'Дилерден гөрі 21-ге жақынырақ жина, бірақ 21-ден асырма.',
       steps: [
-        'Жалғыз не онлайн, 5 ойыншыға дейінгі бір үстелде ойна. 1 000 $ фишкамен бастайсың.',
+        'Жалғыз не онлайн, 5 ойыншыға дейінгі бір үстелде ойна. 100 000 $ фишкамен бастайсың.',
         'Бәс тігіп, «Үлестіру» бас.',
         '«Тағы» карта алады, «Жетеді» тоқтайды, «Екі есе» бәсті екі есе арттырып бір карта береді, «Бөлу» жұпты екі қолға бөледі.',
         '21-ден асса, ұтыласың. Дилерді ұтсаң, бәсіңдей ұтасың; блэкджек 3-ке 2 төлейді.',
@@ -1153,8 +1156,9 @@ export const rules = {
       ],
       tips: [
         'J, Q және K — 10, тұз — 1 не 11.',
-        'Фишка таусылды ма? Лоббиден не үстелден тағы 1 000 $ ал.',
+        'Фишка таусылды ма? Лоббиден не үстелден тағы 100 000 $ ал.',
         'Эмоция жібер, бардан сусын, темекі, кальян не тағам тапсырыс бер, үстелдегілерге не дилерге сыйлық ал. Сыйлық жіберу үшін есімін бас.',
+        'Үстел чатында (T) кімнің не ұтқаны көрінеді, үстелдегілермен сөйлесуге болады.',
         '[FULL] үстелді толық экранға шығарады.'
       ]
     }
