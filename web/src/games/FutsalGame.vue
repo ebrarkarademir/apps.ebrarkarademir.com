@@ -558,9 +558,6 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
       :online="online"
       :inputs="inputs"
       :snaps="snaps"
-      :connection="room.connection"
-      :pings="room.pings"
-
       @exit="room.leave()"
       @snapshot="room.sendLive($event)"
       @input="room.sendLive($event)"

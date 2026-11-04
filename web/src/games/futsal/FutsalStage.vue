@@ -2,7 +2,7 @@
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   STEP, HALF_W, CIRCLE_R, RESTART_TIME,
-  createMatch, stepMatch, setInput, pressKick, snapshot, viewOf, readSnapshot, attackDir, stepPlayer
+  createMatch, stepMatch, setInput, pressKick, snapshot, viewOf, readSnapshot, attackDir
 } from './engine'
 import { LEVELS, newBrain, botControls } from './bots'
 import { createRenderer, VIEW_W, VIEW_H } from './renderer'
@@ -27,13 +27,6 @@ import { haptics } from '../ascii/haptics'
 // bots. The host also sends everyone a snapshot of it many times a second and takes their
 // controls in. Everyone else draws the snapshots a tenth of a second late, so motion stays
 // smooth between them, and sends their own controls.
-//
-// A guest's own player doesn't wait for the host: it moves on this device the moment the
-// controls change, by the same rules the host plays by. Each set of controls goes out with a
-// number, and every snapshot says how many steps the host has played with the latest one it
-// has. When a snapshot comes, the guest starts again from where the host has its player and
-// plays back the steps the host hasn't got to yet, so the two agree; any small difference
-// (a bump with another player, say) is eased away rather than jumped.
 
 const props = defineProps({
   t: { type: Object, required: true },
@@ -50,9 +43,7 @@ const props = defineProps({
   paused: { type: Boolean, default: false },
   online: { type: Object, default: () => ({}) }, // host: id -> still in the room
   inputs: { type: Map, default: null }, // host: id -> the latest controls that guest sent
-  snaps: { type: Array, default: null }, // guest: snapshots from the host, oldest first
-  connection: { type: Object, default: null }, // guest: { kind: direct | relay, ms } on the way to the host
-  pings: { type: Object, default: null } // host: id -> { ms, relay } for each guest
+  snaps: { type: Array, default: null } // guest: snapshots from the host, oldest first
 })
 
 const emit = defineEmits(['exit', 'pause', 'snapshot', 'input', 'end'])
@@ -62,9 +53,6 @@ const INPUT_MS = 30 // guests send their controls at most this often...
 const INPUT_RESEND_MS = 250 // ...and at least this often, in case one got lost
 const STALL_MS = 1500 // nothing from the host this long: say so
 const AWAY_MS = 2000 // host: no controls from a guest this long and a bot plays for them
-const HISTORY = 480 // guest: steps of its own controls kept for playing back (4 s)
-const SNAP_TO = 4 // guest: a correction bigger than this (a line-up after a goal) jumps
-const EASE = 12 // guest: how fast a small correction is eased away, per second
 const STICK_RADIUS = 56 // CSS pixels a finger moves for full speed
 const TOP_BAR = 44
 const BOTTOM_BAR = 40 // a spectator's "you're watching" line
@@ -104,18 +92,6 @@ let lastSent = 0
 let lastSentKey = ''
 let kickCount = 0
 
-// Guest: its own player, moved here ahead of the host (see the top)
-let inputSeq = 0 // numbers each set of controls sent
-let sentKey = ''
-let sent = { x: 0, y: 0, held: false } // the controls last sent, which the player here runs on
-let history = [] // { q, k, x, y, held } for every step not yet confirmed: k counts the steps with controls q
-let stepsOnSent = 0 // steps run so far on the controls last sent
-let own = null // { x, y, vx, vy, team, px, py }: where this device has the player
-const ownShift = { x: 0, y: 0 } // a correction still being eased away
-let ownPhase = { phase: 'ready', kickoff: 0 } // from the latest snapshot
-let drawAlpha = 0
-const acks = new Map() // host: id -> { q, steps }: a guest's latest controls, and steps played with them
-
 const keys = new Set()
 let stickPointer = null // { id, ox, oy, x, y }
 const kickPointers = new Set()
@@ -151,14 +127,6 @@ function newMatch () {
   mountedAt = performance.now()
   lastSentKey = ''
   kickCount = 0
-  sentKey = ''
-  sent = { x: 0, y: 0, held: false }
-  stepsOnSent = 0
-  history = []
-
-  own = null
-  ownShift.x = ownShift.y = 0
-  acks.clear()
   particles.length = 0
   trail.length = 0
   flash = shake = 0
@@ -343,7 +311,6 @@ watch(full, () => nextTick(fit))
 function sendControls (now = false) {
   if (props.mode !== 'guest' || meIndex < 0) return
   const at = performance.now()
-  const due = (key) => now || (key === lastSentKey ? at - lastSent >= INPUT_RESEND_MS : at - lastSent >= INPUT_MS)
   let [x, y] = direction()
   const reach = Math.hypot(x, y)
   if (reach > 0) {
@@ -354,67 +321,10 @@ function sendControls (now = false) {
   }
   const held = kickDown() ? 1 : 0
   const key = `${x},${y},${held},${kickCount}`
-  if (!due(key)) return
-  // New controls get a new number; the player here runs on them from now, as the host will
-  const controls = `${x},${y},${held}`
-  if (controls !== sentKey) {
-    sentKey = controls
-    inputSeq++
-    stepsOnSent = 0
-    sent = { x, y, held: held === 1 }
-  }
+  if (!now && (key === lastSentKey ? at - lastSent < INPUT_RESEND_MS : at - lastSent < INPUT_MS)) return
   lastSentKey = key
   lastSent = at
-  emit('input', { r: props.round, x, y, h: held, n: kickCount, q: inputSeq })
-}
-
-// Guest: one step of its own player, on the controls last sent
-function predict () {
-  if (props.mode !== 'guest' || meIndex < 0) return
-  sendControls()
-  stepsOnSent++
-  if (!own) return
-  history.push({ q: inputSeq, k: stepsOnSent, x: sent.x, y: sent.y, held: sent.held })
-
-  if (history.length > HISTORY) history.shift()
-  own.px = own.x
-  own.py = own.y
-  stepPlayer(own, sent, ownPhase.phase, ownPhase.kickoff)
-}
-
-const num = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : 0)
-
-// Guest: a new snapshot. Start from where the host has the player and play back the steps it
-// hasn't seen yet; whatever that moves the player by on screen is eased away.
-function reconcile (snap, acked) {
-  if (meIndex < 0) return
-  ownPhase = { phase: snap.phase, kickoff: snap.kickoff }
-  const host = snap.players[meIndex]
-  const ack = Array.isArray(acked?.[meIndex]) ? acked[meIndex] : null
-  const next = { x: host.x, y: host.y, vx: ack ? num(ack[2]) : 0, vy: ack ? num(ack[3]) : 0, team: myTeam() }
-  if (ack && Number.isInteger(ack[0]) && Number.isInteger(ack[1])) {
-    const [q, steps] = ack
-    // Controls the host has moved past are done with, and so are the steps it has played
-    // with the ones it has now
-    history = history.filter(entry => entry.q > q || (entry.q === q && entry.k > steps))
-    for (const entry of history) stepPlayer(next, entry, snap.phase, snap.kickoff)
-  } else {
-    history = []
-  }
-  if (own) {
-    const sx = own.x + ownShift.x - next.x
-    const sy = own.y + ownShift.y - next.y
-    const far = Math.hypot(sx, sy) > SNAP_TO
-    ownShift.x = far ? 0 : sx
-    ownShift.y = far ? 0 : sy
-  }
-  own = { ...next, px: next.x, py: next.y }
-}
-
-// Guest: where its own player is drawn this frame, or null to draw the host's
-function ownSpot () {
-  if (props.mode !== 'guest' || !own) return null
-  return { x: lerp(own.px, own.x, drawAlpha) + ownShift.x, y: lerp(own.py, own.y, drawAlpha) + ownShift.y }
+  emit('input', { r: props.round, x, y, h: held, n: kickCount })
 }
 
 // ---------- Running the match (solo and host) ----------
@@ -429,12 +339,6 @@ function guestHere (id) {
 function guestControls (index, id) {
   const input = props.inputs.get(id)
   setInput(match, index, input.x, input.y, input.h === 1)
-  // Count the steps played with each set of controls, for the guest to catch up from
-  if (Number.isInteger(input.q)) {
-    let ack = acks.get(id)
-    if (!ack || ack.q !== input.q) acks.set(id, (ack = { q: input.q, steps: 0 }))
-    ack.steps++
-  }
   const seen = seenKicks.get(id) ?? 0
   if (Number.isInteger(input.n)) {
     // A page that came back counts its presses from zero again
@@ -447,10 +351,6 @@ function guestControls (index, id) {
 }
 
 function tick () {
-  if (props.mode === 'guest') {
-    predict()
-    return
-  }
   if (!match || match.over) return
   remember()
   const level = LEVELS[props.level] || LEVELS.normal
@@ -497,7 +397,6 @@ function pullSnapshots () {
     const snap = readSnapshot(data, props.roster.length)
     if (!snap || (buffer.length && snap.t <= buffer[buffer.length - 1].t)) continue
     buffer.push(snap)
-    reconcile(snap, data.a)
     offsets.push(now - snap.t)
     if (offsets.length > 40) offsets.shift()
     lastSnapAt = performance.now()
@@ -621,14 +520,12 @@ function render (view, time) {
   if (view) {
     scene.ball = view.ball
     const mine = myTeam()
-    const spot = ownSpot()
     view.players.forEach((p, i) => {
       const entry = props.roster[i]
       if (!entry) return
       const me = i === meIndex
       const look = me ? 'me' : (mine < 0 ? entry.team === 0 : entry.team === mine) ? 'mate' : 'foe'
-      const at = me && spot ? spot : p
-      scene.players.push({ x: at.x, y: at.y, team: entry.team, mark: entry.mark || '?', look, held: me ? kickDown() : p.held, label: entry.bot ? '' : entry.name, marker: me })
+      scene.players.push({ x: p.x, y: p.y, team: entry.team, mark: entry.mark || '?', look, held: me ? kickDown() : p.held, label: entry.bot ? '' : entry.name, marker: me })
     })
     if (view.phase === 'kickoff') scene.zone = { x: 0, y: 0, r: CIRCLE_R }
     // In front of the ball, in the half the kicker faces, which the other team keeps clear of
@@ -659,10 +556,6 @@ function frame (alpha) {
   const now = performance.now()
   const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0
   lastFrame = now
-  drawAlpha = alpha
-  const ease = Math.exp(-EASE * dt)
-  ownShift.x *= ease
-  ownShift.y *= ease
   if (props.mode === 'guest') pullSnapshots()
   const view = match ? hostView(alpha) : guestView()
   if (view) {
@@ -676,38 +569,9 @@ function frame (alpha) {
 }
 
 function after () {
-  if (props.mode === 'host' && match) emit('snapshot', { r: props.round, ...snapshot(match), a: guestAcks() })
+  if (props.mode === 'host' && match) emit('snapshot', { r: props.round, ...snapshot(match) })
   sendControls()
 }
-
-// Host: for each guest playing, the number of their latest controls, the steps played with
-// them, and how fast their player is going, so they can carry on from there
-function guestAcks () {
-  let acked = null
-  props.roster.forEach((entry, i) => {
-    const ack = acks.get(entry.id)
-    if (entry.bot || !ack || !guestHere(entry.id)) return
-    const p = match.players[i]
-    acked ||= {}
-    acked[i] = [ack.q, ack.steps, Math.round(p.vx * 100) / 100, Math.round(p.vy * 100) / 100]
-  })
-  return acked
-}
-
-// How the connection is doing, in amber in a corner of the court: a guest sees its own way to
-// the host, the host sees each guest's
-const netLines = computed(() => {
-  if (props.mode === 'guest') {
-    const c = props.connection
-    if (!c?.kind) return []
-    return [`${c.ms === null ? '--' : Math.round(c.ms)} ms · ${c.kind}`]
-  }
-  if (props.mode !== 'host' || !props.pings) return []
-  const lines = props.roster
-    .filter(entry => !entry.bot && entry.id !== props.myId && props.pings[entry.id])
-    .map(entry => `${entry.name} ${props.pings[entry.id].ms} ms · ${props.pings[entry.id].relay ? 'relay' : 'direct'}`)
-  return lines.length > 3 ? [...lines.slice(0, 3), `+${lines.length - 3}`] : lines
-})
 
 // The court keeps its shape and gets all the room it can, standing on end when that makes it
 // clearly bigger, as on a phone held upright. Full screen, the scoreboard goes too.
@@ -752,8 +616,7 @@ onMounted(() => {
   stopLoop = startLoop({ step: STEP, tick, after, draw: frame, paused: () => props.paused })
   // Development builds expose the match, for scripted play-testing
   if (import.meta.env.DEV) {
-    window.__futsal = { get match () { return match }, get view () { return lastView }, get me () { return meIndex }, get mode () { return props.mode }, get own () { return own && { ...own, shift: { ...ownShift }, history: history.length } } }
-
+    window.__futsal = { get match () { return match }, get view () { return lastView }, get me () { return meIndex }, get mode () { return props.mode } }
   }
 })
 
@@ -804,9 +667,6 @@ onUnmounted(() => {
 
       <div class="stage relative shrink-0" :style="{ width: `${box.w}px`, height: `${box.h}px` }">
         <canvas ref="canvas" class="block" role="img" :aria-label="title"></canvas>
-        <div v-if="netLines.length" class="net absolute right-1 bottom-1 pointer-events-none text-right" aria-hidden="true">
-          <p v-for="line in netLines" :key="line">{{ line }}</p>
-        </div>
         <slot name="overlay" />
       </div>
 
@@ -842,17 +702,6 @@ onUnmounted(() => {
   line-height: 1;
   text-align: center;
   font-variant-numeric: tabular-nums;
-}
-
-.net {
-  padding: 0.1rem 0.3rem;
-  background: rgb(0 0 0 / 0.55);
-  color: #ffb000;
-  font-size: 10px;
-  line-height: 1.35;
-  text-shadow: 0 0 4px rgb(255 176 0 / 0.5);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .mini-score {

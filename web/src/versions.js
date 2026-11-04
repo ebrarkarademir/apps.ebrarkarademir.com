@@ -89,7 +89,8 @@ export const SITE = [
   { v: '1.53.0', date: '2026-11-04', commit: 'f0d22d9', note: 'Crater Duel in daylight pixel art, with pixel panels and controls' },
   { v: '1.54.0', date: '2026-11-04', commit: '9127e36', note: 'Crater Duel: bigger soldiers, rifles and shots; charging, a power gauge and a guide from the last shot' },
   { v: '1.55.0', date: '2026-11-04', commit: '4367e2e', note: 'Crater Duel: a simple aim, one line that grows with the power' },
-  { v: '1.55.1', date: '2026-11-04', note: 'The Lobby page fits a phone: no more buttons running off the screen' }
+  { v: '1.55.1', date: '2026-11-04', commit: '6e7759b', note: 'The Lobby page fits a phone: no more buttons running off the screen' },
+  { v: '1.55.2', date: '2026-11-04', note: 'Futsal guests see their own player where the host has it again, so it can’t walk into the ball' }
 ]
 
 export const GAMES = {
@@ -116,7 +117,8 @@ export const GAMES = {
     { v: '2.2.2', date: '2026-11-01', commit: 'fae9042', note: 'The shared full-screen switch' },
     { v: '2.2.3', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
     { v: '2.3.0', date: '2026-11-02', commit: '3d1cd53', note: 'A new look: courts, kits, boards, goal effects' },
-    { v: '2.3.1', date: '2026-11-02', commit: 'cc277f1', note: 'Back to the earlier look' }
+    { v: '2.3.1', date: '2026-11-02', commit: 'cc277f1', note: 'Back to the earlier look' },
+    { v: '2.3.2', date: '2026-11-04', note: 'A guest’s own player is drawn where the host has it again (the moving-ahead from 2.2.1 taken back): it went through the ball and other players on the guest’s screen; the connection corner goes with it' }
   ],
   flappy: [
     { v: '1.0.0', date: '2026-10-26', commit: '4cfe810', note: 'First version, solo and online' },
