@@ -9,7 +9,7 @@ import { stepParticles } from '../ascii/physics'
 import { sound } from '../ascii/sound'
 import { haptics } from '../ascii/haptics'
 import { createTerrain, W } from './terrain'
-import { STEP, SAMPLE, MAX_WALK, WALK_SPEED, WEAPON_IDS, WEAPONS, KINDS, SHOULDER, GUN, launch, previewArc } from './physics'
+import { STEP, SAMPLE, MAX_WALK, WALK_SPEED, WEAPON_IDS, WEAPONS, KINDS, SHOULDER, GUN, previewArc } from './physics'
 import { createRenderer, SIDE_COLORS } from './renderer'
 import { weaponIcon } from './pixel'
 import * as fx from './effects'
@@ -48,6 +48,7 @@ const props = defineProps({
 const emit = defineEmits(['exit', 'fire', 'walk'])
 
 const AIM_DRAG = 0.42 // a pull this share of the shorter screen side is full power
+const AIM_SECONDS = [0.12, 0.5] // the aim line shows this much of the flight: the first, plus the second times the power
 const LIVE_EVERY = 0.1
 const FEED_LIFE = 4.5 // seconds a line stays in the list of who took out whom
 const FEED_MAX = 4
@@ -189,8 +190,8 @@ function fire () {
   ui.charging = false
   charge.holding = false
   walk.dir = 0
-  // Remembered, to show next turn as a guide: the aim, and where it lands
-  lastShots[ui.selected] = { angle: ui.angle, power: ui.power, weapon: ui.weapon, land: null }
+  // Where it lands is marked next turn, to aim from
+  lastShots[ui.selected] = { land: null }
   firedUnit = ui.selected
   firedTurn = props.turn
   sound.play('fire')
@@ -271,7 +272,7 @@ function stepNudge (dt) {
   else setPower(ui.power + nudge.dir * 0.35 * dt)
 }
 
-// The last shot from each of this player's units, by unit: its aim, and where it landed
+// Where the last shot from each of this player's units landed, by unit
 let lastShots = {}
 let firedUnit = -1
 let firedTurn = 0
@@ -555,27 +556,14 @@ function render () {
 
   let aim = null
   if (canAct() && ui.selected >= 0) {
-    const shot = launch(walk.x, walk.y, ui.angle, ui.power, ui.weapon)
-    // The last shot from this unit, faint, and where it landed, to aim from
-    const last = lastShots[ui.selected]
-    const moved = last && (Math.abs(last.angle - ui.angle) > 0.004 || Math.abs(last.power - ui.power) > 0.004)
+    // One line out from the gun: longer the more power. Where this unit's last shot landed
+    // is marked too.
     aim = {
-      points: previewArc(walk.x, walk.y, ui.angle, ui.power, ui.weapon),
-      tip: { x: shot.x + Math.cos(ui.angle) * 2, y: shot.y - Math.sin(ui.angle) * 2 },
+      points: previewArc(walk.x, walk.y, ui.angle, ui.power, ui.weapon, AIM_SECONDS[0] + ui.power * AIM_SECONDS[1]),
       color: colorIndex(props.mySide),
-      from: { x: walk.x, y: walk.y },
-      angle: ui.angle,
-      degrees: degrees.value,
-      power: ui.power,
-      charging: ui.charging,
-      ghost: moved ? previewArc(walk.x, walk.y, last.angle, last.power, last.weapon) : null,
-      mark: last?.land || null
+      mark: lastShots[ui.selected]?.land || null
     }
   }
-  // The band while aiming by dragging
-  const band = drag && drag.active && !drag.pan && canAct()
-    ? { x0: drag.x, y0: drag.y, x1: drag.cx, y1: drag.cy, color: colorIndex(props.mySide), power: ui.power }
-    : null
   renderer.draw({
     terrain: display,
     // Scorch round the craters opened so far
@@ -587,7 +575,6 @@ function render () {
     units,
     shots: shotsShown.map(s => ({ ...s, color: s.side >= 0 ? colorIndex(s.side) : -1 })),
     aim,
-    drag: band,
     particles,
     texts: [...texts, ...banners(units)],
     flash,
@@ -688,9 +675,6 @@ function onPointerMove (event) {
   if (len < 8) return
   const rect = arena.value.getBoundingClientRect()
   cancelCharge()
-  drag.active = true
-  drag.cx = p.x
-  drag.cy = p.y
   ui.angle = Math.atan2(-dy, dx)
   setPower(len / (Math.min(rect.width, rect.height) * AIM_DRAG))
 }

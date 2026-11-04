@@ -412,64 +412,39 @@ export function createRenderer (canvas) {
     }
   }
 
-  // Where the power gauge stands by the soldier being aimed with: behind it, away from the aim
-  const gaugeAt = (a) => ({ x: AX(a.from.x) + (Math.cos(a.angle) >= 0 ? -15 : 11), bottom: AY(a.from.y) - 1 })
-  const GAUGE_H = 26
-
-  // The aim: blocks along the first stretch of the flight and a cross where the gun points; the
-  // last shot's aim faint behind it, with an X where it landed; and a power gauge by the soldier
+  // The aim, kept simple: one line of dots out from the gun along the way the shot will fly.
+  // Its way shows the angle, and its length the power: the longer, the stronger. Where this
+  // unit's last shot landed is marked with a small X.
   function aim (a, time) {
     const color = SIDE_COLORS[a.color] || GREEN
-    if (a.ghost) {
-      g.save()
-      g.globalAlpha = 0.7
-      g.fillStyle = '#ffffff'
-      for (let i = 0; i < a.ghost.length; i += 6) g.fillRect(AX(a.ghost[i]), AY(a.ghost[i + 1]), 2, 2)
-      g.restore()
-    }
-    if (a.mark && Math.floor(time * 3) % 4) {
+    if (a.mark && Math.floor(time * 2) % 3) {
       const mx = AX(a.mark.x)
       const my = AY(a.mark.y)
       for (const [c, w] of [['#141018', 3], [color, 1]]) {
         g.fillStyle = c
-        for (let k = -3; k <= 3; k++) {
+        for (let k = -2; k <= 2; k++) {
           g.fillRect(mx + k - (w >> 1), my + k - (w >> 1), w, w)
           g.fillRect(mx + k - (w >> 1), my - k - (w >> 1), w, w)
         }
       }
     }
     const pts = a.points
-    for (let i = 0; i < pts.length; i += 3) {
-      const px = AX(pts[i])
-      const py = AY(pts[i + 1])
-      const size = i < pts.length * 0.6 ? 2 : 1
+    const n = pts.length / 2
+    for (let i = 0; i < n; i += 3) {
+      const px = AX(pts[i * 2])
+      const py = AY(pts[i * 2 + 1])
       g.fillStyle = '#141018'
-      g.fillRect(px - 1, py - 1, size + 2, size + 2)
-      g.fillStyle = (i / 3) % 2 ? '#ffffff' : color
-      g.fillRect(px, py, size, size)
+      g.fillRect(px - 2, py - 2, 4, 4)
+      g.fillStyle = '#ffffff'
+      g.fillRect(px - 1, py - 1, 2, 2)
     }
-    const x = AX(a.tip.x)
-    const y = AY(a.tip.y)
+    // A bigger dot at its end, in the side's color
+    const ex = AX(pts[pts.length - 2])
+    const ey = AY(pts[pts.length - 1])
     g.fillStyle = '#141018'
-    g.fillRect(x - 5, y - 1, 11, 3)
-    g.fillRect(x - 1, y - 5, 3, 11)
+    g.fillRect(ex - 3, ey - 3, 6, 6)
     g.fillStyle = color
-    g.fillRect(x - 4, y, 4, 1)
-    g.fillRect(x + 1, y, 4, 1)
-    g.fillRect(x, y - 4, 1, 4)
-    g.fillRect(x, y + 1, 1, 4)
-    // The power gauge: a column of segments, green, then yellow, then red at the top
-    const gauge = gaugeAt(a)
-    const top = gauge.bottom - GAUGE_H
-    g.fillStyle = a.charging && Math.floor(time * 10) % 2 ? '#ffffff' : '#141018'
-    g.fillRect(gauge.x - 1, top - 1, 6, GAUGE_H + 2)
-    g.fillStyle = '#3a3440'
-    g.fillRect(gauge.x, top, 4, GAUGE_H)
-    const lit = Math.round(a.power * 12)
-    for (let k = 0; k < lit; k++) {
-      g.fillStyle = k < 7 ? '#7ad94a' : k < 10 ? '#ffd23a' : '#ff4a3a'
-      g.fillRect(gauge.x, gauge.bottom - (k + 1) * 2 - Math.floor(k / 6), 4, 2)
-    }
+    g.fillRect(ex - 2, ey - 2, 4, 4)
   }
 
   // Effects (see effects.js): smoke under, then fire, then bits on top
@@ -521,28 +496,6 @@ export function createRenderer (canvas) {
     }
   }
 
-  // The pull while aiming by dragging: a dotted band from where the drag began to the pointer,
-  // in pixels on the screen, with the power by the pointer
-  function band (d) {
-    const color = SIDE_COLORS[d.color] || GREEN
-    const len = Math.hypot(d.x1 - d.x0, d.y1 - d.y0)
-    const step = 9
-    for (let k = 0; k <= len; k += step) {
-      const t = len ? k / len : 0
-      const x = Math.round(d.x0 + (d.x1 - d.x0) * t)
-      const y = Math.round(d.y0 + (d.y1 - d.y0) * t)
-      ctx.fillStyle = '#141018'
-      ctx.fillRect(x - 3, y - 3, 6, 6)
-      ctx.fillStyle = (k / step) % 2 ? '#ffffff' : color
-      ctx.fillRect(x - 2, y - 2, 4, 4)
-    }
-    ctx.fillStyle = '#141018'
-    ctx.fillRect(d.x0 - 6, d.y0 - 6, 12, 12)
-    ctx.fillStyle = color
-    ctx.fillRect(d.x0 - 4, d.y0 - 4, 8, 8)
-    drawText(ctx, `${Math.round(d.power * 100)}%`, d.x1, d.y1 - 22, { px: 18, dpr, color: '#ffffff', display: true, glow: false })
-  }
-
   // ---------- The strip along the top ----------
 
   function minimapRect () {
@@ -587,7 +540,7 @@ export function createRenderer (canvas) {
    *   terrain, water, wind, time (seconds), camX, scorch: [[x, y, r], ...] (the craters so far),
    *   units: [{ x, y, color (index into SIDE_COLORS), alive, hp, facing, angle, walking, selected, flash }],
    *   shots: [{ x, y, kind (see SHOTS), color }],
-   *   aim: { points: [x, y, ...], tip: { x, y }, color } | null,
+   *   aim: { points: [x, y, ...], color, mark: { x, y } | null } | null,
    *   particles (see effects.js), texts: [{ text, x, y, size, color, alpha }], flash, shake
    * }
    */
@@ -644,19 +597,9 @@ export function createRenderer (canvas) {
     ctx.drawImage(art, 0, 0, aw, ah, view.ox + (origin - view.camX * P) * scale, oy, aw * scale, ah * scale)
 
     // Words, on top
-    const sx = (artX) => view.ox + (artX + origin - view.camX * P) * scale // art pixels -> screen
     for (const u of scene.units) {
       if (u.alive) drawText(ctx, String(u.hp), X(u.x), Y(u.y) - 30 * scale, { px: Math.max(11, cell * 1.3), dpr, color: '#ffffff', glow: false })
     }
-    if (scene.aim) {
-      // The power over its gauge, and the angle by the cross
-      const a = scene.aim
-      const gauge = gaugeAt(a)
-      const px = Math.max(11, cell * 1.15)
-      drawText(ctx, `${Math.round(a.power * 100)}%`, sx(gauge.x + 2), oy + (gauge.bottom - GAUGE_H - 5) * scale, { px, dpr, color: a.power > 0.83 ? '#ff6a5a' : a.power > 0.58 ? '#ffd23a' : '#a6ec7a', glow: false })
-      drawText(ctx, `${a.degrees}°`, X(a.tip.x) + (Math.cos(a.angle) >= 0 ? 1 : -1) * 2.6 * cell, Y(a.tip.y) - 1.6 * cell, { px, dpr, color: '#ffffff', glow: false })
-    }
-    if (scene.drag) band(scene.drag)
     for (const item of scene.texts) {
       drawText(ctx, item.text, item.screen ? item.x : X(item.x), item.screen ? item.y : Y(item.y), { px: Math.max(item.min || 0, item.size * cell), dpr, color: item.color || '#ffffff', alpha: item.alpha ?? 1, display: item.display ?? true, glow: false })
     }
