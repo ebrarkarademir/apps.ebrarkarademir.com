@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, inject, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { sound } from './sound'
 import { haptics } from './haptics'
 
@@ -19,6 +19,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['exit'])
+
+// The open game's version (provided by App), by the title
+const version = inject('gameVersion', null)
 
 const muted = ref(sound.muted)
 const buzzing = ref(haptics.on)
@@ -107,7 +110,7 @@ onUnmounted(() => {
         <span aria-hidden="true">[&lt;]</span>
         <span class="max-[399px]:sr-only">{{ exitLabel }}</span>
       </button>
-      <h1 ref="titleEl" :class="['flex-1 min-w-0 truncate text-center font-display text-2xl leading-none uppercase', { 'sr-only': tight }]">[ {{ title }} ]</h1>
+      <h1 ref="titleEl" :class="['flex-1 min-w-0 truncate text-center font-display text-2xl leading-none uppercase', { 'sr-only': tight }]">[ {{ title }}<span v-if="version" class="version"> v{{ version }}</span> ]</h1>
       <span v-if="tight" ref="roomEl" class="flex-1 min-w-0" aria-hidden="true"></span>
       <slot name="actions" />
       <button
@@ -136,6 +139,13 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.version {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: none;
+  vertical-align: middle;
+  opacity: 0.6;
+}
 .arena {
   -webkit-touch-callout: none;
 }

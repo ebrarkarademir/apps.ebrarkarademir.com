@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, provide, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import LanguageMenu from './components/LanguageMenu.vue'
 import TermWindow from './components/TermWindow.vue'
+import VersionsPanel from './components/VersionsPanel.vue'
 import GameMenu from './views/GameMenu.vue'
 import UsersView from './views/UsersView.vue'
 import LobbyView from './views/LobbyView.vue'
@@ -30,6 +31,7 @@ const WorldGame = defineAsyncComponent(() => import('./world/WorldGame.vue'))
 const worldOn = import.meta.env.DEV || !!import.meta.env.VITE_WORLD_URL
 import { rules, rulesLabels } from './rules'
 import { cardArt } from './cardArt'
+import { gameVersion } from './versions'
 import { useUsers } from './online/useUsers'
 import { session, currentRoom, roomInfo } from './online/session'
 import { switchTargets, appNav } from './online/gameSwitch'
@@ -271,7 +273,7 @@ const games = computed(() => [
     mode: t.value.cardModeSolo,
     soon: true
   }
-])
+].map(game => ({ ...game, version: gameVersion(game.id) })))
 
 // ---------- URL routing ----------
 // /            menu, all games
@@ -316,12 +318,16 @@ const launches = ref(0)
 const inviteCodeFor = (gameId) => (launch.value?.game === gameId ? launch.value.code || '' : '')
 const hostRoomFor = (gameId) => launch.value?.game === gameId && !!launch.value.host
 const showRules = ref(false)
+const showVersions = ref(false)
 
 // The dev Firebase site (apps-76619-dev.web.app) and the local dev server get a DEV mark
 // so they can't be mistaken for the live site
 const isDevSite = import.meta.env.DEV || window.location.hostname.includes('-dev.')
-// The site's version (from package.json), shown on both sites
+// The site's version (from package.json), shown on both sites; it opens every version of the
+// site and of each game
 const appVersion = `v${__APP_VERSION__}`
+// The open game's version, for its window to show by its title (see TermWindow, ArcadeStage)
+provide('gameVersion', computed(() => (selectedGame.value ? gameVersion(selectedGame.value) : '')))
 
 // The visitor's public IPv4 address, only to tell the country they're in (the nationality their
 // profile shows unless they pick one). The site has no server of its own, so a public lookup
@@ -723,14 +729,15 @@ const onKeydown = (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return
 
   if (e.key === 'Escape') {
-    if (showRules.value) showRules.value = false
+    if (showVersions.value) showVersions.value = false
+    else if (showRules.value) showRules.value = false
     else if (flippedGame.value) flippedGame.value = null
     else if (!isTyping(e.target)) goUp()
     return
   }
 
   // 1-9 on the menu opens the game on that card
-  if (selectedGame.value || page.value || showRules.value || isTyping(e.target)) return
+  if (selectedGame.value || page.value || showRules.value || showVersions.value || isTyping(e.target)) return
   const game = /^[1-9]$/.test(e.key) && filteredGames.value[Number(e.key) - 1]
   if (game) openGame(game.id)
 }
@@ -750,8 +757,8 @@ onUnmounted(() => {
   <div class="crt min-h-screen bg-black text-term font-mono">
     <nav :aria-label="t.navLabel" class="sticky top-0 z-30 bg-black/90 border-b border-term-low">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap lg:flex-nowrap items-center gap-x-6 gap-y-3">
-        <span v-if="isDevSite" class="order-1 -mr-3 term-inverse px-1.5 text-xs font-bold tracking-widest" title="Development site">DEV {{ appVersion }}</span>
-        <span v-else class="order-1 -mr-3 border border-term-low px-1.5 text-xs font-bold tracking-widest term-muted" title="Site version">{{ appVersion }}</span>
+        <button v-if="isDevSite" type="button" class="order-1 -mr-3 term-inverse px-1.5 text-xs font-bold tracking-widest" :title="t.versionsTitle" @click="showVersions = true">DEV {{ appVersion }}</button>
+        <button v-else type="button" class="order-1 -mr-3 border border-term-low px-1.5 text-xs font-bold tracking-widest term-muted hover:text-term" :title="t.versionsTitle" @click="showVersions = true">{{ appVersion }}</button>
 
         <!-- Shell prompt -->
         <p class="order-1 flex-1 basis-0 lg:flex-none lg:basis-auto min-w-0 truncate text-sm font-semibold">
@@ -1021,6 +1028,10 @@ onUnmounted(() => {
     </div>
 
     <Transition name="rules">
+      <VersionsPanel v-if="showVersions" :t="t" :games="games" :current="selectedGame || ''" @close="showVersions = false" />
+    </Transition>
+
+    <Transition name="rules">
       <div
         v-if="showRules"
         class="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4"
@@ -1051,7 +1062,7 @@ onUnmounted(() => {
                 </h2>
                 <div v-if="currentRules.players || currentRules.duration" class="mt-2 flex flex-wrap gap-2">
                   <span
-                    v-for="chip in [currentRules.players, currentRules.duration].filter(Boolean)"
+                    v-for="chip in [currentRules.players, currentRules.duration, selectedGame && gameVersion(selectedGame) && `v${gameVersion(selectedGame)}`].filter(Boolean)"
                     :key="chip"
                     class="term-chip"
                   >

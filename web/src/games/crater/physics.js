@@ -1,4 +1,4 @@
-import { W, H } from './terrain'
+import { W, H } from './terrain.js'
 
 // A turn of Crater Duel, played out. Both players' shots fly at once under gravity and the
 // turn's wind: a shell bursts where it lands, a grenade bounces until its fuse runs out, a
@@ -85,16 +85,20 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
     events.push({ t: 0, k: 'fire', u: shot.unit, w: shot.weapon })
   }
 
+  // A unit that goes down is credited to the side whose blast or fire last hurt it this turn
+  // (`by`, or -1 when nobody's did: shots meeting in the air)
+  const lastBy = new Map()
   const die = (u, index, why) => {
     if (!u.alive) return
     u.alive = false
     u.hp = Math.max(0, u.hp)
     u.air = false
-    events.push({ t: tick, k: 'die', u: index, why })
+    events.push({ t: tick, k: 'die', u: index, why, by: lastBy.has(index) ? lastBy.get(index) : -1 })
   }
 
-  function hurt (u, index, amount) {
+  function hurt (u, index, amount, by) {
     if (!u.alive || amount <= 0) return
+    if (by !== undefined) lastBy.set(index, by)
     u.hp -= amount
     events.push({ t: tick, k: 'dmg', u: index, n: amount })
     if (u.hp <= 0) die(u, index, 'hp')
@@ -114,7 +118,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
       const d = Math.hypot(dx, dy)
       if (d >= reach) return
       const f = 1 - d / reach
-      hurt(u, index, Math.round(damage * (0.35 + 0.65 * f)))
+      hurt(u, index, Math.round(damage * (0.35 + 0.65 * f)), side)
       if (!u.alive) return
       const nx = d > 0.01 ? dx / d : 0
       const ny = d > 0.01 ? dy / d : -1
@@ -220,6 +224,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
   }
 
   const burning = new Map() // unit -> burn damage not yet reported
+  const burnedBy = new Map() // unit -> the side whose fire last reached it
 
   function moveFlame (p) {
     p.fuse -= STEP
@@ -250,6 +255,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
     units.forEach((u, index) => {
       if (!u.alive || Math.abs(u.x - p.x) > FLAME_REACH || p.y < u.y - 3 || p.y > u.y + 0.8) return
       burning.set(index, (burning.get(index) || 0) + WEAPONS.molotov.burn * STEP)
+      burnedBy.set(index, p.side)
     })
     return true
   }
@@ -260,7 +266,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
       if (amount < 1) continue
       const whole = Math.floor(amount)
       burning.set(index, amount - whole)
-      hurt(units[index], index, whole)
+      hurt(units[index], index, whole, burnedBy.get(index))
     }
   }
 

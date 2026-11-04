@@ -1,4 +1,4 @@
-import { mulberry32 } from '../ascii/random'
+import { mulberry32 } from '../ascii/random.js'
 
 // The ground of Crater Duel: a grid of cells, open, earth (explosions bite into it) or rock
 // (nothing does). A map comes from a seed and a level alone, made with nothing but random

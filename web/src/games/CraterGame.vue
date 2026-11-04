@@ -22,6 +22,7 @@ const emit = defineEmits(['go-back'])
 const MAX_SIDES = 6
 const UNIT_OPTIONS = [1, 2, 3]
 const TIME_OPTIONS = [15, 20, 30]
+const ROUND_OPTIONS = [1, 3, 5, 10] // rounds in a match
 const LEVEL_OPTIONS = ['random', ...LEVEL_IDS]
 const LEVEL_KEYS = { random: 'craterRandom', hills: 'craterHills', mountain: 'craterMountain', valley: 'craterValley', islands: 'craterIslands', plateaus: 'craterPlateaus', canyon: 'craterCanyon', caverns: 'craterCaverns', sky: 'craterSky', city: 'craterCity', cheese: 'craterCheese' }
 const BOT_LEVEL_NAMES = Object.keys(BOT_LEVELS)
@@ -29,6 +30,8 @@ const SUDDEN_TURN = 8 // from this turn on the sea rises
 const WATER_RISE = 3 // cells a turn
 const AWAY_TURNS = 2 // turns a player can be gone before their side leaves the battle
 const REPLAY_PAD_MS = 1300 // after the recording, before the next turn
+const RESULT_MS = 1600 // the last turn settles before the results come up (see CraterMatch)
+const NEXT_ROUND_MS = 8000 // the results show this long before the next round of a match starts
 const SETUP_KEY = 'craterSolo'
 
 const LETTERS = {
@@ -105,7 +108,8 @@ function finished (s) {
   const reason = winner >= 0 && sideList(s).every(side => side === winner || s.left[side]) ? 'left' : 'units'
   s.outcome = { winner, reason }
   s.phase = 'over'
-  s.deadline = null
+  // In the middle of a match the next round starts by itself
+  s.deadline = s.played < s.rounds ? Date.now() + RESULT_MS + NEXT_ROUND_MS : null
   s.locked = s.sides.map(() => false)
   if (winner >= 0) {
     const id = s.sides[winner]
@@ -142,6 +146,10 @@ function resolve (s, now = Date.now()) {
     water: s.water
   })
   s.craters.push(...result.craters)
+  // A unit knocked out by another side's shot is a kill for that side
+  for (const event of result.replay.events) {
+    if (event.k === 'die' && event.by >= 0 && event.by !== units[event.u]?.side) s.kills[event.by] = (s.kills[event.by] || 0) + 1
+  }
   s.units = result.units
   s.replay = { turn: s.turn, before, ...result.replay }
   s.phase = 'resolve'
@@ -175,6 +183,7 @@ function onAction (s, playerId, action) {
       if (TIME_OPTIONS.includes(action.aimSeconds)) s.aimSeconds = action.aimSeconds
       if (LEVEL_OPTIONS.includes(action.level)) s.level = action.level
       if (BOT_LEVEL_NAMES.includes(action.botLevel)) s.botLevel = action.botLevel
+      if (ROUND_OPTIONS.includes(action.rounds)) s.rounds = action.rounds
       break
     case 'addBot':
       if (!isHost || !between(s) || people(s).length + s.bots.length >= MAX_SIDES) return
@@ -192,9 +201,19 @@ function onAction (s, playerId, action) {
       // People first, then bots, up to six sides; anyone past that watches
       const ids = [...s.players.map(p => p.id), ...s.bots.map(b => b.id)].slice(0, MAX_SIDES)
       if (ids.length < 2) return
+      // From the lobby or after a match's last round a new match starts, with the wins at nought
+      if (!rematch || s.played >= s.rounds) {
+        s.played = 0
+        s.score = {}
+      }
+      s.played++
       // The same line-up again: everyone moves one place along, so the ends change
       const same = rematch && ids.length === s.sides.length && ids.every(id => s.sides.includes(id))
       s.sides = same ? [...s.sides.slice(1), s.sides[0]] : ids
+      // Each side's color comes from its player's place in the list (people in the order they
+      // came, then bots), so a player keeps the same one from round to round, on every screen
+      s.colors = s.sides.map(id => ids.indexOf(id))
+      s.kills = s.sides.map(() => 0)
       s.seed = Math.floor(Math.random() * 2 ** 31)
       s.mapLevel = s.level === 'random' ? LEVEL_IDS[Math.floor(Math.random() * LEVEL_IDS.length)] : s.level
       ground = createTerrain(s.seed, s.mapLevel)
@@ -254,6 +273,9 @@ function onTick (s, now) {
     if (s.phase === 'aim' && now >= s.deadline) resolve(s, now)
   } else if (s.phase === 'resolve' && now >= s.deadline && !finished(s)) {
     nextTurn(s, now)
+  } else if (s.phase === 'over' && s.deadline && now >= s.deadline) {
+    s.deadline = null
+    onAction(s, s.hostId, { type: 'start' })
   }
 }
 
@@ -263,6 +285,8 @@ const initialState = () => ({
   level: 'random', // the host's pick
   mapLevel: 'hills', // this match's map
   botLevel: 'normal',
+  rounds: 3, // rounds in a match
+  played: 0, // rounds of this match so far
   bots: [],
   botSeq: 0,
   ammo: [],
@@ -270,6 +294,8 @@ const initialState = () => ({
   turn: 0,
   seed: 0,
   sides: [],
+  colors: [], // by side: its color (see SIDE_COLORS)
+  kills: [], // by side: units it knocked out this round
   left: [],
   units: [],
   craters: [],
@@ -279,7 +305,7 @@ const initialState = () => ({
   locked: [],
   replay: null,
   outcome: null,
-  score: {}
+  score: {} // round wins in this match, by player
 })
 
 // The players' walking, many times a second: shown on everyone's screen as it happens
@@ -321,7 +347,7 @@ const lobbyCount = computed(() => (room.view ? people(room.view).length + room.v
 // ---------- Solo ----------
 
 const loadSetup = () => {
-  const fallback = { bots: 1, botLevel: 'normal', perSide: 2, aimSeconds: 20, level: 'random' }
+  const fallback = { bots: 1, botLevel: 'normal', perSide: 2, aimSeconds: 20, level: 'random', rounds: 3 }
   try {
     const saved = JSON.parse(localStorage.getItem(SETUP_KEY) || '{}')
     return {
@@ -329,7 +355,8 @@ const loadSetup = () => {
       botLevel: BOT_LEVEL_NAMES.includes(saved.botLevel) ? saved.botLevel : fallback.botLevel,
       perSide: UNIT_OPTIONS.includes(saved.perSide) ? saved.perSide : fallback.perSide,
       aimSeconds: TIME_OPTIONS.includes(saved.aimSeconds) ? saved.aimSeconds : fallback.aimSeconds,
-      level: LEVEL_OPTIONS.includes(saved.level) ? saved.level : fallback.level
+      level: LEVEL_OPTIONS.includes(saved.level) ? saved.level : fallback.level,
+      rounds: ROUND_OPTIONS.includes(saved.rounds) ? saved.rounds : fallback.rounds
     }
   } catch {
     return fallback
@@ -363,6 +390,7 @@ function startSolo () {
     aimSeconds: setup.aimSeconds,
     level: setup.level,
     botLevel: setup.botLevel,
+    rounds: setup.rounds,
     bots,
     botSeq: bots.length
   })
@@ -438,6 +466,10 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
           <span class="term-label w-full sm:w-44">&gt; {{ t.craterMap }}</span>
           <button v-for="id in LEVEL_OPTIONS" :key="id" type="button" :class="optionClass(setup.level === id)" @click="setup.level = id">{{ t[LEVEL_KEYS[id]] }}</button>
         </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="term-label w-full sm:w-44">&gt; {{ t.tankRounds }}</span>
+          <button v-for="n in ROUND_OPTIONS" :key="n" type="button" :class="optionClass(setup.rounds === n)" @click="setup.rounds = n">{{ n }}</button>
+        </div>
       </div>
 
       <p class="term-muted text-sm leading-relaxed">&gt; {{ fmt(t.craterSoloHint, { n: setup.bots }) }} {{ t.craterAmmoHint }}</p>
@@ -448,7 +480,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
   </TermWindow>
 
   <!-- Solo game -->
-  <CraterMatch v-else-if="mode === 'solo' && solo.view" :t="t" :room="solo" :live="live" :suddenTurn="SUDDEN_TURN" solo @exit="leaveSolo" @setup="leaveSolo" />
+  <CraterMatch v-else-if="mode === 'solo' && solo.view" :t="t" :room="solo" :live="live" :suddenTurn="SUDDEN_TURN" :resultMs="RESULT_MS" solo @exit="leaveSolo" @setup="leaveSolo" />
 
   <!-- Online -->
   <OnlineRoom
@@ -524,6 +556,17 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
             @click="room.act('settings', { level: id })"
           >{{ t[LEVEL_KEYS[id]] }}</button>
         </div>
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="term-label w-full sm:w-44">&gt; {{ t.tankRounds }}</span>
+          <button
+            v-for="n in ROUND_OPTIONS"
+            :key="n"
+            type="button"
+            :disabled="!isHost"
+            :class="optionClass(lobby.rounds === n)"
+            @click="room.act('settings', { rounds: n })"
+          >{{ n }}</button>
+        </div>
         <div class="space-y-2 text-sm leading-relaxed">
           <p class="term-muted">&gt; {{ t.craterLobbyHint }}</p>
           <p class="term-muted">&gt; {{ t.craterAmmoHint }}</p>
@@ -532,6 +575,6 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
       </div>
     </template>
 
-    <CraterMatch :t="t" :room="room" :live="live" :suddenTurn="SUDDEN_TURN" @exit="room.leave()" />
+    <CraterMatch :t="t" :room="room" :live="live" :suddenTurn="SUDDEN_TURN" :resultMs="RESULT_MS" @exit="room.leave()" />
   </OnlineRoom>
 </template>

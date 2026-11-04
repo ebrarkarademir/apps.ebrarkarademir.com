@@ -1,6 +1,11 @@
 <script setup>
+import { inject } from 'vue'
+
 // Frame shared by every game screen: a green wireframe window with its title set into the
-// top border, like a terminal UI dialog, and a back command in the corner
+// top border, like a terminal UI dialog, and a back command in the corner. The open game's
+// version (provided by App) sits by the title.
+const version = inject('gameVersion', null)
+
 defineProps({
   title: { type: String, required: true },
   backLabel: { type: String, required: true }
@@ -12,7 +17,7 @@ defineEmits(['back'])
 <template>
   <section class="term-window mx-auto w-full mt-4 px-4 pt-6 pb-5 sm:px-8 sm:pb-8">
     <h1 class="absolute -top-3.5 left-3 sm:left-6 max-w-[calc(100%-1.5rem)] truncate bg-black px-2 font-display text-2xl leading-7 uppercase">
-      [ {{ title }} ]
+      [ {{ title }}<span v-if="version" class="version"> v{{ version }}</span> ]
     </h1>
 
     <div class="flex items-center justify-between gap-3 mb-6">
@@ -26,3 +31,13 @@ defineEmits(['back'])
     <slot />
   </section>
 </template>
+
+<style scoped>
+.version {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  text-transform: none;
+  vertical-align: middle;
+  opacity: 0.6;
+}
+</style>

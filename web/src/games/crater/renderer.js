@@ -133,7 +133,7 @@ export function createRenderer (canvas) {
     ctx.fillRect(rect.x, rect.y + scene.water * sy, rect.w, rect.h - scene.water * sy)
     for (const u of scene.units) {
       if (!u.alive) continue
-      ctx.fillStyle = SIDE_COLORS[u.side]
+      ctx.fillStyle = SIDE_COLORS[u.color]
       ctx.fillRect(rect.x + u.x * sx - 1.5, rect.y + (u.y - 2) * sy, 3, 4)
     }
     ctx.strokeStyle = GREEN
@@ -148,10 +148,10 @@ export function createRenderer (canvas) {
     const x = X(u.x)
     const feet = Y(u.y)
     if (!u.alive) {
-      drawSprite(ctx, sprites.graves[u.side], x, feet - cell, { dpr, alpha: 0.55 })
+      drawSprite(ctx, sprites.graves[u.color], x, feet - cell, { dpr, alpha: 0.55 })
       return
     }
-    const color = SIDE_COLORS[u.side]
+    const color = SIDE_COLORS[u.color]
     if (u.selected) {
       ctx.save()
       ctx.strokeStyle = color
@@ -180,7 +180,7 @@ export function createRenderer (canvas) {
     ctx.stroke()
     ctx.restore()
     const pose = u.walking ? Math.floor(time * 8) % 2 : 0
-    const body = u.flash > 0 ? sprites.hurt[pose] : sprites.units[u.side][u.facing ? 1 : 0][pose]
+    const body = u.flash > 0 ? sprites.hurt[pose] : sprites.units[u.color][u.facing ? 1 : 0][pose]
     const bob = u.selected && !u.walking ? Math.sin(time * 4) * cell * 0.08 : 0
     drawSprite(ctx, body, x, feet - cell * 1.5 + bob, { dpr })
     // Health: a bar, and the number over it
@@ -198,7 +198,7 @@ export function createRenderer (canvas) {
   function shot (s, time) {
     const x = X(s.x)
     const y = Y(s.y)
-    const color = SIDE_COLORS[s.side] || GREEN
+    const color = SIDE_COLORS[s.color] || GREEN
     if (s.kind === 6) {
       // A flame: flickering, never quite the same size
       const flicker = 0.75 + Math.random() * 0.5
@@ -222,9 +222,9 @@ export function createRenderer (canvas) {
   /**
    * scene: {
    *   terrain, water, time (seconds), camX,
-   *   units: [{ x, y, side, alive, hp, facing, angle, walking, selected, blink, flash }],
-   *   shots: [{ x, y, kind (see SHOT_CHARS), side }],
-   *   aim: { points: [x, y, ...], tip: { x, y }, side } | null,
+   *   units: [{ x, y, color (index into SIDE_COLORS), alive, hp, facing, angle, walking, selected, blink, flash }],
+   *   shots: [{ x, y, kind (see SHOT_CHARS), color }],
+   *   aim: { points: [x, y, ...], tip: { x, y }, color } | null,
    *   particles, texts: [{ text, x, y, size, color, alpha }], flash, shake
    * }
    */
@@ -251,7 +251,7 @@ export function createRenderer (canvas) {
 
     // The aim: the first stretch of the flight, and a cross where the barrel points
     if (scene.aim) {
-      const color = SIDE_COLORS[scene.aim.side]
+      const color = SIDE_COLORS[scene.aim.color]
       const pts = scene.aim.points
       for (let i = 0; i < pts.length; i += 2) {
         drawGlyph(ctx, '.', X(pts[i]), Y(pts[i + 1]), { px: Math.max(10, cell * 2), color, alpha: 1 - (i / pts.length) * 0.8 })

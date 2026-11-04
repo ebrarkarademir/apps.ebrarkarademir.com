@@ -18,7 +18,8 @@ import { createRenderer, SIDE_COLORS } from './renderer'
 // plays the turn out once every side has fired or the clock runs out. Then everyone plays back
 // the host's recording: shots flying, craters opening, units thrown about. There are two to six
 // sides, each a person or a bot, every side for itself. The full-screen switch leaves the
-// battlefield, the scores over it and the controls under it, and nothing else.
+// battlefield, the scores over it and the controls under it, and nothing else. A short list in
+// the corner says who took out whom; a unit that's been hurt smokes, and one near the end burns.
 
 const props = defineProps({
   t: { type: Object, required: true },
@@ -32,6 +33,7 @@ const props = defineProps({
   units: { type: Array, required: true }, // [{ side, x, y, hp, alive }]
   mySide: { type: Number, default: -1 }, // this player's side, or -1 watching
   names: { type: Array, required: true },
+  colors: { type: Array, default: () => [] }, // by side: its color, an index into SIDE_COLORS
   wind: { type: Number, default: 0 }, // -1 to 1
   water: { type: Number, required: true },
   sudden: { type: Boolean, default: false }, // the sea rises every turn now
@@ -46,6 +48,11 @@ const emit = defineEmits(['exit', 'fire', 'walk'])
 
 const AIM_DRAG = 0.42 // a pull this share of the shorter screen side is full power
 const LIVE_EVERY = 0.1
+const FEED_LIFE = 4.5 // seconds a line stays in the list of who took out whom
+const FEED_MAX = 4
+const POP_LIFE = 1.8 // seconds "You took out ..." shows
+const OUT_LIFE = 3 // seconds "Eliminated" shows, then it clears the way to watch the rest
+const YOU_SECONDS = 2.5 // YOU shows over your units this long into a round
 
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
@@ -64,8 +71,16 @@ const ui = reactive({
   weapon: 'shell',
   fired: false,
   seconds: 0,
-  walked: 0
+  walked: 0,
+  strip: false, // the strip with the whole map is along the top
+  feed: [], // who took out whom: { id, killer (side or -1), victim (side), at }
+  pop: null // { text, color, at }: this player took one out
 })
+
+// Each side's color, the same on every screen and from round to round
+const colorIndex = (side) => (props.colors[side] ?? side) % SIDE_COLORS.length
+const colorOf = (side) => SIDE_COLORS[colorIndex(side)] || GREEN
+let feedSeq = 0
 
 // The battlefield with the scores and the controls, filling the screen; the way out joins the scores
 const { full, toggle: toggleFull } = useFullscreen(() => arena.value?.closest('.arena'))
@@ -286,12 +301,17 @@ function happen (event, frame) {
     const u = unitAt(frame, event.u)
     flashUntil[event.u] = clock + 0.25
     sound.play('hit')
-    rise(`-${event.n}`, u.x, u.y - 4, SIDE_COLORS[props.units[event.u]?.side ?? 0])
+    rise(`-${event.n}`, u.x, u.y - 4, colorOf(props.units[event.u]?.side ?? 0))
   } else if (event.k === 'die') {
     const u = unitAt(frame, event.u)
+    const victim = props.units[event.u]?.side ?? 0
     sound.play('fall')
     haptics.buzz('crash')
-    rise(event.why === 'water' ? '~blub~' : 'x_x', u.x, Math.min(u.y, props.water) - 3, SIDE_COLORS[props.units[event.u]?.side ?? 0], 1.6)
+    rise(event.why === 'water' ? '~blub~' : 'x_x', u.x, Math.min(u.y, props.water) - 3, colorOf(victim), 1.6)
+    noteKill(event.by ?? -1, victim)
+    // This player's last unit: out of the round, watching the rest
+    // (the replay is past this event, so diedBy covers the units still to go down)
+    if (victim === props.mySide && !props.units.some((v, i) => v.side === victim && i !== event.u && (v.alive || diedBy(i)))) outAt = clock
   } else if (event.k === 'bounce') {
     sound.play('bounce')
   } else if (event.k === 'splash') {
@@ -301,6 +321,20 @@ function happen (event, frame) {
     }
   }
 }
+
+// Someone's unit is down: a line in the list, and a moment of glory if this player did it.
+// Taking out your own, or the sea doing it, shows with nobody's name in front.
+function noteKill (by, victim) {
+  const killer = by >= 0 && by !== victim ? by : -1
+  ui.feed.push({ id: ++feedSeq, killer, victim, at: clock })
+  if (ui.feed.length > FEED_MAX) ui.feed.shift()
+  if (killer >= 0 && killer === props.mySide) {
+    ui.pop = { text: fmt(props.t.craterYouKilled, { name: props.names[victim] || '?' }), color: colorOf(killer), at: clock }
+    sound.play('kill')
+  }
+}
+
+let outAt = -Infinity
 
 function stepReplay (dt) {
   if (!play) return null
@@ -366,6 +400,9 @@ function after (dt) {
   }
   flash = Math.max(0, flash - dt * 2.5)
   shake = Math.max(0, shake - dt * 2.5)
+  while (ui.feed.length && clock - ui.feed[0].at > FEED_LIFE) ui.feed.shift()
+  if (ui.pop && clock - ui.pop.at > POP_LIFE) ui.pop = null
+  hurtSmoke(dt)
   stepParticles(particles, dt)
   for (const t of texts) {
     t.life -= dt
@@ -374,6 +411,22 @@ function after (dt) {
   }
   texts = texts.filter(t => t.life > 0)
 }
+
+// Damage you can see: a unit under half its health trails smoke, and under a quarter it burns
+let smokeClock = 0
+function hurtSmoke (dt) {
+  smokeClock += dt
+  if (reduceMotion || smokeClock < 0.12 || !renderer) return
+  smokeClock = 0
+  for (const u of shownUnits) {
+    if (!u.alive || u.hp >= 50) continue
+    const burning = u.hp < 25
+    if (Math.random() < (burning ? 0.9 : 0.55)) particles.push({ ch: ['o', 'O', '.'][Math.floor(Math.random() * 3)], x: u.x + (Math.random() - 0.5) * 1.2, y: u.y - 3, vx: (Math.random() - 0.5) * 1.5 + props.wind * 2, vy: -2.5 - Math.random() * 2, life: 1 + Math.random() * 0.6, ttl: 1.6, color: burning ? '#5f6a5f' : SMOKE, size: 1 + Math.random() * 0.6, alpha: burning ? 0.75 : 0.5 })
+    if (burning && Math.random() < 0.7) particles.push({ ch: ['^', '*', "'"][Math.floor(Math.random() * 3)], x: u.x + (Math.random() - 0.5) * 1.4, y: u.y - 1.6 - Math.random(), vx: (Math.random() - 0.5) * 1.5, vy: -3 - Math.random() * 2, life: 0.35 + Math.random() * 0.25, ttl: 0.6, color: FIRE_COLORS[Math.floor(Math.random() * 3)], size: 1.1 + Math.random() * 0.4 })
+  }
+}
+
+let shownUnits = [] // the units as last drawn, where the smoke comes from
 
 function render () {
   if (!renderer) return
@@ -404,6 +457,7 @@ function render () {
       x,
       y,
       side: u.side,
+      color: colorIndex(u.side),
       alive,
       hp: frame ? hpAt(i) : u.hp,
       facing,
@@ -414,6 +468,7 @@ function render () {
       flash: (flashUntil[i] || 0) - clock
     }
   })
+  shownUnits = units
   // The camera: on the unit being aimed with, then after the shots, unless the strip was used
   let target = cam.x + renderer.visible / 2
   if (clock < cam.manualUntil) target = cam.target
@@ -429,7 +484,7 @@ function render () {
   let aim = null
   if (canAct() && ui.selected >= 0) {
     const shot = launch(walk.x, walk.y, ui.angle, ui.power, ui.weapon)
-    aim = { points: previewArc(walk.x, walk.y, ui.angle, ui.power, ui.weapon), tip: { x: shot.x + Math.cos(ui.angle) * 2.5, y: shot.y - Math.sin(ui.angle) * 2.5 }, side: props.mySide }
+    aim = { points: previewArc(walk.x, walk.y, ui.angle, ui.power, ui.weapon), tip: { x: shot.x + Math.cos(ui.angle) * 2.5, y: shot.y - Math.sin(ui.angle) * 2.5 }, color: colorIndex(props.mySide) }
   }
   renderer.draw({
     terrain: display,
@@ -437,10 +492,10 @@ function render () {
     time: clock,
     camX: cam.x,
     units,
-    shots: shotsShown,
+    shots: shotsShown.map(s => ({ ...s, color: s.side >= 0 ? colorIndex(s.side) : -1 })),
     aim,
     particles,
-    texts: [...texts, ...banners()],
+    texts: [...texts, ...banners(units)],
     flash,
     shake
   })
@@ -460,10 +515,21 @@ function diedBy (i) {
   return play.replay.events.slice(play.next).some(e => e.k === 'die' && e.u === i)
 }
 
-function banners () {
+function banners (units) {
   const list = []
   const middle = cam.x + (renderer?.visible || W) / 2
   const since = clock - turnStartedAt
+  // YOU over this player's units as a round starts, so they know which are theirs
+  if (playing.value && props.turn === 1 && props.phase === 'aim' && since < YOU_SECONDS) {
+    const alpha = Math.min(1, (YOU_SECONDS - since) / 0.5)
+    for (const u of units) {
+      if (u.alive && u.side === props.mySide) list.push({ text: upperT(props.t.gameYou), x: u.x, y: u.y - 8.5, size: 1.3, color: colorOf(u.side), display: true, min: 12, alpha })
+    }
+  }
+  // Out of the round: a big word for a moment, then out of the way so the rest can be watched
+  const out = clock - outAt
+  if (out >= 0 && out < OUT_LIFE) list.push({ text: upperT(props.t.craterEliminated), x: middle, y: 15, size: 3, color: '#ff5c5c', display: true, min: 24, alpha: Math.min(1, (OUT_LIFE - out) / 0.5) })
+  if (ui.pop) list.push({ text: ui.pop.text, x: middle, y: 9, size: 1.5, color: ui.pop.color, display: true, min: 13, alpha: Math.min(1, (POP_LIFE - (clock - ui.pop.at)) / 0.4) })
   if (props.phase === 'aim' && since < 1.8) {
     const alpha = Math.min(1, (1.8 - since) / 0.5)
     const first = props.turn === 1
@@ -582,8 +648,14 @@ function press (event, run) {
 const teams = computed(() => props.names.map((name, side) => {
   const list = props.units.filter(u => u.side === side)
   const hp = list.reduce((sum, u) => sum + (u.alive ? u.hp : 0), 0)
-  return { side, name: name || '?', hp, units: list.map(u => (u.alive ? u.hp : 0)), me: side === props.mySide, fired: props.locked[side] }
+  return { side, name: name || '?', color: colorOf(side), hp, units: list.map(u => (u.alive ? u.hp : 0)), me: side === props.mySide, fired: props.locked[side] }
 }))
+// The list of who took out whom, by name and color
+const feedLines = computed(() => ui.feed.map(item => ({
+  id: item.id,
+  killer: item.killer >= 0 ? { name: props.names[item.killer] || '?', color: colorOf(item.killer) } : null,
+  victim: { name: props.names[item.victim] || '?', color: colorOf(item.victim) }
+})))
 // The first half of the sides down the left of the bar, the rest down the right; past two,
 // each one takes a single line
 const halves = computed(() => {
@@ -627,6 +699,9 @@ watch(() => props.seed, () => {
   particles = []
   texts = []
   play = null
+  ui.feed = []
+  ui.pop = null
+  outAt = -Infinity
 })
 let playedTurn = 0
 watch(() => props.replay, (replay) => {
@@ -655,6 +730,7 @@ function fit () {
   const el = arena.value
   if (!el || !renderer) return
   renderer.resize(el.clientWidth, el.clientHeight, window.devicePixelRatio || 1)
+  ui.strip = !!renderer.minimapRect()
 }
 
 onMounted(() => {
@@ -703,10 +779,10 @@ onUnmounted(() => {
       <!-- Every side's health, the clock and the wind; in full screen, the way out too -->
       <div :class="['hud', { 'is-full': full }]">
         <div v-for="(half, h) in halves" :key="h" :class="['group', h ? 'side-1 items-end' : 'side-0 items-start']">
-          <div v-for="team in half" :key="team.side" :class="['team', h ? 'text-right items-end' : 'items-start', { 'is-me': team.me, compact }]" :style="{ color: SIDE_COLORS[team.side] }">
+          <div v-for="team in half" :key="team.side" :class="['team', h ? 'text-right items-end' : 'items-start', { 'is-me': team.me, compact }]" :style="{ color: team.color }">
             <span class="name truncate">{{ team.name }}<span v-if="team.fired && phase === 'aim'" class="ok"> [ok]</span></span>
             <span class="pips" aria-hidden="true">
-              <span v-for="(hp, k) in team.units" :key="k" :class="['pip', { 'is-down': !hp }]"><span :style="{ width: hp + '%', background: SIDE_COLORS[team.side] }"></span></span>
+              <span v-for="(hp, k) in team.units" :key="k" :class="['pip', { 'is-down': !hp }]"><span :style="{ width: hp + '%', background: team.color }"></span></span>
             </span>
             <span class="sr-only">{{ team.hp }}</span>
           </div>
@@ -729,6 +805,21 @@ onUnmounted(() => {
         @pointercancel="onPointerUp"
       >
         <canvas ref="canvas" class="absolute inset-0" role="img" :aria-label="title"></canvas>
+        <!-- Who took out whom: a few short lines that fade -->
+        <ol :class="['feed', { 'below-strip': ui.strip }]" aria-live="polite">
+          <li v-for="line in feedLines" :key="line.id">
+            <template v-if="line.killer">
+              <span class="who" :style="{ color: line.killer.color }">{{ line.killer.name }}</span>
+              <span class="arrow" :style="{ color: line.killer.color }" aria-hidden="true">-&gt;</span>
+              <span class="sr-only">{{ t.craterFeedTook }}</span>
+              <span class="who" :style="{ color: line.victim.color }">{{ line.victim.name }}</span>
+            </template>
+            <template v-else>
+              <span class="who" :style="{ color: line.victim.color }">{{ line.victim.name }}</span>
+              <span class="down">x_x</span>
+            </template>
+          </li>
+        </ol>
         <p v-if="status" class="status" aria-live="polite">&gt; <span class="term-cursor">{{ status }}</span></p>
       </div>
 
@@ -885,6 +976,50 @@ onUnmounted(() => {
   white-space: pre;
   letter-spacing: 0;
   color: var(--color-term);
+}
+
+.feed {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-width: calc(100% - 1rem);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.25;
+  pointer-events: none;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000;
+}
+.feed.below-strip {
+  top: 1.9rem;
+}
+.feed li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  white-space: nowrap;
+  animation: feed-life 4.5s linear forwards;
+}
+.feed .who {
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.feed .down {
+  color: #9aa69a;
+}
+@keyframes feed-life {
+  0% { opacity: 0; transform: translateX(-0.4rem); }
+  6% { opacity: 1; transform: none; }
+  86% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed li {
+    animation: none;
+  }
 }
 
 .status {

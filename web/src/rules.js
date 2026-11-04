@@ -412,7 +412,8 @@ export const rules = {
         'Play alone against bots, or online: one person creates a room and the others join with the code.',
         'Each turn, pick a unit and a weapon, then drag back like a slingshot to aim. Press Fire.',
         'Everyone’s shots fly together. Watch the wind at the top.',
-        'Blasts dig craters and throw units. Falling into the sea knocks them out. The last side standing wins.'
+        'Blasts dig craters and throw units. Falling into the sea knocks them out. The last side standing wins the round.',
+        'A match is 1, 3, 5 or 10 rounds; the next one starts by itself, and the most rounds won takes the match. Every player keeps one color the whole match.'
       ],
       tips: [
         'Blow up the ground under an enemy and let them fall.'
@@ -428,7 +429,8 @@ export const rules = {
         'Botlara karşı tek başına oyna ya da çevrim içi: bir kişi oda oluşturur, diğerleri kodla katılır.',
         'Her turda bir birlik ve silah seç, nişan almak için sapan gibi geri çek. Ateş’e bas.',
         'Herkesin atışı birlikte uçar. Üstteki rüzgâra dikkat et.',
-        'Patlamalar krater açar ve birlikleri fırlatır. Denize düşen elenir. Ayakta kalan son taraf kazanır.'
+        'Patlamalar krater açar ve birlikleri fırlatır. Denize düşen elenir. Ayakta kalan son taraf turu kazanır.',
+        'Maç 1, 3, 5 ya da 10 turdur; sonraki tur kendiliğinden başlar, en çok tur kazanan maçı alır. Her oyuncunun rengi maç boyunca aynı kalır.'
       ],
       tips: [
         'Düşmanın altındaki toprağı patlat, düşsün.'
@@ -444,7 +446,8 @@ export const rules = {
         'Играй один против ботов или онлайн: один создаёт комнату, остальные входят по коду.',
         'Каждый ход выбери бойца и оружие, затем оттяни назад, как рогатку, чтобы прицелиться. Нажми «Огонь».',
         'Выстрелы всех игроков летят одновременно. Следи за ветром сверху.',
-        'Взрывы выбивают кратеры и отбрасывают бойцов. Упавший в море выбывает. Побеждает последняя сторона.'
+        'Взрывы выбивают кратеры и отбрасывают бойцов. Упавший в море выбывает. Раунд выигрывает последняя сторона.',
+        'Матч — 1, 3, 5 или 10 раундов; следующий начинается сам, матч берёт тот, кто выиграл больше раундов. Цвет игрока не меняется весь матч.'
       ],
       tips: [
         'Взорви землю под врагом — пусть упадёт.'
@@ -460,7 +463,8 @@ export const rules = {
         'Боттарға қарсы жалғыз ойна не онлайн: бір адам бөлме ашады, қалғандары кодпен кіреді.',
         'Әр жүрісте жауынгер мен қару таңда, көздеу үшін салбырауық сияқты артқа тарт. «Ату» бас.',
         'Барлығының оғы бірге ұшады. Жоғарыдағы желге назар аудар.',
-        'Жарылыстар кратер ашып, жауынгерлерді лақтырады. Теңізге түскен шығады. Соңғы қалған жақ жеңеді.'
+        'Жарылыстар кратер ашып, жауынгерлерді лақтырады. Теңізге түскен шығады. Соңғы қалған жақ раундты жеңеді.',
+        'Матч 1, 3, 5 не 10 раунд; келесісі өзі басталады, көп раунд жеңген матчты алады. Әр ойыншының түсі матч бойы өзгермейді.'
       ],
       tips: [
         'Жаудың астындағы жерді жар — құлап кетсін.'
