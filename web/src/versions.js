@@ -83,8 +83,7 @@ export const SITE = [
   { v: '1.49.0', date: '2026-11-04', commit: 'c5a38dc', note: 'Blackjack: the man in the suit is animated' },
   { v: '1.49.1', date: '2026-11-04', commit: '3df5a60', note: 'Blackjack: the man in the suit plays his own frames' },
   { v: '1.50.0', date: '2026-11-04', commit: 'f78504d', note: 'Everyone’s picture is the man in the suit' },
-  { v: '1.51.0', date: '2026-11-04', commit: '6b68d34', note: 'Crater Duel gets Tank’s match rounds, kill list and colors; version numbers for the site and every game' },
-  { v: '1.52.0', date: '2026-11-04', note: 'Crater Duel’s new look: glowing vector graphics like Tank’s' }
+  { v: '1.51.0', date: '2026-11-04', note: 'Crater Duel gets Tank’s match rounds, kill list and colors; version numbers for the site and every game' }
 ]
 
 export const GAMES = {
@@ -129,8 +128,7 @@ export const GAMES = {
     { v: '1.2.0', date: '2026-11-01', commit: '221a3ec', note: 'Bots, a solo mode, up to six sides online' },
     { v: '1.3.0', date: '2026-11-01', commit: 'fae9042', note: 'Full screen' },
     { v: '1.3.1', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
-    { v: '1.4.0', date: '2026-11-04', commit: '6b68d34', note: 'From Tank: rounds in a match, a kill list, one color per player, YOU at the start, Eliminated that fades so you can watch, smoke and fire on hurt units, kills in the results' },
-    { v: '2.0.0', date: '2026-11-04', note: 'A new look like Tank’s: glowing vector graphics, a sky with hills far off, lit and shaded ground scorched round its craters, drawn soldiers, glowing shots with trails, fireballs, shock waves and flying dirt, a sea with waves' }
+    { v: '1.4.0', date: '2026-11-04', note: 'From Tank: rounds in a match, a kill list, one color per player, YOU at the start, Eliminated that fades so you can watch, smoke and fire on hurt units, kills in the results' }
   ],
   race: [
     { v: '1.0.0', date: '2026-11-02', commit: '3022633', note: 'First version, solo against bots or online' }

@@ -3,15 +3,15 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
 import FullscreenButton from '../ascii/FullscreenButton.vue'
 import { useFullscreen } from '../ascii/fullscreen'
-import { GREEN, watchFonts } from '../ascii/paint'
+import { GREEN, DIM, watchFonts } from '../ascii/paint'
 import { startLoop } from '../ascii/loop'
 import { stepParticles } from '../ascii/physics'
+import { sparks } from '../ascii/fx'
 import { sound } from '../ascii/sound'
 import { haptics } from '../ascii/haptics'
 import { createTerrain, W } from './terrain'
 import { STEP, SAMPLE, MAX_WALK, WALK_SPEED, WEAPON_IDS, WEAPONS, KINDS, launch, previewArc } from './physics'
 import { createRenderer, SIDE_COLORS } from './renderer'
-import * as fx from './effects'
 
 // The full-screen match. In the aiming part of a turn this player picks a unit, walks it,
 // aims by dragging (pull back, like a slingshot) and fires; the shot goes to the host, which
@@ -59,6 +59,8 @@ const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? ''
 const WEAPON_KEYS = { shell: 'craterShell', grenade: 'craterGrenade', cluster: 'craterCluster', molotov: 'craterMolotov', dynamite: 'craterDynamite' }
 const WEAPON_ICONS = { shell: 'o', grenade: '@', cluster: '*', molotov: '!', dynamite: '|' }
 const LEVEL_KEYS = { hills: 'craterHills', mountain: 'craterMountain', valley: 'craterValley', islands: 'craterIslands', plateaus: 'craterPlateaus', canyon: 'craterCanyon', caverns: 'craterCaverns', sky: 'craterSky', city: 'craterCity', cheese: 'craterCheese' }
+const FIRE_COLORS = ['#ffe680', '#ffb000', '#ff6a2a']
+const SMOKE = '#7f8f7f'
 
 const arena = ref(null)
 const canvas = ref(null)
@@ -261,15 +263,8 @@ function rise (text, x, y, color, size = 1.8) {
 function happen (event, frame) {
   if (event.k === 'fire') {
     const u = unitAt(frame, event.u)
-    const side = props.units[event.u]?.side ?? 0
     sound.play('fire')
-    if (reduceMotion) return
-    // The flash at the gun, the way the shot left it
-    const sx = u.x
-    const sy = u.y - 1.9
-    const away = frameAt(STEP * SAMPLE * 2).shots.find(s => s.side === side)
-    const angle = away ? Math.atan2(-(away.y - sy), away.x - sx) : (u.x > W / 2 ? Math.PI - 0.6 : 0.6)
-    fx.muzzle(particles, sx + Math.cos(angle) * 2, sy - Math.sin(angle) * 2, angle, colorOf(side))
+    if (!reduceMotion) sparks(particles, u.x, u.y - 1.5, { count: 6, speed: 10, life: 0.3 })
   } else if (event.k === 'boom') {
     const removed = display.carve(event.x, event.y, event.r)
     applied++
@@ -278,14 +273,35 @@ function happen (event, frame) {
     if (reduceMotion) return
     flash = Math.max(flash, 0.5 + event.r * 0.06)
     shake = Math.max(shake, 0.2 + event.r * 0.07)
-    // A fireball, a shock wave, smoke, sparks, and the ground it blew away flying out
-    fx.blast(particles, event.x, event.y, event.r, removed, renderer?.dirt)
+    sparks(particles, event.x, event.y, { count: 10 + event.r * 2, speed: 18, life: 0.5 })
+    // A fireball, then smoke rising from it
+    for (let k = 0; k < 8 + event.r * 3; k++) {
+      const a = Math.random() * Math.PI * 2
+      const v = Math.random() * event.r * 3.5
+      particles.push({ ch: ['@', '#', '*', 'O'][k % 4], x: event.x, y: event.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, drag: 3, life: 0.35 + Math.random() * 0.35, ttl: 0.7, color: FIRE_COLORS[k % 3], size: 1.4 + event.r * 0.12 })
+    }
+    for (let k = 0; k < 4 + event.r; k++) {
+      particles.push({ ch: ['o', 'O', '(', ')'][k % 4], x: event.x + (Math.random() * 2 - 1) * event.r * 0.6, y: event.y - Math.random() * event.r * 0.5, vx: (Math.random() * 2 - 1) * 2, vy: -3 - Math.random() * 3, life: 1.2 + Math.random() * 0.8, ttl: 2, color: SMOKE, size: 1.3 + Math.random(), alpha: 0.6 })
+    }
+    // The ground it blew away flies out as its own characters
+    const chars = ['#', '%', ':', '"', '.']
+    for (let i = 0; i < removed.length && i < 70; i += 2 * Math.max(1, Math.floor(removed.length / 70))) {
+      const x = removed[i] + 0.5
+      const y = removed[i + 1] + 0.5
+      const dx = x - event.x
+      const dy = y - event.y
+      const d = Math.hypot(dx, dy) || 1
+      particles.push({ ch: chars[i % chars.length], x, y, vx: (dx / d) * (10 + Math.random() * 18), vy: (dy / d) * 10 - 12 - Math.random() * 14, gravity: 40, drag: 0.6, life: 0.9 + Math.random() * 0.6, ttl: 1.5, color: i % 3 ? DIM : GREEN, spin: (Math.random() * 2 - 1) * 8, size: 1.3 })
+    }
+    for (let k = 0; k < 14; k++) {
+      const a = (k / 14) * Math.PI * 2
+      particles.push({ ch: 'o', x: event.x, y: event.y, vx: Math.cos(a) * event.r * 6, vy: Math.sin(a) * event.r * 6, drag: 5, life: 0.35, ttl: 0.35, color: '#ffe680', size: 1.2 })
+    }
   } else if (event.k === 'dmg') {
     const u = unitAt(frame, event.u)
     flashUntil[event.u] = clock + 0.25
     sound.play('hit')
     rise(`-${event.n}`, u.x, u.y - 4, colorOf(props.units[event.u]?.side ?? 0))
-    if (!reduceMotion) fx.hit(particles, u.x, u.y - 1.8, colorOf(props.units[event.u]?.side ?? 0))
   } else if (event.k === 'die') {
     const u = unitAt(frame, event.u)
     const victim = props.units[event.u]?.side ?? 0
@@ -293,16 +309,16 @@ function happen (event, frame) {
     haptics.buzz('crash')
     rise(event.why === 'water' ? '~blub~' : 'x_x', u.x, Math.min(u.y, props.water) - 3, colorOf(victim), 1.6)
     noteKill(event.by ?? -1, victim)
-    if (!reduceMotion && event.why !== 'water') fx.knockOut(particles, u.x, u.y - 1.6, colorOf(victim))
     // This player's last unit: out of the round, watching the rest
     // (the replay is past this event, so diedBy covers the units still to go down)
     if (victim === props.mySide && !props.units.some((v, i) => v.side === victim && i !== event.u && (v.alive || diedBy(i)))) outAt = clock
   } else if (event.k === 'bounce') {
     sound.play('bounce')
-    if (!reduceMotion) fx.knock(particles, event.x, event.y)
   } else if (event.k === 'splash') {
     sound.play('board', 0.4)
-    if (!reduceMotion) fx.splash(particles, event.x, props.water, renderer?.sea)
+    if (!reduceMotion) {
+      for (let k = 0; k < 8; k++) particles.push({ ch: '~', x: event.x, y: props.water - 0.5, vx: (Math.random() * 2 - 1) * 8, vy: -10 - Math.random() * 10, gravity: 40, life: 0.6, ttl: 0.6, color: '#3fd0ff', size: 1.2 })
+    }
   }
 }
 
@@ -330,9 +346,12 @@ function stepReplay (dt) {
   shotsShown = frame.shots
   if (!reduceMotion && Math.floor(clock * 30) !== Math.floor((clock - dt) * 30)) {
     for (const s of frame.shots) {
-      const kind = KINDS[s.kind]
-      if (kind === 'flame' && Math.random() > 0.3) continue
-      fx.trail(particles, s.x, s.y, kind, colorOf(s.side))
+      if (KINDS[s.kind] === 'flame') {
+        if (Math.random() < 0.25) particles.push({ ch: '.', x: s.x + (Math.random() - 0.5), y: s.y - 1, vx: 0, vy: -4, life: 0.6, ttl: 0.6, color: SMOKE, size: 1, alpha: 0.6 })
+        continue
+      }
+      const ember = KINDS[s.kind] === 'molotov'
+      particles.push({ ch: ember ? '*' : '.', x: s.x, y: s.y, vx: 0, vy: ember ? -1 : -0.5, life: 0.6, ttl: 0.6, color: ember ? FIRE_COLORS[Math.floor(Math.random() * 3)] : SMOKE, size: 1.2, alpha: 0.8 })
     }
   }
   if (play.time >= play.replay.duration + 0.3 && play.next >= events.length) {
@@ -402,7 +421,8 @@ function hurtSmoke (dt) {
   for (const u of shownUnits) {
     if (!u.alive || u.hp >= 50) continue
     const burning = u.hp < 25
-    if (Math.random() < (burning ? 0.9 : 0.55)) fx.hurtSmoke(particles, u.x, u.y - 3, props.wind, burning)
+    if (Math.random() < (burning ? 0.9 : 0.55)) particles.push({ ch: ['o', 'O', '.'][Math.floor(Math.random() * 3)], x: u.x + (Math.random() - 0.5) * 1.2, y: u.y - 3, vx: (Math.random() - 0.5) * 1.5 + props.wind * 2, vy: -2.5 - Math.random() * 2, life: 1 + Math.random() * 0.6, ttl: 1.6, color: burning ? '#5f6a5f' : SMOKE, size: 1 + Math.random() * 0.6, alpha: burning ? 0.75 : 0.5 })
+    if (burning && Math.random() < 0.7) particles.push({ ch: ['^', '*', "'"][Math.floor(Math.random() * 3)], x: u.x + (Math.random() - 0.5) * 1.4, y: u.y - 1.6 - Math.random(), vx: (Math.random() - 0.5) * 1.5, vy: -3 - Math.random() * 2, life: 0.35 + Math.random() * 0.25, ttl: 0.6, color: FIRE_COLORS[Math.floor(Math.random() * 3)], size: 1.1 + Math.random() * 0.4 })
   }
 }
 
@@ -468,8 +488,6 @@ function render () {
   }
   renderer.draw({
     terrain: display,
-    // Scorch round the craters opened so far
-    scorch: props.craters.slice(0, applied),
     water: props.water,
     time: clock,
     camX: cam.x,
@@ -505,7 +523,7 @@ function banners (units) {
   if (playing.value && props.turn === 1 && props.phase === 'aim' && since < YOU_SECONDS) {
     const alpha = Math.min(1, (YOU_SECONDS - since) / 0.5)
     for (const u of units) {
-      if (u.alive && u.side === props.mySide) list.push({ text: upperT(props.t.gameYou), x: u.x, y: u.y - 10, size: 1.3, color: colorOf(u.side), display: true, min: 12, alpha })
+      if (u.alive && u.side === props.mySide) list.push({ text: upperT(props.t.gameYou), x: u.x, y: u.y - 8.5, size: 1.3, color: colorOf(u.side), display: true, min: 12, alpha })
     }
   }
   // Out of the round: a big word for a moment, then out of the way so the rest can be watched
