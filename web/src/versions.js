@@ -88,7 +88,8 @@ export const SITE = [
   { v: '1.52.1', date: '2026-11-04', commit: 'ae9da2f', note: 'Crater Duel back to its earlier look' },
   { v: '1.53.0', date: '2026-11-04', commit: 'f0d22d9', note: 'Crater Duel in daylight pixel art, with pixel panels and controls' },
   { v: '1.54.0', date: '2026-11-04', commit: '9127e36', note: 'Crater Duel: bigger soldiers, rifles and shots; charging, a power gauge and a guide from the last shot' },
-  { v: '1.55.0', date: '2026-11-04', note: 'Crater Duel: a simple aim, one line that grows with the power' }
+  { v: '1.55.0', date: '2026-11-04', commit: '4367e2e', note: 'Crater Duel: a simple aim, one line that grows with the power' },
+  { v: '1.55.1', date: '2026-11-04', note: 'The Lobby page fits a phone: no more buttons running off the screen' }
 ]
 
 export const GAMES = {
@@ -138,7 +139,7 @@ export const GAMES = {
     { v: '2.0.1', date: '2026-11-04', commit: 'ae9da2f', note: 'Back to the earlier look' },
     { v: '3.0.0', date: '2026-11-04', commit: 'f0d22d9', note: 'Daylight pixel art: skies with a sun and hills, a skyline or a cave wall; grass on banded, outlined dirt, brick rock, scorched craters; pixel soldiers, shots and explosions; a windsock; pixel panels, weapon icons and a big FIRE button' },
     { v: '3.1.0', date: '2026-11-04', commit: '9127e36', note: 'Bigger soldiers (half as tall again, hit anywhere on the body), a real rifle twice as long, shots twice the size; hold FIRE or Space to charge the power; a power gauge by the soldier and the angle by the sight; a band while dragging; last shot’s aim and landing as a guide; fine-aim buttons; Shift for slow aiming' },
-    { v: '3.2.0', date: '2026-11-04', note: 'A simple aim: one line of dots from the gun, longer the more power, and an X where the last shot landed; no sight, gauge, labels, guide path or band on the battlefield' }
+    { v: '3.2.0', date: '2026-11-04', commit: '4367e2e', note: 'A simple aim: one line of dots from the gun, longer the more power, and an X where the last shot landed; no sight, gauge, labels, guide path or band on the battlefield' }
   ],
   race: [
     { v: '1.0.0', date: '2026-11-02', commit: '3022633', note: 'First version, solo against bots or online' }
