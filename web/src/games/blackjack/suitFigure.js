@@ -228,6 +228,221 @@ function rail (dealer) {
   return paint(g)
 }
 
+// ---------- Frames for the animations (see suitAnim.js) ----------
+//
+// A frame is a stack of layers: his body (with the side of his jacket where his left arm hung,
+// whenever that arm is drawn elsewhere), his eyes, his mouth, the rail, the arm with whatever it
+// holds, and smoke. Each layer is its own image; the animation swaps them about ten times a second.
+
+const SHOULDER = [92, 62]
+
+// Where his left arm is in each pose: the elbow, the wrist, and what the hand is doing. In between
+// two poses the elbow and wrist are eased from one to the other.
+export const POSES = {
+  side: { elbow: [100, 92], wrist: [97, 116], hand: 'open' }, // hanging, empty
+  chest: { elbow: [101, 104], wrist: [80, 94], hand: 'grip' }, // a glass held at his chest
+  chestSmoke: { elbow: [101, 104], wrist: [80, 90], hand: 'pinch' }, // a cigarette held there
+  mouth: { elbow: [100, 88], wrist: [62, 44], hand: 'grip' }, // the glass at his lips
+  mouthSmoke: { elbow: [100, 88], wrist: [63, 40], hand: 'pinch', atLips: true }, // the cigarette there
+  fistUp: { elbow: [104, 70], wrist: [95, 42], hand: 'fist' }, // a fist in the air
+  fistMid: { elbow: [104, 78], wrist: [97, 56], hand: 'fist' },
+  forehead: { elbow: [100, 78], wrist: [64, 30], hand: 'palm' } // a hand on his forehead
+}
+
+// The hand's middle: a little past the wrist, along the forearm
+function handAt (pose) {
+  const [ex, ey] = pose.elbow
+  const [wx, wy] = pose.wrist
+  const len = Math.hypot(wx - ex, wy - ey) || 1
+  return { dx: (wx - ex) / len, dy: (wy - ey) / len, c: [Math.round(wx + ((wx - ex) / len) * 5), Math.round(wy + ((wy - ey) / len) * 5)] }
+}
+
+/**
+ * Where what he holds goes in a pose: { art, x, y } for the thing, and ember [x, y], the lit
+ * end of a cigarette (or null). `lift` raises it a pixel or two, as in a sip.
+ */
+export function heldLayout (pose, held, lift = 0) {
+  const art = HELD[held]
+  if (!art) return { item: null, ember: null }
+  const { w, h } = sizeOf(art)
+  const { c } = handAt(pose)
+  const lit = held === 'cigarette' || held === 'cigar'
+  if (pose.hand === 'pinch') {
+    // At the lips it points out to the right of his face; at his chest, away to the left
+    if (pose.atLips) return { item: { art, x: 46, y: 35 }, ember: lit ? [46 + w - 1, 36] : null }
+    const x = c[0] - w + 2
+    const y = c[1] - 2
+    return { item: { art: reversed(art), x, y }, ember: lit ? [x, y + 1] : null }
+  }
+  return { item: { art, x: c[0] - 3 - w + 2, y: c[1] - Math.floor(h / 2) - lift }, ember: null }
+}
+
+// The hand, by what it's doing
+function drawHand (g, pose) {
+  const { c } = handAt(pose)
+  const [x, y] = c
+  const skin = mat(SKIN, (px) => (px >= x + 2 ? 2 : 1))
+  const crease = flat(SKIN[2])
+  switch (pose.hand) {
+    case 'grip': // round a glass, fingers on its side, the thumb over the top
+      g.rect(x - 4, y - 5, x + 4, y + 4, skin)
+      for (const fy of [y - 2, y + 1]) g.rect(x - 4, fy, x - 1, fy, crease)
+      g.rect(x - 4, y - 5, x - 2, y - 5, flat(SKIN[0]))
+      break
+    case 'pinch': // the cigarette between two fingers
+      g.rect(x - 3, y - 4, x + 3, y + 4, skin)
+      g.rect(x - 3, y, x + 1, y, crease)
+      break
+    case 'fist': // knuckles on top, the thumb across
+      g.rect(x - 4, y - 4, x + 4, y + 4, skin)
+      for (const kx of [x - 2, x + 1]) g.rect(kx, y - 4, kx, y - 2, crease)
+      g.rect(x - 4, y + 1, x, y + 1, crease)
+      g.rect(x - 4, y - 4, x + 4, y - 4, flat(SKIN[0]))
+      break
+    case 'palm': // flat across his forehead, fingers to the left
+      g.rect(x - 8, y - 3, x + 5, y + 3, skin)
+      for (const fy of [y - 1, y + 1]) g.rect(x - 8, fy, x - 3, fy, crease)
+      break
+    default: // open, hanging
+      g.rect(x - 3, y - 4, x + 3, y + 5, skin)
+      for (const fx of [x - 1, x + 1]) g.rect(fx, y + 3, fx, y + 5, crease)
+  }
+}
+
+// His left arm in a pose, with what it holds; or, with no pose, what he has on the rail
+function armCells ({ pose, held = '', lift = 0, onRail: railed = false }) {
+  const g = new Grid()
+  if (railed && HELD[held]) {
+    const place = placeOf(held, 'down')
+    if (smoking(held)) g.sprite(ASHTRAY, 82, RAIL_TOP - 6, COLORS)
+    g.sprite(place.art, place.x, place.y, COLORS)
+  }
+  if (pose) {
+    const { dx, dy } = handAt(pose)
+    const [wx, wy] = pose.wrist
+    const cuff = [wx - dx * 4, wy - dy * 4]
+    g.limb([SHOULDER, pose.elbow], 8.5, mat(SLEEVE, (x) => (x >= 98 ? 2 : 1)))
+    g.limb([pose.elbow, cuff], 7, mat(SLEEVE, (x, y) => (y >= 80 ? 2 : 1)))
+    g.limb([cuff, pose.wrist], 4.6, mat(CUFF))
+    const { item } = railed ? { item: null } : heldLayout(pose, held, lift)
+    if (pose.hand === 'pinch') {
+      drawHand(g, pose)
+      if (item) g.sprite(item.art, item.x, item.y, COLORS)
+    } else {
+      if (item) g.sprite(item.art, item.x, item.y, COLORS)
+      drawHand(g, pose)
+    }
+  }
+  return paint(g)
+}
+
+// His body, and with `patched` the side of his jacket painted over where his left arm hung
+function bodyCells (patched) {
+  const cells = person(false)
+  if (!patched) return cells
+  for (let y = 88; y < RAIL_TOP; y++) {
+    const row = SUIT.rows[y]
+    let edge = row.length - 1
+    while (edge > SEAM && row[edge] === '.') edge--
+    for (let x = SEAM + 1; x < edge; x++) cells[y * FW + x] = x >= edge - 3 ? JACKET_DARK : JACKET
+  }
+  return cells
+}
+
+// Eyelids: half down, or shut
+function eyesCells (eyes) {
+  const cells = Array(FW * FH).fill(null)
+  if (eyes !== 'half' && eyes !== 'closed') return cells
+  for (const [x0, x1] of [[35, 41], [46, 53]]) {
+    const rows = eyes === 'half' ? [25, 26] : [25, 26, 27]
+    for (const y of rows) for (let x = x0; x <= x1; x++) cells[y * FW + x] = LID
+    const lash = eyes === 'half' ? 26 : 27
+    for (let x = x0 + 1; x < x1; x++) cells[lash * FW + x] = LASH
+  }
+  return cells
+}
+
+// The mouth, in his beard: a grin with teeth, open for a bite, an O for blowing smoke, a flat line
+function mouthCells (mouth) {
+  const cells = Array(FW * FH).fill(null)
+  const set = (x, y, c) => { cells[y * FW + x] = c }
+  const DARK = '#3a1418'
+  const LIP = '#8a3a3a'
+  const TEETH = '#f4efe6'
+  if (mouth === 'grin') {
+    for (let x = 39; x <= 47; x++) set(x, 35, TEETH)
+    for (let x = 40; x <= 46; x++) set(x, 36, DARK)
+    set(38, 34, LIP)
+    set(48, 34, LIP)
+    set(38, 35, LIP)
+    set(48, 35, LIP)
+    for (let x = 40; x <= 46; x++) set(x, 37, LIP)
+  } else if (mouth === 'open' || mouth === 'o') {
+    const [x0, x1] = mouth === 'open' ? [40, 46] : [42, 44]
+    for (let y = 35; y <= 37; y++) for (let x = x0; x <= x1; x++) set(x, y, DARK)
+    for (let x = x0; x <= x1; x++) set(x, 34, LIP)
+    for (let x = x0; x <= x1; x++) set(x, 38, LIP)
+  } else if (mouth === 'chew') {
+    for (let x = 40; x <= 46; x++) set(x, 36, LIP)
+    set(41, 35, DARK)
+    set(45, 35, DARK)
+  } else if (mouth === 'flat') {
+    for (let x = 39; x <= 47; x++) set(x, 36, DARK)
+    for (let x = 39; x <= 47; x++) set(x, 35, LIP)
+  }
+  return cells
+}
+
+// Smoke, as round puffs of pixels thinning out (dithered) as they fade; and the glow round a lit
+// end, bright during a draw
+function fxCells ({ puffs = [], ember = null, glow = 0 }) {
+  const cells = Array(FW * FH).fill(null)
+  const set = (x, y, c) => { if (x >= 0 && y >= 0 && x < FW && y < FH) cells[y * FW + x] = c }
+  for (const { x, y, r, fade } of puffs) {
+    for (let py = Math.floor(y - r); py <= Math.ceil(y + r); py++) {
+      for (let px = Math.floor(x - r); px <= Math.ceil(x + r); px++) {
+        const d = Math.hypot(px - x, py - y)
+        if (d > r) continue
+        const k = (px + py) & 3
+        if ((fade === 1 && k === 0) || (fade === 2 && (k & 1)) || (fade >= 3 && k !== 0)) continue
+        set(px, py, d > r - 1 ? '#c3cad2' : '#eef1f4')
+      }
+    }
+  }
+  if (ember) {
+    const [ex, ey] = ember
+    if (glow >= 1) for (const [dx, dy] of [[-1, 0], [2, 0], [0, -1], [1, -1], [0, 2], [1, 2]]) set(ex + dx, ey + dy, glow >= 2 ? '#ffb347' : '#e8682a')
+    if (glow >= 2) for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) set(ex + dx, ey + dy, '#fff1a8')
+  }
+  return cells
+}
+
+// Frames repeat (the same pose, the same puff), so their images are kept; but not without end
+const frames = new Map()
+const FRAMES_MAX = 600
+
+function frameUrl (key, make) {
+  if (!frames.has(key)) {
+    if (frames.size >= FRAMES_MAX) frames.delete(frames.keys().next().value)
+    frames.set(key, toUrl(make()))
+  }
+  return frames.get(key)
+}
+
+/** The layers of one frame (see suitAnim.js frameAt) as image URLs. */
+export function suitFrame (state, { held = '', dealer = false } = {}) {
+  const pose = state.pose
+  const arm = { pose, held, lift: state.lift || 0, onRail: !!state.onRail }
+  return {
+    body: frameUrl(`b${pose ? 1 : 0}`, () => bodyCells(!!pose)),
+    eyes: frameUrl(`e${state.eyes || ''}`, () => eyesCells(state.eyes)),
+    mouth: frameUrl(`m${state.mouth || ''}`, () => mouthCells(state.mouth)),
+    rail: suitUrl({ part: 'rail', dealer }),
+    arm: frameUrl(`a${JSON.stringify(arm)}`, () => armCells(arm)),
+    fx: frameUrl(`f${JSON.stringify(state.fx || {})}`, () => fxCells(state.fx || {}))
+  }
+}
+
 const cache = new Map()
 
 /** A layer of the man as an image URL: 'chair' (none), 'person', 'rail' or 'arm' (see avatars.js). */

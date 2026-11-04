@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { heldKind, canHold } from './avatars'
 import { figureOf } from './figures'
+import SuitAvatar from './SuitAvatar.vue'
 
 // Someone at the table in pixel art (see avatars.js): a player on their chair behind the rail, or
 // the dealer. Whatever they hold from the bar they use, the way a person at a bar does: a sip of
@@ -13,8 +14,12 @@ const props = defineProps({
   look: { type: Object, required: true },
   held: { type: String, default: '' }, // a bar item id
   seed: { type: Number, default: 0 }, // so people at one table don't all move at once
-  size: { type: String, default: '' }
+  size: { type: String, default: '' },
+  react: { type: Object, default: null } // { kind: 'win' | 'lose', id }: played once by those who can
 })
+
+// The man in the suit has animations of his own, frame by frame
+const suit = computed(() => props.look?.figure === 'suit')
 
 const item = computed(() => (canHold(props.held) ? props.held : ''))
 const kind = computed(() => (item.value ? heldKind(item.value) : ''))
@@ -45,7 +50,8 @@ const style = computed(() => ({
 </script>
 
 <template>
-  <div :class="['avatar', kind && `does-${kind}`]" :style="style" aria-hidden="true">
+  <SuitAvatar v-if="suit" :held="item" :seed="seed" :react="react" :dealer="!!look.dealer" :size="size" />
+  <div v-else :class="['avatar', kind && `does-${kind}`]" :style="style" aria-hidden="true">
     <span class="ground"></span>
     <img class="layer" :src="layers.chair" alt="" draggable="false" />
     <img class="layer breathe" :src="layers.person" alt="" draggable="false" />

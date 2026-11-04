@@ -270,6 +270,19 @@ function heldOf (id) {
   return list[list.length - 1] || null
 }
 const lookFor = (id) => lookOf(id)
+
+// How a round went for each seat, for the people to react to: a fist in the air for a win, a hand
+// to the forehead for a loss (the dealer the other way round when they bust or have Blackjack)
+function reactOf (seat) {
+  if (phase.value !== 'settled' || !seat?.hands.length) return null
+  const net = seat.hands.reduce((sum, hand) => sum + hand.payout - hand.bet, 0) + (seat.sides || []).reduce((sum, side) => sum + side.payout - side.bet, 0)
+  return net ? { kind: net > 0 ? 'win' : 'lose', id: `${props.table.round}` } : null
+}
+const dealerReact = computed(() => {
+  const d = props.table.dealer
+  if (phase.value !== 'settled' || !(d.bust || d.blackjack)) return null
+  return { kind: d.blackjack ? 'win' : 'lose', id: `${props.table.round}` }
+})
 // Emotes from people watching, who have no seat for them to show over
 const railBubbles = computed(() => Object.entries(props.bubbles)
   .filter(([pid]) => pid !== DEALER && !seats.value.some(seat => seat?.pid === pid))
@@ -344,7 +357,7 @@ onUnmounted(() => {
       <!-- The dealer, with whatever they've been given -->
       <section class="dealer" data-pid="dealer" :aria-label="t.bjDealer">
         <button type="button" class="who" :title="t.bjGiftDealer" @click="giftTo(DEALER)">{{ t.bjDealer }}</button>
-        <SeatAvatar class="dealer-avatar" :look="DEALER_LOOK" :held="heldOf(DEALER)?.k || ''" :seed="3" />
+        <SeatAvatar class="dealer-avatar" :look="DEALER_LOOK" :held="heldOf(DEALER)?.k || ''" :seed="3" :react="dealerReact" />
         <div class="dealer-row">
           <SeatItems class="dealer-items" :t="t" :items="itemsOf(DEALER)" :now="now" :hidden="hidden" :name-of="nameOf" :max="4" :except="heldOf(DEALER)?.n" />
           <div class="dealer-hand">
@@ -431,7 +444,7 @@ onUnmounted(() => {
               </div>
               <!-- The player in their chair, with their name on the rail -->
               <div class="sitter">
-                <SeatAvatar :look="lookFor(seat.pid)" :held="heldOf(seat.pid)?.k || ''" :seed="index" />
+                <SeatAvatar :look="lookFor(seat.pid)" :held="heldOf(seat.pid)?.k || ''" :seed="index" :react="reactOf(seat)" />
                 <component
                   :is="seat.me ? 'p' : 'button'"
                   :type="seat.me ? undefined : 'button'"
