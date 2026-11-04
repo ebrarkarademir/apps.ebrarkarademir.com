@@ -6,7 +6,7 @@ import SeatItems from './SeatItems.vue'
 import EmoteBubble from './EmoteBubble.vue'
 import SeatAvatar from './SeatAvatar.vue'
 import { canHold } from './avatars'
-import { lookOf, DEALER_LOOK } from './figures'
+import { lookOf, DEALER_LOOK, holdsOrders } from './figures'
 import { CHIP_LOOKS, money, chipLabel } from './chips'
 import { iconUrl, itemUrl } from './pixels'
 import { DEALER } from './social'
@@ -359,7 +359,7 @@ onUnmounted(() => {
         <button type="button" class="who" :title="t.bjGiftDealer" @click="giftTo(DEALER)">{{ t.bjDealer }}</button>
         <SeatAvatar class="dealer-avatar" :look="DEALER_LOOK" :held="heldOf(DEALER)?.k || ''" :seed="3" :react="dealerReact" />
         <div class="dealer-row">
-          <SeatItems class="dealer-items" :t="t" :items="itemsOf(DEALER)" :now="now" :hidden="hidden" :name-of="nameOf" :max="4" :except="heldOf(DEALER)?.n" />
+          <SeatItems class="dealer-items" :t="t" :items="itemsOf(DEALER)" :now="now" :hidden="hidden" :name-of="nameOf" :max="4" :except="holdsOrders(DEALER_LOOK) ? heldOf(DEALER)?.n : null" />
           <div class="dealer-hand">
             <SeatItems class="over-items" :t="t" :items="itemsOf(DEALER)" :now="now" :hidden="hidden" :name-of="nameOf" :max="1" over />
             <div class="hand-cards dealer-cards" :style="{ '--n': table.dealer.cards.length }">
@@ -440,7 +440,7 @@ onUnmounted(() => {
                     <span v-if="spot.amount && (spot.key === 'main' || seat.me)" class="spot-amount">{{ money(spot.amount) }}</span>
                   </component>
                 </div>
-                <SeatItems class="seat-items" :t="t" :items="itemsOf(seat.pid)" :now="now" :hidden="hidden" :name-of="nameOf" :max="seat.me ? 4 : 3" :except="heldOf(seat.pid)?.n" />
+                <SeatItems class="seat-items" :t="t" :items="itemsOf(seat.pid)" :now="now" :hidden="hidden" :name-of="nameOf" :max="seat.me ? 4 : 3" :except="holdsOrders(lookFor(seat.pid)) ? heldOf(seat.pid)?.n : null" />
               </div>
               <!-- The player in their chair, with their name on the rail -->
               <div class="sitter">
