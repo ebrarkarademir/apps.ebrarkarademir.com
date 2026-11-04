@@ -4,7 +4,7 @@ import TermWindow from '../components/TermWindow.vue'
 import QrCode from '../components/QrCode.vue'
 import LobbyChat from './LobbyChat.vue'
 import { switchTargets, appNav } from './gameSwitch'
-import { faceLine } from './profile'
+import PixelPerson from '../components/PixelPerson.vue'
 import { SESSION_MS } from './session'
 
 // Shared frame for online games: header, name + create/join screen, connecting spinner and
@@ -209,7 +209,7 @@ function onCodeInput (event) {
               ]"
             >
               <span :class="['term-dot', { 'is-off': !player.online }]"></span>
-              <span class="shrink-0 text-xs term-muted" aria-hidden="true">{{ faceLine(player.av) }}</span>
+              <PixelPerson face size="1.9rem" class="-my-1" />
               <span class="truncate font-medium">{{ player.name }}</span>
               <span v-if="player.id === view.hostId" class="ml-auto text-[10px] uppercase tracking-wider term-muted">
                 {{ t.onlineHostBadge }}

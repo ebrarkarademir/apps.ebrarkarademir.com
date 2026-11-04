@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { session, CHAT_TEXT } from './session'
 import { switchTargets } from './gameSwitch'
-import { faceLine } from './profile'
+import PixelPerson from '../components/PixelPerson.vue'
 
 // The lobby chat (see session.js): everyone in the room, plus a line from the host when
 // someone comes, goes, takes a new name or the game changes. Lines read here count as read.
@@ -56,7 +56,7 @@ onUnmounted(() => document.removeEventListener('visibilitychange', seen))
         <span v-if="line.sys" class="term-muted italic">*** {{ systemText(line) }}</span>
         <template v-else>
           <span :class="['mr-2 whitespace-nowrap', line.from === session.myId ? 'term-muted' : 'font-semibold']">
-            <span class="text-xs" aria-hidden="true">{{ faceLine(line.av) }}</span> {{ line.name }}&gt;
+            <PixelPerson face size="1.85em" class="-my-1.5 mr-1" />{{ line.name }}&gt;
           </span>
           <span>{{ line.text }}</span>
         </template>

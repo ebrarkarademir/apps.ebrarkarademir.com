@@ -1,11 +1,11 @@
 <script setup>
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import TermWindow from '../components/TermWindow.vue'
-import AsciiAvatar from '../components/AsciiAvatar.vue'
+import PixelPerson from '../components/PixelPerson.vue'
 import MedalBadge from '../components/MedalBadge.vue'
 import { flagPng } from '../online/ipInfo'
 import { MAX_TEXT } from '../online/useUsers'
-import { profile, autoCountry, cleanName, cleanBio, randomName, faceLine, MAX_NAME, MAX_BIO, MEDALS, medalProgress } from '../online/profile'
+import { profile, autoCountry, cleanName, cleanBio, randomName, MAX_NAME, MAX_BIO, MEDALS, medalProgress } from '../online/profile'
 import { banner } from '../online/asciiFont'
 import { COUNTRY_CODES } from '../online/countries'
 import { currentRoom } from '../online/session'
@@ -156,7 +156,6 @@ function saveProfile () {
   savedTimer = setTimeout(() => { saved.value = false }, 1800)
 }
 
-const newFace = () => { profile.avatar = Math.floor(Math.random() * 2 ** 31) }
 const newName = () => { edit.name = randomName(profile.uid || 1 + Math.floor(Math.random() * 999)) }
 
 // ---------- Chat ----------
@@ -225,7 +224,7 @@ onUnmounted(() => {
               ]"
               @click="select(item.id)"
             >
-              <span class="w-12 shrink-0 text-center text-xs whitespace-nowrap" aria-hidden="true">{{ faceLine(item.av) }}</span>
+              <PixelPerson face size="2.75rem" class="-my-1 border border-term-low" />
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-2">
                   <img
@@ -268,8 +267,8 @@ onUnmounted(() => {
 
         <!-- On a phone the lettered name goes under the face, where it has the whole width -->
         <header class="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-          <div class="self-start shrink-0 border border-term-low px-2 py-1.5 text-sm sm:text-base">
-            <AsciiAvatar :seed="person.av" />
+          <div class="self-start shrink-0 border border-term-low bg-term-deep px-1 pt-1">
+            <PixelPerson size="8.5rem" :seed="(person.av || 0) % 7" />
           </div>
           <div class="min-w-0 flex-1 w-full">
             <h2 id="users-person-title" class="min-w-0">
@@ -441,10 +440,6 @@ onUnmounted(() => {
                 <option v-for="country in countries" :key="country.code" :value="country.code">{{ country.name }}</option>
               </select>
             </label>
-            <div class="flex items-center gap-4">
-              <div class="border border-term-low px-2 py-1.5 text-sm"><AsciiAvatar :seed="profile.avatar" /></div>
-              <button type="button" class="term-btn min-h-10 text-sm" @click="newFace">{{ t.usersNewFace }}</button>
-            </div>
             <button type="submit" class="term-btn term-btn-primary w-full min-h-10" :disabled="!editDirty || !cleanName(edit.name)">
               {{ saved ? t.usersSaved : t.usersSave }}
             </button>

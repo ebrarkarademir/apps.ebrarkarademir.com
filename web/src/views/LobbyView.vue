@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import TermWindow from '../components/TermWindow.vue'
 import LobbyChat from '../online/LobbyChat.vue'
 import { session, roomInfo, SESSION_MS } from '../online/session'
-import { faceLine } from '../online/profile'
+import PixelPerson from '../components/PixelPerson.vue'
 
 // The Lobby page: every lobby open on the site right now (from the users list, see useUsers.js),
 // what each plays, who's inside and how long it has left, with a Join button. The lobby this
@@ -70,7 +70,7 @@ function create (game) {
           </div>
           <ul class="grid grid-cols-2 gap-2">
             <li v-for="player in mine.players" :key="player.id" :class="['flex items-center gap-2 border px-2 py-1.5 text-sm', player.id === session.myId ? 'border-term bg-term-deep' : 'border-term-low']">
-              <span class="shrink-0 text-xs term-muted" aria-hidden="true">{{ faceLine(player.av) }}</span>
+              <PixelPerson face size="1.75rem" class="-my-1" />
               <span class="truncate">{{ player.name }}</span>
               <span v-if="player.host" class="ml-auto text-[10px] uppercase tracking-wider term-muted">{{ t.onlineHostBadge }}</span>
             </li>
@@ -112,7 +112,7 @@ function create (game) {
               <h3 class="term-label">{{ t.lobbyInside }}</h3>
               <ul class="grid grid-cols-2 gap-2">
                 <li v-for="player in lobby.players" :key="player.name" class="flex items-center gap-2 border border-term-low px-2 py-1.5 text-sm">
-                  <span class="shrink-0 text-xs term-muted" aria-hidden="true">{{ faceLine(player.av) }}</span>
+                  <PixelPerson face size="1.75rem" class="-my-1" />
                   <span class="truncate">{{ player.name }}</span>
                   <span v-if="player.host" class="ml-auto text-[10px] uppercase tracking-wider term-muted">{{ t.onlineHostBadge }}</span>
                 </li>
