@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
-import { avatarUrl, heldKind, canHold, emberOf, MOUTH_AT, W, H } from './avatars'
+import { heldKind, canHold } from './avatars'
+import { figureOf } from './figures'
 
 // Someone at the table in pixel art (see avatars.js): a player on their chair behind the rail, or
 // the dealer. Whatever they hold from the bar they use, the way a person at a bar does: a sip of
@@ -17,10 +18,11 @@ const props = defineProps({
 
 const item = computed(() => (canHold(props.held) ? props.held : ''))
 const kind = computed(() => (item.value ? heldKind(item.value) : ''))
-const ember = computed(() => emberOf(item.value))
+const figure = computed(() => figureOf(props.look))
+const ember = computed(() => figure.value.ember(item.value))
 
 const layers = computed(() => {
-  const url = (options) => avatarUrl(props.look, options)
+  const url = (options) => figure.value.url(options)
   return {
     chair: url({ part: 'chair' }),
     person: url({ part: 'person' }),
@@ -32,12 +34,12 @@ const layers = computed(() => {
 })
 
 const at = (point) => ({ left: `${point.x * 100}%`, top: `${point.y * 100}%` })
-const mouth = at(MOUTH_AT)
+const mouth = computed(() => at(figure.value.mouth))
 
 const style = computed(() => ({
   '--seed': props.seed % 7,
-  '--gw': W,
-  '--gh': H,
+  '--gw': figure.value.w,
+  '--gh': figure.value.h,
   ...(props.size ? { '--av': props.size } : {})
 }))
 </script>

@@ -553,7 +553,7 @@ function drawFarArm (g, look, skin) {
 
 // The bar's things as they look in a hand: letters are colours in HELD_COLORS. A cigarette's lit
 // end is its last letter, so it can glow.
-const HELD = {
+export const HELD = {
   beer: ['.WWWW...', 'WWwWWW..', 'shyyysSS', 'shyYys.S', 'shyyYs.S', 'shyyysSS', 'syyyys..', 'sSSSSs..'],
   wine: ['s...s', 'sRrRs', 'shRRs', '.sRs.', '..s..', '..s..', '..s..', '.sss.'],
   champagne: ['s.s', 'sys', 'hys', 'sys', 'sYs', '.s.', '.s.', '.s.', 'sss'],
@@ -574,7 +574,7 @@ const HELD = {
   nuts: ['OtOtOtO', 'sssssss', '.sssss.', '..sss..']
 }
 
-const HELD_COLORS = {
+export const HELD_COLORS = {
   W: '#fffaf0',
   w: '#e3dccb',
   y: '#ffcc33',
