@@ -86,7 +86,8 @@ export const SITE = [
   { v: '1.51.0', date: '2026-11-04', commit: '6b68d34', note: 'Crater Duel gets Tank’s match rounds, kill list and colors; version numbers for the site and every game' },
   { v: '1.52.0', date: '2026-11-04', commit: 'c486f59', note: 'Crater Duel in glowing vector graphics' },
   { v: '1.52.1', date: '2026-11-04', commit: 'ae9da2f', note: 'Crater Duel back to its earlier look' },
-  { v: '1.53.0', date: '2026-11-04', note: 'Crater Duel in daylight pixel art, with pixel panels and controls' }
+  { v: '1.53.0', date: '2026-11-04', commit: 'f0d22d9', note: 'Crater Duel in daylight pixel art, with pixel panels and controls' },
+  { v: '1.54.0', date: '2026-11-04', note: 'Crater Duel: bigger soldiers, rifles and shots; charging, a power gauge and a guide from the last shot' }
 ]
 
 export const GAMES = {
@@ -134,7 +135,8 @@ export const GAMES = {
     { v: '1.4.0', date: '2026-11-04', commit: '6b68d34', note: 'From Tank: rounds in a match, a kill list, one color per player, YOU at the start, Eliminated that fades so you can watch, smoke and fire on hurt units, kills in the results' },
     { v: '2.0.0', date: '2026-11-04', commit: 'c486f59', note: 'Glowing vector graphics' },
     { v: '2.0.1', date: '2026-11-04', commit: 'ae9da2f', note: 'Back to the earlier look' },
-    { v: '3.0.0', date: '2026-11-04', note: 'Daylight pixel art: skies with a sun and hills, a skyline or a cave wall; grass on banded, outlined dirt, brick rock, scorched craters; pixel soldiers, shots and explosions; a windsock; pixel panels, weapon icons and a big FIRE button' }
+    { v: '3.0.0', date: '2026-11-04', commit: 'f0d22d9', note: 'Daylight pixel art: skies with a sun and hills, a skyline or a cave wall; grass on banded, outlined dirt, brick rock, scorched craters; pixel soldiers, shots and explosions; a windsock; pixel panels, weapon icons and a big FIRE button' },
+    { v: '3.1.0', date: '2026-11-04', note: 'Bigger soldiers (half as tall again, hit anywhere on the body), a real rifle twice as long, shots twice the size; hold FIRE or Space to charge the power; a power gauge by the soldier and the angle by the sight; a band while dragging; last shot’s aim and landing as a guide; fine-aim buttons; Shift for slow aiming' }
   ],
   race: [
     { v: '1.0.0', date: '2026-11-02', commit: '3022633', note: 'First version, solo against bots or online' }

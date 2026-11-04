@@ -45,52 +45,71 @@ export function sprite (rows, colors, { outline = true, mirror = false } = {}) {
   return canvas
 }
 
-// A soldier facing right, 7 by 12: helmet, face, shirt in the side's color, belt, trousers,
-// boots; the second pose is a step. The gun is drawn on its own, at the aim.
+// A soldier facing right, 11 by 18 (4.5 cells tall): a helmet with a shine on it, a face, a
+// backpack, a shirt in the side's color, a belt with a buckle, trousers and boots; the second
+// pose is a step. The rifle is drawn on its own, at the aim, from the shoulder (SHOULDER).
 export const SOLDIER = [
   [
-    '..hhh..',
-    '.hhhhhh',
-    '..sse..',
-    '..sss..',
-    '.ccccc.',
-    'ccccccc',
-    '.ccccc.',
-    '.bbbbb.',
-    '.pp.pp.',
-    '.pp.pp.',
-    '.pp.pp.',
-    '.kk.kk.'
+    '....hhh....',
+    '...hHHHh...',
+    '..hHHHHHh..',
+    '..hhhhhhhhh',
+    '...sssses..',
+    '...ssssss..',
+    '....dsss...',
+    '.gcccccccc.',
+    'ggcCcccccc.',
+    'ggcCcccccc.',
+    '.gcCcccccc.',
+    '..bbbbBbb..',
+    '..ppp.ppp..',
+    '..pPp.pPp..',
+    '..pPp.pPp..',
+    '..ppp.ppp..',
+    '..kkk.kkkk.',
+    '..kkk.kkkk.'
   ],
   [
-    '..hhh..',
-    '.hhhhhh',
-    '..sse..',
-    '..sss..',
-    '.ccccc.',
-    'ccccccc',
-    '.ccccc.',
-    '.bbbbb.',
-    '.ppppp.',
-    'pp...pp',
-    'pp...pp',
-    'kk...kk'
+    '....hhh....',
+    '...hHHHh...',
+    '..hHHHHHh..',
+    '..hhhhhhhhh',
+    '...sssses..',
+    '...ssssss..',
+    '....dsss...',
+    '.gcccccccc.',
+    'ggcCcccccc.',
+    'ggcCcccccc.',
+    '.gcCcccccc.',
+    '..bbbbBbb..',
+    '..ppppppp..',
+    '.pPp...pPp.',
+    '.pPp...pPp.',
+    '.pp.....pp.',
+    'kkk....kkk.',
+    'kkk....kkkk'
   ]
 ]
+// Where the rifle sits, in the sprite's pixels from its top left (before the outline)
+export const SHOULDER = { x: 5, y: 8 }
 
 export const GRAVE = [
-  '.ggg.',
-  'ggcgg',
-  'gcccg',
-  'ggcgg',
-  'ggcgg',
-  'ggggg'
+  '..ggg..',
+  '.ggggg.',
+  'gggcggg',
+  'ggcccgg',
+  'gggcggg',
+  'gggcggg',
+  'ggggggg',
+  'ggggggg',
+  'GGGGGGG'
 ]
 
 export const ARROW = [
-  'aaaaa',
-  '.aaa.',
-  '..a..'
+  'aaaaaaa',
+  '.aaaaa.',
+  '..aaa..',
+  '...a...'
 ]
 
 // What flies, by its place in KINDS (physics.js): shell, grenade, cluster, bomblet, molotov,

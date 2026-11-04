@@ -18,7 +18,11 @@ export const WIND_MAX = 10 // cells/s² sideways, at full wind
 export const MAX_WALK = 14 // cells a unit can walk in a turn
 export const WALK_SPEED = 7 // cells/s
 const MAX_SECONDS = 12
-const UNIT_HIT = 1.4 // how close a shot passes to a unit's middle to hit it
+const UNIT_HIT = 1.3 // how close a shot passes to a unit's body (see hitsUnit) to hit it
+const BODY_LOW = 0.5 // a unit's body, cells above its feet: from here...
+const BODY_HIGH = 4.1 // ...to its head
+export const SHOULDER = 2.5 // where its gun sits, cells above its feet
+export const GUN = 3 // and how long the gun is, cells
 const FALL_SAFE = 30 // landing speed that doesn't hurt
 const SETTLE_STEPS = 20
 
@@ -37,12 +41,18 @@ const FLAME_REACH = 1.4 // how close to a unit's feet a flame burns it
 /** A side's stock at the start of a match: every weapon but the shell is limited. */
 export const startAmmo = () => Object.fromEntries(WEAPON_IDS.filter(id => WEAPONS[id].ammo).map(id => [id, WEAPONS[id].ammo]))
 
-/** Where a shot leaves a unit at (x, y), and its velocity, for an angle (radians, up from the right) and power 0-1. */
+/** Is (x, y) within reach of the body of a unit standing at (ux, uy)? The body is upright: a line from just over its feet to its head. */
+export function hitsUnit (ux, uy, x, y, reach = UNIT_HIT) {
+  const by = Math.max(uy - BODY_HIGH, Math.min(uy - BODY_LOW, y))
+  return Math.hypot(ux - x, by - y) < reach
+}
+
+/** Where a shot leaves a unit at (x, y) (the end of its gun), and its velocity, for an angle (radians, up from the right) and power 0-1. */
 export function launch (x, y, angle, power, weapon = 'shell') {
   const cos = Math.cos(angle)
   const sin = Math.sin(angle)
   const speed = MAX_SPEED * (WEAPONS[weapon]?.reach || 1) * Math.max(0.08, Math.min(1, power))
-  return { x: x + cos * 1.6, y: y - 1.5 - sin * 1.6, vx: cos * speed, vy: -sin * speed }
+  return { x: x + cos * GUN, y: y - SHOULDER - sin * GUN, vx: cos * speed, vy: -sin * speed }
 }
 
 /** The first stretch of a shot's flight, without wind, for the aim preview: [x, y, ...]. */
@@ -114,7 +124,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
     units.forEach((u, index) => {
       if (!u.alive) return
       const dx = u.x - x
-      const dy = u.y - 1 - y
+      const dy = u.y - 2 - y
       const d = Math.hypot(dx, dy)
       if (d >= reach) return
       const f = 1 - d / reach
@@ -167,11 +177,11 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
       p.x += (p.vx * STEP) / 2
       p.y += (p.vy * STEP) / 2
       if (p.y >= water) {
-        events.push({ t: tick, k: 'splash', x: round1(p.x) })
+        events.push({ t: tick, k: 'splash', x: round1(p.x), s: p.side })
         return false
       }
       if (p.x < -12 || p.x > W + 12 || p.y > H + 4) return false
-      const struck = units.findIndex((u, index) => u.alive && !(index === p.owner && p.age < 0.25) && Math.hypot(u.x - p.x, u.y - 1 - p.y) < UNIT_HIT)
+      const struck = units.findIndex((u, index) => u.alive && !(index === p.owner && p.age < 0.25) && hitsUnit(u.x, u.y, p.x, p.y))
       const ground = terrain.solid(p.x, p.y)
       if (struck < 0 && !ground) continue
       if ((p.kind === 'grenade' || p.kind === 'dynamite') && struck < 0) {
@@ -213,11 +223,11 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
     p.x += p.vx * STEP
     p.y += p.vy * STEP
     if (p.y >= water) {
-      events.push({ t: tick, k: 'splash', x: round1(p.x) })
+      events.push({ t: tick, k: 'splash', x: round1(p.x), s: p.side })
       return false
     }
     if (p.x < -12 || p.x > W + 12 || p.y > H + 4) return false
-    const hit = terrain.solid(p.x, p.y) || units.some(u => u.alive && Math.hypot(u.x - p.x, u.y - 1 - p.y) < UNIT_HIT)
+    const hit = terrain.solid(p.x, p.y) || units.some(u => u.alive && hitsUnit(u.x, u.y, p.x, p.y))
     if (!hit) return true
     burst(p.x, p.y, WEAPONS.cluster.bombletRadius, WEAPONS.cluster.bombletDamage, p.side)
     return false
@@ -253,7 +263,7 @@ export function simulate ({ terrain, units: start, shots, wind, water, random = 
       p.rest = false
     }
     units.forEach((u, index) => {
-      if (!u.alive || Math.abs(u.x - p.x) > FLAME_REACH || p.y < u.y - 3 || p.y > u.y + 0.8) return
+      if (!u.alive || Math.abs(u.x - p.x) > FLAME_REACH || p.y < u.y - BODY_HIGH || p.y > u.y + 0.8) return
       burning.set(index, (burning.get(index) || 0) + WEAPONS.molotov.burn * STEP)
       burnedBy.set(index, p.side)
     })

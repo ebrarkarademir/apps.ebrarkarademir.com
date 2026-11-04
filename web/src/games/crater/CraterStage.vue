@@ -9,7 +9,7 @@ import { stepParticles } from '../ascii/physics'
 import { sound } from '../ascii/sound'
 import { haptics } from '../ascii/haptics'
 import { createTerrain, W } from './terrain'
-import { STEP, SAMPLE, MAX_WALK, WALK_SPEED, WEAPON_IDS, WEAPONS, KINDS, launch, previewArc } from './physics'
+import { STEP, SAMPLE, MAX_WALK, WALK_SPEED, WEAPON_IDS, WEAPONS, KINDS, SHOULDER, GUN, launch, previewArc } from './physics'
 import { createRenderer, SIDE_COLORS } from './renderer'
 import { weaponIcon } from './pixel'
 import * as fx from './effects'
@@ -70,6 +70,7 @@ const ui = reactive({
   fired: false,
   seconds: 0,
   walked: 0,
+  charging: false, // FIRE (or Space) is held down: the power swings up and down until it's let go
   strip: false, // the strip with the whole map is along the top
   feed: [], // who took out whom: { id, killer (side or -1), victim (side), at }
   pop: null // { text, color, at }: this player took one out
@@ -185,11 +186,95 @@ function fire () {
   if (!canAct() || ui.selected < 0) return
   if (left(ui.weapon) <= 0) ui.weapon = 'shell'
   ui.fired = true
+  ui.charging = false
+  charge.holding = false
   walk.dir = 0
+  // Remembered, to show next turn as a guide: the aim, and where it lands
+  lastShots[ui.selected] = { angle: ui.angle, power: ui.power, weapon: ui.weapon, land: null }
+  firedUnit = ui.selected
+  firedTurn = props.turn
   sound.play('fire')
   haptics.buzz('tap')
   emit('fire', { unit: ui.selected, x: Math.round(walk.x * 100) / 100, y: walk.y, angle: ui.angle, power: ui.power, weapon: ui.weapon, turn: props.turn })
 }
+
+// ---------- Aiming and power ----------
+
+// Holding FIRE (or Space) charges: after a moment the power climbs from nothing to full and back
+// again, over and over, and letting go fires at whatever it's reached. A quick tap fires at the
+// power already set.
+const CHARGE_DELAY = 0.18 // seconds held before it counts as charging
+const CHARGE_TIME = 1.3 // seconds from nothing to full
+const charge = { holding: false, at: 0 }
+
+function startCharge () {
+  if (!canAct() || ui.selected < 0 || charge.holding) return
+  charge.holding = true
+  charge.at = clock
+}
+
+function endCharge () {
+  if (!charge.holding) return
+  charge.holding = false
+  ui.charging = false
+  fire()
+}
+
+function cancelCharge () {
+  charge.holding = false
+  ui.charging = false
+}
+
+function stepCharge () {
+  if (!charge.holding) return
+  if (!canAct()) {
+    cancelCharge()
+    return
+  }
+  const held = clock - charge.at
+  if (held < CHARGE_DELAY) return
+  if (!ui.charging) sound.play('tock')
+  ui.charging = true
+  const k = ((held - CHARGE_DELAY) / CHARGE_TIME) % 2
+  ui.power = Math.max(0.05, k <= 1 ? k : 2 - k)
+}
+
+// Raise or lower the aim, whichever way the unit faces
+function elevate (delta) {
+  const facingRight = Math.cos(ui.angle) >= 0
+  const elevation = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2, (facingRight ? ui.angle : Math.PI - ui.angle) + delta))
+  ui.angle = facingRight ? elevation : Math.PI - elevation
+}
+
+const setPower = (power) => { ui.power = Math.max(0.05, Math.min(1, power)) }
+
+// The fine-aim buttons: a press moves the angle a degree (or the power a step), and held, they
+// keep going
+const NUDGE_REPEAT = 0.35 // seconds held before it keeps going
+const nudge = { kind: null, dir: 0, at: 0 }
+
+function startNudge (kind, dir) {
+  sound.unlock()
+  if (!canAct()) return
+  Object.assign(nudge, { kind, dir, at: clock })
+  if (kind === 'angle') elevate(dir * (Math.PI / 180))
+  else setPower(ui.power + dir * 0.01)
+}
+
+function stopNudge () {
+  nudge.kind = null
+}
+
+function stepNudge (dt) {
+  if (!nudge.kind || !canAct() || clock - nudge.at < NUDGE_REPEAT) return
+  if (nudge.kind === 'angle') elevate(nudge.dir * 0.6 * dt)
+  else setPower(ui.power + nudge.dir * 0.35 * dt)
+}
+
+// The last shot from each of this player's units, by unit: its aim, and where it landed
+let lastShots = {}
+let firedUnit = -1
+let firedTurn = 0
 
 // What's left of a weapon for this player: Infinity for the shell
 const left = (id) => (WEAPONS[id].ammo ? props.ammo[props.mySide]?.[id] ?? 0 : Infinity)
@@ -265,10 +350,10 @@ function happen (event, frame) {
     sound.play('fire')
     if (reduceMotion) return
     // The bang at the gun, the way the shot left it
-    const sy = u.y - 1.9
+    const sy = u.y - SHOULDER
     const away = frameAt(STEP * SAMPLE * 2).shots.find(s => s.side === side)
     const angle = away ? Math.atan2(-(away.y - sy), away.x - u.x) : (u.x > W / 2 ? Math.PI - 0.6 : 0.6)
-    fx.muzzle(particles, u.x + Math.cos(angle) * 1.8, sy - Math.sin(angle) * 1.8, angle)
+    fx.muzzle(particles, u.x + Math.cos(angle) * GUN, sy - Math.sin(angle) * GUN, angle)
   } else if (event.k === 'boom') {
     const removed = display.carve(event.x, event.y, event.r)
     applied++
@@ -283,8 +368,8 @@ function happen (event, frame) {
     const u = unitAt(frame, event.u)
     flashUntil[event.u] = clock + 0.25
     sound.play('hit')
-    rise(`-${event.n}`, u.x, u.y - 4, colorOf(props.units[event.u]?.side ?? 0))
-    if (!reduceMotion) fx.hit(particles, u.x, u.y - 1.8)
+    rise(`-${event.n}`, u.x, u.y - 6, colorOf(props.units[event.u]?.side ?? 0))
+    if (!reduceMotion) fx.hit(particles, u.x, u.y - 2.4)
   } else if (event.k === 'die') {
     const u = unitAt(frame, event.u)
     const victim = props.units[event.u]?.side ?? 0
@@ -292,7 +377,7 @@ function happen (event, frame) {
     haptics.buzz('crash')
     rise(event.why === 'water' ? '~blub~' : 'x_x', u.x, Math.min(u.y, props.water) - 3, colorOf(victim), 1.6)
     noteKill(event.by ?? -1, victim)
-    if (!reduceMotion && event.why !== 'water') fx.knockOut(particles, u.x, u.y - 1.6, colorOf(victim))
+    if (!reduceMotion && event.why !== 'water') fx.knockOut(particles, u.x, u.y - 2.4, colorOf(victim))
     // This player's last unit: out of the round, watching the rest
     // (the replay is past this event, so diedBy covers the units still to go down)
     if (victim === props.mySide && !props.units.some((v, i) => v.side === victim && i !== event.u && (v.alive || diedBy(i)))) outAt = clock
@@ -318,6 +403,15 @@ function noteKill (by, victim) {
 }
 
 let outAt = -Infinity
+
+// Where this player's shot first came down in a turn's recording: a burst, or the sea. Read as
+// the recording comes, so it's known even on a screen that skips the playback.
+function noteLanding (replay) {
+  const last = lastShots[firedUnit]
+  if (!last || last.land || replay.turn !== firedTurn) return
+  const first = replay.events.find(e => (e.k === 'boom' || e.k === 'splash') && e.s === props.mySide)
+  if (first) last.land = { x: first.x, y: first.k === 'boom' ? first.y : props.water }
+}
 
 function stepReplay (dt) {
   if (!play) return null
@@ -352,20 +446,19 @@ function after (dt) {
   clock += dt
   lastDt = dt
   currentFrame = stepReplay(dt)
-  // Held keys: arrows walk and aim, W and S set the power
+  // Held keys: arrows walk and aim, W and S set the power; with Shift, aiming is slow and fine
   if (canAct()) {
     const left = keys.has('ArrowLeft') || keys.has('KeyA')
     const right = keys.has('ArrowRight') || keys.has('KeyD')
     if (left || right) walk.dir = left === right ? 0 : left ? -1 : 1
-    const facingRight = Math.cos(ui.angle) >= 0
+    const fine = keys.has('ShiftLeft') || keys.has('ShiftRight') ? 0.2 : 1
     const turn = (keys.has('ArrowUp') ? 1 : 0) - (keys.has('ArrowDown') ? 1 : 0)
-    if (turn) {
-      const elevation = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2, (facingRight ? ui.angle : Math.PI - ui.angle) + turn * 1.1 * dt))
-      ui.angle = facingRight ? elevation : Math.PI - elevation
-    }
-    const charge = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0)
-    if (charge) ui.power = Math.max(0.05, Math.min(1, ui.power + charge * 0.6 * dt))
+    if (turn) elevate(turn * 1.1 * fine * dt)
+    const more = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0)
+    if (more && !ui.charging) setPower(ui.power + more * 0.6 * fine * dt)
   }
+  stepCharge()
+  stepNudge(dt)
   stepWalk(dt)
   liveClock += dt
   if (playing.value && props.phase === 'aim' && ui.selected >= 0 && liveClock >= LIVE_EVERY) {
@@ -401,7 +494,7 @@ function hurtSmoke (dt) {
   for (const u of shownUnits) {
     if (!u.alive || u.hp >= 50) continue
     const burning = u.hp < 25
-    if (Math.random() < (burning ? 0.9 : 0.55)) fx.hurtSmoke(particles, u.x, u.y - 3.2, props.wind, burning)
+    if (Math.random() < (burning ? 0.9 : 0.55)) fx.hurtSmoke(particles, u.x, u.y - 4.4, props.wind, burning)
   }
 }
 
@@ -463,8 +556,26 @@ function render () {
   let aim = null
   if (canAct() && ui.selected >= 0) {
     const shot = launch(walk.x, walk.y, ui.angle, ui.power, ui.weapon)
-    aim = { points: previewArc(walk.x, walk.y, ui.angle, ui.power, ui.weapon), tip: { x: shot.x + Math.cos(ui.angle) * 2.5, y: shot.y - Math.sin(ui.angle) * 2.5 }, color: colorIndex(props.mySide) }
+    // The last shot from this unit, faint, and where it landed, to aim from
+    const last = lastShots[ui.selected]
+    const moved = last && (Math.abs(last.angle - ui.angle) > 0.004 || Math.abs(last.power - ui.power) > 0.004)
+    aim = {
+      points: previewArc(walk.x, walk.y, ui.angle, ui.power, ui.weapon),
+      tip: { x: shot.x + Math.cos(ui.angle) * 2, y: shot.y - Math.sin(ui.angle) * 2 },
+      color: colorIndex(props.mySide),
+      from: { x: walk.x, y: walk.y },
+      angle: ui.angle,
+      degrees: degrees.value,
+      power: ui.power,
+      charging: ui.charging,
+      ghost: moved ? previewArc(walk.x, walk.y, last.angle, last.power, last.weapon) : null,
+      mark: last?.land || null
+    }
   }
+  // The band while aiming by dragging
+  const band = drag && drag.active && !drag.pan && canAct()
+    ? { x0: drag.x, y0: drag.y, x1: drag.cx, y1: drag.cy, color: colorIndex(props.mySide), power: ui.power }
+    : null
   renderer.draw({
     terrain: display,
     // Scorch round the craters opened so far
@@ -476,6 +587,7 @@ function render () {
     units,
     shots: shotsShown.map(s => ({ ...s, color: s.side >= 0 ? colorIndex(s.side) : -1 })),
     aim,
+    drag: band,
     particles,
     texts: [...texts, ...banners(units)],
     flash,
@@ -505,7 +617,7 @@ function banners (units) {
   if (playing.value && props.turn === 1 && props.phase === 'aim' && since < YOU_SECONDS) {
     const alpha = Math.min(1, (YOU_SECONDS - since) / 0.5)
     for (const u of units) {
-      if (u.alive && u.side === props.mySide) list.push({ text: upperT(props.t.gameYou), x: u.x, y: u.y - 10.5, size: 1.3, color: colorOf(u.side), display: true, min: 12, alpha })
+      if (u.alive && u.side === props.mySide) list.push({ text: upperT(props.t.gameYou), x: u.x, y: u.y - 13, size: 1.3, color: colorOf(u.side), display: true, min: 12, alpha })
     }
   }
   // Out of the round: a big word for a moment, then out of the way so the rest can be watched
@@ -547,7 +659,7 @@ function onPointerDown (event) {
   }
   if (!canAct()) return
   const at = renderer.toMap(p.x, p.y)
-  const touched = mine.value.find(i => Math.abs(props.units[i].x - at.x) < 2.2 && at.y > props.units[i].y - 4.5 && at.y < props.units[i].y + 1)
+  const touched = mine.value.find(i => Math.abs(props.units[i].x - at.x) < 2.2 && at.y > props.units[i].y - 5.5 && at.y < props.units[i].y + 1)
   if (touched !== undefined && touched !== ui.selected) {
     selectUnit(touched)
     sound.play('tock')
@@ -575,8 +687,12 @@ function onPointerMove (event) {
   const len = Math.hypot(dx, dy)
   if (len < 8) return
   const rect = arena.value.getBoundingClientRect()
+  cancelCharge()
+  drag.active = true
+  drag.cx = p.x
+  drag.cy = p.y
   ui.angle = Math.atan2(-dy, dx)
-  ui.power = Math.max(0.05, Math.min(1, len / (Math.min(rect.width, rect.height) * AIM_DRAG)))
+  setPower(len / (Math.min(rect.width, rect.height) * AIM_DRAG))
 }
 
 function onPointerUp (event) {
@@ -595,10 +711,14 @@ function onKeyDown (event) {
   if (event.ctrlKey || event.metaKey || event.altKey) return
   sound.unlock()
   if (event.target.closest?.('button') && (event.code === 'Enter' || event.code === 'Space')) return
+  if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') keys.add(event.code)
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(event.code)) {
     event.preventDefault()
     keys.add(event.code)
-  } else if ((event.code === 'Space' || event.code === 'Enter') && !event.repeat) {
+  } else if (event.code === 'Space') {
+    event.preventDefault()
+    if (!event.repeat) startCharge()
+  } else if (event.code === 'Enter' && !event.repeat) {
     event.preventDefault()
     fire()
   } else if (KEY_WEAPONS[event.code]) {
@@ -612,11 +732,30 @@ function onKeyDown (event) {
 function releaseKeys () {
   keys.clear()
   walk.dir = 0
+  cancelCharge()
+  stopNudge()
 }
 
 function onKeyUp (event) {
   keys.delete(event.code)
+  if (event.code === 'Space') endCharge()
   if (['ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'].includes(event.code)) walk.dir = 0
+}
+
+// The FIRE button: held, it charges (see startCharge); a tap fires; from the keyboard it fires
+function onFireDown (event) {
+  sound.unlock()
+  event.currentTarget.setPointerCapture?.(event.pointerId)
+  startCharge()
+}
+
+function onFireUp (event) {
+  endCharge()
+  if (event.pointerType !== 'touch') event.currentTarget.blur()
+}
+
+function onFireClick (event) {
+  if (!event.detail) fire()
 }
 
 function press (event, run) {
@@ -680,11 +819,14 @@ watch(() => props.seed, () => {
   ui.feed = []
   ui.pop = null
   outAt = -Infinity
+  lastShots = {}
+  firedUnit = -1
 })
 let playedTurn = 0
 watch(() => props.replay, (replay) => {
   if (!replay || replay.turn === playedTurn) return
   playedTurn = replay.turn
+  noteLanding(replay)
   startReplay(replay)
 })
 watch(() => [props.turn, props.phase], ([turn, phase], before) => {
@@ -733,7 +875,7 @@ onMounted(() => {
   }
   cam.x = Math.max(0, (playing.value && ui.selected >= 0 ? walk.x : W / 2) - (renderer.visible || W) / 2)
   stopLoop = startLoop({ step: STEP, tick: () => {}, after, draw: render })
-  if (import.meta.env.DEV) window.__crater = { ui, walk, fire, get display () { return display } }
+  if (import.meta.env.DEV) window.__crater = { ui, walk, fire, get display () { return display }, get lastShots () { return lastShots } }
 })
 
 onUnmounted(() => {
@@ -830,13 +972,19 @@ onUnmounted(() => {
             <span class="count">{{ left(id) === Infinity ? '∞' : left(id) }}</span>
           </button>
         </div>
+        <div class="aim-pad" role="group" :aria-label="t.craterAimPad">
+          <button type="button" class="nudge" :aria-label="t.craterAngleUp" @pointerdown="startNudge('angle', 1)" @pointerup="stopNudge" @pointerleave="stopNudge" @pointercancel="stopNudge" @click="$event.detail || startNudge('angle', 1)">&#9650;</button>
+          <button type="button" class="nudge" :aria-label="t.craterAngleDown" @pointerdown="startNudge('angle', -1)" @pointerup="stopNudge" @pointerleave="stopNudge" @pointercancel="stopNudge" @click="$event.detail || startNudge('angle', -1)">&#9660;</button>
+          <button type="button" class="nudge" :aria-label="t.craterPowerDown" @pointerdown="startNudge('power', -1)" @pointerup="stopNudge" @pointerleave="stopNudge" @pointercancel="stopNudge" @click="$event.detail || startNudge('power', -1)">&minus;</button>
+          <button type="button" class="nudge" :aria-label="t.craterPowerUp" @pointerdown="startNudge('power', 1)" @pointerup="stopNudge" @pointerleave="stopNudge" @pointercancel="stopNudge" @click="$event.detail || startNudge('power', 1)">+</button>
+        </div>
         <div class="readout" aria-live="off">
-          <span class="angle">{{ degrees }}°</span>
+          <span class="angle">{{ degrees }}° <span class="pct">{{ Math.round(ui.power * 100) }}%</span></span>
           <span class="power" role="meter" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="Math.round(ui.power * 100)" :aria-label="`${Math.round(ui.power * 100)}%`">
             <span v-for="k in 10" :key="k" :class="['seg', { on: k <= Math.round(ui.power * 10), hot: k > 7 }]"></span>
           </span>
         </div>
-        <button type="button" class="fire" @click="press($event, fire)">{{ t.craterFire }}</button>
+        <button type="button" :class="['fire', { 'is-charging': ui.charging }]" :title="t.craterFireHint" @pointerdown="onFireDown" @pointerup="onFireUp" @pointercancel="cancelCharge" @click="onFireClick">{{ ui.charging ? `${Math.round(ui.power * 100)}%` : t.craterFire }}</button>
       </div>
       <p v-else-if="playing && phase === 'aim' && mine.length" class="controls-note">{{ t.craterLocked }}</p>
       <p v-else class="controls-note"></p>
@@ -1161,6 +1309,25 @@ onUnmounted(() => {
 .weapon:disabled {
   opacity: 0.35;
 }
+.aim-pad {
+  display: grid;
+  grid-template-columns: repeat(2, 1.9rem);
+  grid-template-rows: repeat(2, 1.3rem);
+  gap: 0.3rem;
+}
+.controls .nudge {
+  font-size: 0.95rem;
+  line-height: 1;
+  touch-action: none;
+}
+.readout .pct {
+  color: var(--ui-gold);
+}
+.controls .fire.is-charging {
+  min-width: 5.5rem;
+  background: #ff8020;
+  box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--ui-gold), inset 2px 2px 0 #ffc040, inset -2px -4px 0 #a04010;
+}
 .readout {
   display: flex;
   flex-direction: column;
@@ -1205,11 +1372,24 @@ onUnmounted(() => {
   .weapon .label {
     display: none;
   }
-  /* A phone held upright: walking and the aim readout on one row, the weapons and fire under */
+  .key {
+    width: 2.4rem;
+  }
+  /* The gauge by the soldier shows the power; the row has no room for a second one */
+  .readout .power {
+    display: none;
+  }
+  /* A phone held upright: walking, the aim readout and the fine-aim buttons on one row, the
+     weapons and fire under them */
   .controls {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "walk readout" "weapons fire";
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "walk readout pad" "weapons weapons fire";
+  }
+  .controls .aim-pad {
+    grid-area: pad;
+    grid-template-columns: repeat(4, 1.9rem);
+    grid-template-rows: 2.1rem;
   }
   .controls .walk {
     grid-area: walk;

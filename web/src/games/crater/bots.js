@@ -1,5 +1,5 @@
 import { W, H } from './terrain'
-import { GRAVITY, WIND_MAX, WEAPONS, launch } from './physics'
+import { GRAVITY, WIND_MAX, WEAPONS, launch, hitsUnit } from './physics'
 
 // Bots for Crater Duel. Only the host plays one: when its turn comes it picks one of its units
 // and an enemy to aim at, then tries a spread of angles and powers, flying each shot through
@@ -14,7 +14,6 @@ export const LEVELS = {
 
 const DT = 1 / 30
 const MAX_FLIGHT = 7 // seconds
-const UNIT_HIT = 1.4
 const ANGLES = 56
 const POWERS = 22
 
@@ -43,7 +42,7 @@ function flight (ground, units, shooter, x, y, angle, power, weapon, wind, water
     for (let i = 0; i < units.length; i++) {
       const u = units[i]
       if (!u.alive || (i === shooter && t < 0.25)) continue
-      if (Math.hypot(u.x - px, u.y - 1 - py) < UNIT_HIT) return { x: px, y: py }
+      if (hitsUnit(u.x, u.y, px, py)) return { x: px, y: py }
     }
   }
   return null
@@ -82,7 +81,7 @@ export function planShot ({ ground, units, side, wind, water, ammo, level = 'nor
 
   const reach = WEAPONS[weapon].radius + 3
   const aimX = target.x
-  const aimY = target.y - 1
+  const aimY = target.y - 2
   let choice = null
   for (let a = 0; a < ANGLES; a++) {
     const angle = 0.12 + (a / (ANGLES - 1)) * (Math.PI - 0.24)

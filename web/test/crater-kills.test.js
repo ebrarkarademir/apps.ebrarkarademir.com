@@ -29,3 +29,12 @@ test('a unit that loses health but stays up has no death to credit', () => {
   assert.ok(!result.replay.events.some(e => e.k === 'die' && e.u === 1))
 })
 
+
+test('a shot hits a unit anywhere on its body, feet to head, and not beside it', async () => {
+  const { hitsUnit } = await import('../src/games/crater/physics.js')
+  assert.ok(hitsUnit(10, 30, 10, 29.5), 'at its feet')
+  assert.ok(hitsUnit(10, 30, 10.8, 27.5), 'at its middle')
+  assert.ok(hitsUnit(10, 30, 10, 26), 'at its head')
+  assert.ok(!hitsUnit(10, 30, 12, 28), 'beside it')
+  assert.ok(!hitsUnit(10, 30, 10, 24.4), 'over its head')
+})
