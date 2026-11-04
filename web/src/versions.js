@@ -83,7 +83,10 @@ export const SITE = [
   { v: '1.49.0', date: '2026-11-04', commit: 'c5a38dc', note: 'Blackjack: the man in the suit is animated' },
   { v: '1.49.1', date: '2026-11-04', commit: '3df5a60', note: 'Blackjack: the man in the suit plays his own frames' },
   { v: '1.50.0', date: '2026-11-04', commit: 'f78504d', note: 'Everyone’s picture is the man in the suit' },
-  { v: '1.51.0', date: '2026-11-04', note: 'Crater Duel gets Tank’s match rounds, kill list and colors; version numbers for the site and every game' }
+  { v: '1.51.0', date: '2026-11-04', commit: '6b68d34', note: 'Crater Duel gets Tank’s match rounds, kill list and colors; version numbers for the site and every game' },
+  { v: '1.52.0', date: '2026-11-04', commit: 'c486f59', note: 'Crater Duel in glowing vector graphics' },
+  { v: '1.52.1', date: '2026-11-04', commit: 'ae9da2f', note: 'Crater Duel back to its earlier look' },
+  { v: '1.53.0', date: '2026-11-04', note: 'Crater Duel in daylight pixel art, with pixel panels and controls' }
 ]
 
 export const GAMES = {
@@ -128,7 +131,10 @@ export const GAMES = {
     { v: '1.2.0', date: '2026-11-01', commit: '221a3ec', note: 'Bots, a solo mode, up to six sides online' },
     { v: '1.3.0', date: '2026-11-01', commit: 'fae9042', note: 'Full screen' },
     { v: '1.3.1', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
-    { v: '1.4.0', date: '2026-11-04', note: 'From Tank: rounds in a match, a kill list, one color per player, YOU at the start, Eliminated that fades so you can watch, smoke and fire on hurt units, kills in the results' }
+    { v: '1.4.0', date: '2026-11-04', commit: '6b68d34', note: 'From Tank: rounds in a match, a kill list, one color per player, YOU at the start, Eliminated that fades so you can watch, smoke and fire on hurt units, kills in the results' },
+    { v: '2.0.0', date: '2026-11-04', commit: 'c486f59', note: 'Glowing vector graphics' },
+    { v: '2.0.1', date: '2026-11-04', commit: 'ae9da2f', note: 'Back to the earlier look' },
+    { v: '3.0.0', date: '2026-11-04', note: 'Daylight pixel art: skies with a sun and hills, a skyline or a cave wall; grass on banded, outlined dirt, brick rock, scorched craters; pixel soldiers, shots and explosions; a windsock; pixel panels, weapon icons and a big FIRE button' }
   ],
   race: [
     { v: '1.0.0', date: '2026-11-02', commit: '3022633', note: 'First version, solo against bots or online' }

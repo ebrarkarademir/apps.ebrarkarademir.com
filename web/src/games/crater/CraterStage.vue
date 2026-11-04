@@ -3,15 +3,16 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
 import FullscreenButton from '../ascii/FullscreenButton.vue'
 import { useFullscreen } from '../ascii/fullscreen'
-import { GREEN, DIM, watchFonts } from '../ascii/paint'
+import { GREEN, watchFonts } from '../ascii/paint'
 import { startLoop } from '../ascii/loop'
 import { stepParticles } from '../ascii/physics'
-import { sparks } from '../ascii/fx'
 import { sound } from '../ascii/sound'
 import { haptics } from '../ascii/haptics'
 import { createTerrain, W } from './terrain'
 import { STEP, SAMPLE, MAX_WALK, WALK_SPEED, WEAPON_IDS, WEAPONS, KINDS, launch, previewArc } from './physics'
 import { createRenderer, SIDE_COLORS } from './renderer'
+import { weaponIcon } from './pixel'
+import * as fx from './effects'
 
 // The full-screen match. In the aiming part of a turn this player picks a unit, walks it,
 // aims by dragging (pull back, like a slingshot) and fires; the shot goes to the host, which
@@ -57,10 +58,7 @@ const YOU_SECONDS = 2.5 // YOU shows over your units this long into a round
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 const WEAPON_KEYS = { shell: 'craterShell', grenade: 'craterGrenade', cluster: 'craterCluster', molotov: 'craterMolotov', dynamite: 'craterDynamite' }
-const WEAPON_ICONS = { shell: 'o', grenade: '@', cluster: '*', molotov: '!', dynamite: '|' }
 const LEVEL_KEYS = { hills: 'craterHills', mountain: 'craterMountain', valley: 'craterValley', islands: 'craterIslands', plateaus: 'craterPlateaus', canyon: 'craterCanyon', caverns: 'craterCaverns', sky: 'craterSky', city: 'craterCity', cheese: 'craterCheese' }
-const FIRE_COLORS = ['#ffe680', '#ffb000', '#ff6a2a']
-const SMOKE = '#7f8f7f'
 
 const arena = ref(null)
 const canvas = ref(null)
@@ -263,8 +261,14 @@ function rise (text, x, y, color, size = 1.8) {
 function happen (event, frame) {
   if (event.k === 'fire') {
     const u = unitAt(frame, event.u)
+    const side = props.units[event.u]?.side ?? 0
     sound.play('fire')
-    if (!reduceMotion) sparks(particles, u.x, u.y - 1.5, { count: 6, speed: 10, life: 0.3 })
+    if (reduceMotion) return
+    // The bang at the gun, the way the shot left it
+    const sy = u.y - 1.9
+    const away = frameAt(STEP * SAMPLE * 2).shots.find(s => s.side === side)
+    const angle = away ? Math.atan2(-(away.y - sy), away.x - u.x) : (u.x > W / 2 ? Math.PI - 0.6 : 0.6)
+    fx.muzzle(particles, u.x + Math.cos(angle) * 1.8, sy - Math.sin(angle) * 1.8, angle)
   } else if (event.k === 'boom') {
     const removed = display.carve(event.x, event.y, event.r)
     applied++
@@ -273,35 +277,14 @@ function happen (event, frame) {
     if (reduceMotion) return
     flash = Math.max(flash, 0.5 + event.r * 0.06)
     shake = Math.max(shake, 0.2 + event.r * 0.07)
-    sparks(particles, event.x, event.y, { count: 10 + event.r * 2, speed: 18, life: 0.5 })
-    // A fireball, then smoke rising from it
-    for (let k = 0; k < 8 + event.r * 3; k++) {
-      const a = Math.random() * Math.PI * 2
-      const v = Math.random() * event.r * 3.5
-      particles.push({ ch: ['@', '#', '*', 'O'][k % 4], x: event.x, y: event.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, drag: 3, life: 0.35 + Math.random() * 0.35, ttl: 0.7, color: FIRE_COLORS[k % 3], size: 1.4 + event.r * 0.12 })
-    }
-    for (let k = 0; k < 4 + event.r; k++) {
-      particles.push({ ch: ['o', 'O', '(', ')'][k % 4], x: event.x + (Math.random() * 2 - 1) * event.r * 0.6, y: event.y - Math.random() * event.r * 0.5, vx: (Math.random() * 2 - 1) * 2, vy: -3 - Math.random() * 3, life: 1.2 + Math.random() * 0.8, ttl: 2, color: SMOKE, size: 1.3 + Math.random(), alpha: 0.6 })
-    }
-    // The ground it blew away flies out as its own characters
-    const chars = ['#', '%', ':', '"', '.']
-    for (let i = 0; i < removed.length && i < 70; i += 2 * Math.max(1, Math.floor(removed.length / 70))) {
-      const x = removed[i] + 0.5
-      const y = removed[i + 1] + 0.5
-      const dx = x - event.x
-      const dy = y - event.y
-      const d = Math.hypot(dx, dy) || 1
-      particles.push({ ch: chars[i % chars.length], x, y, vx: (dx / d) * (10 + Math.random() * 18), vy: (dy / d) * 10 - 12 - Math.random() * 14, gravity: 40, drag: 0.6, life: 0.9 + Math.random() * 0.6, ttl: 1.5, color: i % 3 ? DIM : GREEN, spin: (Math.random() * 2 - 1) * 8, size: 1.3 })
-    }
-    for (let k = 0; k < 14; k++) {
-      const a = (k / 14) * Math.PI * 2
-      particles.push({ ch: 'o', x: event.x, y: event.y, vx: Math.cos(a) * event.r * 6, vy: Math.sin(a) * event.r * 6, drag: 5, life: 0.35, ttl: 0.35, color: '#ffe680', size: 1.2 })
-    }
+    // A ball of fire burning down to smoke, sparks, and the ground it blew away flying out
+    fx.blast(particles, event.x, event.y, event.r, removed, renderer?.dirt)
   } else if (event.k === 'dmg') {
     const u = unitAt(frame, event.u)
     flashUntil[event.u] = clock + 0.25
     sound.play('hit')
     rise(`-${event.n}`, u.x, u.y - 4, colorOf(props.units[event.u]?.side ?? 0))
+    if (!reduceMotion) fx.hit(particles, u.x, u.y - 1.8)
   } else if (event.k === 'die') {
     const u = unitAt(frame, event.u)
     const victim = props.units[event.u]?.side ?? 0
@@ -309,16 +292,16 @@ function happen (event, frame) {
     haptics.buzz('crash')
     rise(event.why === 'water' ? '~blub~' : 'x_x', u.x, Math.min(u.y, props.water) - 3, colorOf(victim), 1.6)
     noteKill(event.by ?? -1, victim)
+    if (!reduceMotion && event.why !== 'water') fx.knockOut(particles, u.x, u.y - 1.6, colorOf(victim))
     // This player's last unit: out of the round, watching the rest
     // (the replay is past this event, so diedBy covers the units still to go down)
     if (victim === props.mySide && !props.units.some((v, i) => v.side === victim && i !== event.u && (v.alive || diedBy(i)))) outAt = clock
   } else if (event.k === 'bounce') {
     sound.play('bounce')
+    if (!reduceMotion) fx.knock(particles, event.x, event.y)
   } else if (event.k === 'splash') {
     sound.play('board', 0.4)
-    if (!reduceMotion) {
-      for (let k = 0; k < 8; k++) particles.push({ ch: '~', x: event.x, y: props.water - 0.5, vx: (Math.random() * 2 - 1) * 8, vy: -10 - Math.random() * 10, gravity: 40, life: 0.6, ttl: 0.6, color: '#3fd0ff', size: 1.2 })
-    }
+    if (!reduceMotion) fx.splash(particles, event.x, props.water, renderer?.sea)
   }
 }
 
@@ -346,12 +329,9 @@ function stepReplay (dt) {
   shotsShown = frame.shots
   if (!reduceMotion && Math.floor(clock * 30) !== Math.floor((clock - dt) * 30)) {
     for (const s of frame.shots) {
-      if (KINDS[s.kind] === 'flame') {
-        if (Math.random() < 0.25) particles.push({ ch: '.', x: s.x + (Math.random() - 0.5), y: s.y - 1, vx: 0, vy: -4, life: 0.6, ttl: 0.6, color: SMOKE, size: 1, alpha: 0.6 })
-        continue
-      }
-      const ember = KINDS[s.kind] === 'molotov'
-      particles.push({ ch: ember ? '*' : '.', x: s.x, y: s.y, vx: 0, vy: ember ? -1 : -0.5, life: 0.6, ttl: 0.6, color: ember ? FIRE_COLORS[Math.floor(Math.random() * 3)] : SMOKE, size: 1.2, alpha: 0.8 })
+      const kind = KINDS[s.kind]
+      if (kind === 'flame' && Math.random() > 0.3) continue
+      fx.trail(particles, s.x, s.y, kind)
     }
   }
   if (play.time >= play.replay.duration + 0.3 && play.next >= events.length) {
@@ -421,8 +401,7 @@ function hurtSmoke (dt) {
   for (const u of shownUnits) {
     if (!u.alive || u.hp >= 50) continue
     const burning = u.hp < 25
-    if (Math.random() < (burning ? 0.9 : 0.55)) particles.push({ ch: ['o', 'O', '.'][Math.floor(Math.random() * 3)], x: u.x + (Math.random() - 0.5) * 1.2, y: u.y - 3, vx: (Math.random() - 0.5) * 1.5 + props.wind * 2, vy: -2.5 - Math.random() * 2, life: 1 + Math.random() * 0.6, ttl: 1.6, color: burning ? '#5f6a5f' : SMOKE, size: 1 + Math.random() * 0.6, alpha: burning ? 0.75 : 0.5 })
-    if (burning && Math.random() < 0.7) particles.push({ ch: ['^', '*', "'"][Math.floor(Math.random() * 3)], x: u.x + (Math.random() - 0.5) * 1.4, y: u.y - 1.6 - Math.random(), vx: (Math.random() - 0.5) * 1.5, vy: -3 - Math.random() * 2, life: 0.35 + Math.random() * 0.25, ttl: 0.6, color: FIRE_COLORS[Math.floor(Math.random() * 3)], size: 1.1 + Math.random() * 0.4 })
+    if (Math.random() < (burning ? 0.9 : 0.55)) fx.hurtSmoke(particles, u.x, u.y - 3.2, props.wind, burning)
   }
 }
 
@@ -488,7 +467,10 @@ function render () {
   }
   renderer.draw({
     terrain: display,
+    // Scorch round the craters opened so far
+    scorch: props.craters.slice(0, applied),
     water: props.water,
+    wind: props.wind,
     time: clock,
     camX: cam.x,
     units,
@@ -523,7 +505,7 @@ function banners (units) {
   if (playing.value && props.turn === 1 && props.phase === 'aim' && since < YOU_SECONDS) {
     const alpha = Math.min(1, (YOU_SECONDS - since) / 0.5)
     for (const u of units) {
-      if (u.alive && u.side === props.mySide) list.push({ text: upperT(props.t.gameYou), x: u.x, y: u.y - 8.5, size: 1.3, color: colorOf(u.side), display: true, min: 12, alpha })
+      if (u.alive && u.side === props.mySide) list.push({ text: upperT(props.t.gameYou), x: u.x, y: u.y - 10.5, size: 1.3, color: colorOf(u.side), display: true, min: 12, alpha })
     }
   }
   // Out of the round: a big word for a moment, then out of the way so the rest can be watched
@@ -533,8 +515,8 @@ function banners (units) {
   if (props.phase === 'aim' && since < 1.8) {
     const alpha = Math.min(1, (1.8 - since) / 0.5)
     const first = props.turn === 1
-    list.push({ text: upperT(first ? props.t.craterFight : fmt(props.t.craterTurn, { n: props.turn })), x: middle, y: 13, size: 3, color: GREEN, display: true, min: 24, alpha })
-    if (first) list.push({ text: upperT(props.t[LEVEL_KEYS[props.level]] || ''), x: middle, y: 18, size: 1.6, color: GREEN, display: true, min: 14, alpha: alpha * 0.8 })
+    list.push({ text: upperT(first ? props.t.craterFight : fmt(props.t.craterTurn, { n: props.turn })), x: middle, y: 13, size: 3, color: '#ffffff', display: true, min: 24, alpha })
+    if (first) list.push({ text: upperT(props.t[LEVEL_KEYS[props.level]] || ''), x: middle, y: 18, size: 1.6, color: '#ffd23a', display: true, min: 14, alpha: alpha * 0.8 })
     else if (props.sudden) list.push({ text: upperT(props.t.craterSeaRising), x: middle, y: 18, size: 1.5, color: '#3fd0ff', display: true, min: 13, alpha })
   }
   return list
@@ -663,17 +645,13 @@ const halves = computed(() => {
   return [teams.value.slice(0, n), teams.value.slice(n)]
 })
 const compact = computed(() => teams.value.length > 2)
-// The wind as a gauge out from the middle, five marks at full strength
-const windGauge = computed(() => {
+// The wind as arrows the way it blows, up to five at full strength
+const windArrows = computed(() => {
   const n = Math.round(Math.abs(props.wind) * 5)
-  const toLeft = props.wind < 0 ? ' '.repeat(5 - n) + '<'.repeat(n) : '     '
-  const toRight = props.wind > 0 ? '>'.repeat(n) + ' '.repeat(5 - n) : '     '
-  return toLeft + '|' + toRight
+  return n ? (props.wind < 0 ? '◀'.repeat(n) : '▶'.repeat(n)) : '-'
 })
-const powerBar = computed(() => {
-  const filled = Math.round(ui.power * 10)
-  return '#'.repeat(filled) + '.'.repeat(10 - filled)
-})
+// The weapon icons in this player's color
+const myColor = computed(() => colorOf(props.mySide >= 0 ? props.mySide : 0))
 const degrees = computed(() => {
   const elevation = Math.cos(ui.angle) >= 0 ? ui.angle : Math.PI - ui.angle
   return Math.round((elevation * 180) / Math.PI)
@@ -775,22 +753,27 @@ onUnmounted(() => {
       <FullscreenButton :t="t" @toggle="onFullClick" />
     </template>
 
-    <div class="relative flex-1 min-h-0 flex flex-col">
-      <!-- Every side's health, the clock and the wind; in full screen, the way out too -->
-      <div :class="['hud', { 'is-full': full }]">
-        <div v-for="(half, h) in halves" :key="h" :class="['group', h ? 'side-1 items-end' : 'side-0 items-start']">
-          <div v-for="team in half" :key="team.side" :class="['team', h ? 'text-right items-end' : 'items-start', { 'is-me': team.me, compact }]" :style="{ color: team.color }">
-            <span class="name truncate">{{ team.name }}<span v-if="team.fired && phase === 'aim'" class="ok"> [ok]</span></span>
-            <span class="pips" aria-hidden="true">
-              <span v-for="(hp, k) in team.units" :key="k" :class="['pip', { 'is-down': !hp }]"><span :style="{ width: hp + '%', background: team.color }"></span></span>
+    <div :class="['crater-ui relative flex-1 min-h-0 flex flex-col', { 'is-full': full }]">
+      <!-- Every side's health and the clock; in full screen, the way out too. The wind also blows
+           the sock at the top of the battlefield. -->
+      <div class="hud">
+        <div v-for="(half, h) in halves" :key="h" :class="['teams', h ? 'side-1' : 'side-0']">
+          <div v-for="team in half" :key="team.side" :class="['team', { 'is-me': team.me, compact }]">
+            <span class="chip" :style="{ background: team.color }" aria-hidden="true"></span>
+            <span class="who">
+              <span class="name truncate" :style="{ color: team.color }">{{ team.name }}</span>
+              <span class="bars" aria-hidden="true">
+                <span v-for="(hp, k) in team.units" :key="k" :class="['bar', { 'is-down': !hp }]"><span :style="{ width: hp + '%', background: hp < 25 ? '#ff4a3a' : team.color }"></span></span>
+              </span>
             </span>
+            <span v-if="team.fired && phase === 'aim'" class="ready">OK</span>
             <span class="sr-only">{{ team.hp }}</span>
           </div>
         </div>
-        <div class="center">
-          <span class="text-[10px] uppercase tracking-widest term-muted">{{ fmt(t.craterTurn, { n: turn }) }}</span>
-          <span :class="['font-display text-3xl leading-none tabular-nums', { 'term-blink': phase === 'aim' && ui.seconds <= 5 }]">{{ phase === 'aim' ? ui.seconds : '--' }}</span>
-          <span class="wind" :title="t.craterWind"><span class="term-muted">{{ t.craterWind }}</span> <span class="gauge">[{{ windGauge }}]</span></span>
+        <div class="clock">
+          <span class="turn">{{ fmt(t.craterTurn, { n: turn }) }}</span>
+          <span :class="['seconds', { hurry: phase === 'aim' && ui.seconds <= 5 }]">{{ phase === 'aim' ? ui.seconds : '--' }}</span>
+          <span class="wind" :title="t.craterWind">{{ t.craterWind }} <b>{{ windArrows }}</b></span>
         </div>
         <FullscreenButton v-if="full" :t="t" full class="exit-full" @toggle="onFullClick" />
       </div>
@@ -810,7 +793,7 @@ onUnmounted(() => {
           <li v-for="line in feedLines" :key="line.id">
             <template v-if="line.killer">
               <span class="who" :style="{ color: line.killer.color }">{{ line.killer.name }}</span>
-              <span class="arrow" :style="{ color: line.killer.color }" aria-hidden="true">-&gt;</span>
+              <span class="hit" aria-hidden="true">&#9658;</span>
               <span class="sr-only">{{ t.craterFeedTook }}</span>
               <span class="who" :style="{ color: line.victim.color }">{{ line.victim.name }}</span>
             </template>
@@ -820,41 +803,43 @@ onUnmounted(() => {
             </template>
           </li>
         </ol>
-        <p v-if="status" class="status" aria-live="polite">&gt; <span class="term-cursor">{{ status }}</span></p>
+        <p v-if="status" class="status" aria-live="polite">{{ status }}</p>
       </div>
 
       <!-- Walk, weapon, aim and fire -->
       <div v-if="showControls" class="controls">
-        <div class="walk flex gap-1.5">
-          <button type="button" class="term-icon-btn ctl" :aria-label="t.craterWalkLeft" @pointerdown="holdWalk(-1)" @pointerup="walk.dir = 0" @pointerleave="walk.dir = 0" @pointercancel="walk.dir = 0">&lt;</button>
-          <button type="button" class="term-icon-btn ctl" :aria-label="t.craterWalkRight" @pointerdown="holdWalk(1)" @pointerup="walk.dir = 0" @pointerleave="walk.dir = 0" @pointercancel="walk.dir = 0">&gt;</button>
-          <button v-if="mine.length > 1" type="button" class="term-icon-btn ctl" :aria-label="t.craterNextUnit" :title="`${t.craterNextUnit} (Tab)`" @click="press($event, nextUnit)">&#8635;</button>
+        <div class="walk">
+          <button type="button" class="key" :aria-label="t.craterWalkLeft" @pointerdown="holdWalk(-1)" @pointerup="walk.dir = 0" @pointerleave="walk.dir = 0" @pointercancel="walk.dir = 0">&#9664;</button>
+          <button type="button" class="key" :aria-label="t.craterWalkRight" @pointerdown="holdWalk(1)" @pointerup="walk.dir = 0" @pointerleave="walk.dir = 0" @pointercancel="walk.dir = 0">&#9654;</button>
+          <button v-if="mine.length > 1" type="button" class="key" :aria-label="t.craterNextUnit" :title="`${t.craterNextUnit} (Tab)`" @click="press($event, nextUnit)">&#8635;</button>
         </div>
-        <div class="weapons flex gap-1.5 flex-1 min-w-0" role="group" :aria-label="t.craterWeapons">
+        <div class="weapons" role="group" :aria-label="t.craterWeapons">
           <button
             v-for="(id, index) in WEAPON_IDS"
             :key="id"
             type="button"
-            :class="['weapon term-option', { 'is-active': ui.weapon === id }]"
+            :class="['weapon', { 'is-active': ui.weapon === id }]"
             :aria-pressed="ui.weapon === id"
             :disabled="left(id) <= 0"
             :title="`${t[WEAPON_KEYS[id]]} (${index + 1})`"
             :aria-label="`${t[WEAPON_KEYS[id]]}: ${left(id) === Infinity ? '∞' : left(id)}`"
             @click="press($event, () => pickWeapon(id))"
           >
-            <span :class="['icon', `is-${id}`]">{{ WEAPON_ICONS[id] }}</span>
+            <img class="icon" :src="weaponIcon(id, myColor)" alt="" width="30" height="30" />
             <span class="label">{{ t[WEAPON_KEYS[id]] }}</span>
-            <span class="count tabular-nums">{{ left(id) === Infinity ? '∞' : left(id) }}</span>
+            <span class="count">{{ left(id) === Infinity ? '∞' : left(id) }}</span>
           </button>
         </div>
-        <div class="readout tabular-nums" aria-live="off">
-          <span>{{ degrees }}°</span>
-          <span class="power" :aria-label="`${Math.round(ui.power * 100)}%`">[{{ powerBar }}]</span>
+        <div class="readout" aria-live="off">
+          <span class="angle">{{ degrees }}°</span>
+          <span class="power" role="meter" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="Math.round(ui.power * 100)" :aria-label="`${Math.round(ui.power * 100)}%`">
+            <span v-for="k in 10" :key="k" :class="['seg', { on: k <= Math.round(ui.power * 10), hot: k > 7 }]"></span>
+          </span>
         </div>
-        <button type="button" class="term-btn term-btn-primary fire" @click="press($event, fire)">{{ t.craterFire }}</button>
+        <button type="button" class="fire" @click="press($event, fire)">{{ t.craterFire }}</button>
       </div>
-      <p v-else-if="playing && phase === 'aim' && mine.length" class="controls-note term-muted">&gt; {{ t.craterLocked }}</p>
-      <p v-else class="controls-note term-muted"></p>
+      <p v-else-if="playing && phase === 'aim' && mine.length" class="controls-note">{{ t.craterLocked }}</p>
+      <p v-else class="controls-note"></p>
 
       <slot name="overlay" />
     </div>
@@ -862,270 +847,365 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* A game's own panels round the pixel-art battlefield: dark slate, hard black edges with a
+   lighter bevel, and the pixel font. Nothing is rounded and nothing glows. */
+.crater-ui {
+  --ui-bg: #1d1a33;
+  --ui-deep: #100e1e;
+  --ui-hi: #3c3766;
+  --ui-text: #f2efe6;
+  --ui-dim: #9c97bc;
+  --ui-gold: #ffd23a;
+  --pixel-edge: 0 0 0 2px #000, inset 2px 2px 0 var(--ui-hi), inset -2px -2px 0 var(--ui-deep);
+  background: var(--ui-deep);
+  color: var(--ui-text);
+  font-family: var(--font-display);
+  text-shadow: none;
+}
+
+/* ---------- The bar along the top ---------- */
 .hud {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.35rem 0.75rem;
-  border-bottom: 1px solid var(--color-term-low);
-  min-height: 3rem;
+  gap: 0.6rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--ui-bg);
+  border-bottom: 3px solid #000;
+  min-height: 3.2rem;
 }
-.hud.is-full {
+.is-full .hud {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
-  padding-right: 0.5rem;
 }
 .hud .exit-full {
   grid-column: 4;
   grid-row: 1;
 }
-.hud .group {
+.teams {
   display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  flex-wrap: wrap;
+  gap: 0.3rem;
   min-width: 0;
 }
-.hud .team {
-  display: flex;
-  flex-direction: column;
-  max-width: 100%;
-  min-width: 0;
-  font-size: 0.75rem;
-  line-height: 1.25;
-  text-shadow: 0 0 5px currentColor;
-}
-.hud .team.compact {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.4rem;
-}
-.hud .side-1 .team.compact {
-  flex-direction: row-reverse;
-}
-.hud .compact .name {
-  font-size: 0.7rem;
-}
-.hud .compact .pips {
-  margin-top: 0;
-  flex-shrink: 0;
-}
-.hud .compact .pip {
-  width: 1.3rem;
-  height: 0.4rem;
-}
-
-.hud .side-0 {
+.teams.side-0 {
   grid-column: 1;
   grid-row: 1;
 }
-.hud .side-1 {
+.teams.side-1 {
   grid-column: 3;
   grid-row: 1;
+  justify-content: flex-end;
 }
-.hud .center {
+.team {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.2rem 0.45rem;
+  background: var(--ui-deep);
+  box-shadow: var(--pixel-edge);
+}
+.team.is-me {
+  box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--ui-gold), inset 2px 2px 0 var(--ui-hi), inset -2px -2px 0 var(--ui-deep);
+}
+.team .chip {
+  flex-shrink: 0;
+  width: 0.7rem;
+  height: 0.7rem;
+  box-shadow: 0 0 0 2px #000;
+}
+.team .who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.15rem;
+}
+.team .name {
+  font-size: 1.05rem;
+  line-height: 0.9;
+}
+.team .bars {
+  display: flex;
+  gap: 3px;
+}
+.team .bar {
+  position: relative;
+  width: 2.2rem;
+  height: 6px;
+  background: #3a3440;
+  box-shadow: 0 0 0 2px #000;
+}
+.team .bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  transition: width 0.4s steps(6);
+}
+.team .bar.is-down {
+  opacity: 0.4;
+}
+.team .ready {
+  flex-shrink: 0;
+  padding: 0 0.25rem;
+  font-size: 0.85rem;
+  line-height: 1.1;
+  color: #000;
+  background: #7ad94a;
+  box-shadow: 0 0 0 2px #000;
+}
+.team.compact .name {
+  font-size: 0.9rem;
+}
+.team.compact .bar {
+  width: 1.3rem;
+}
+.clock {
   grid-column: 2;
   grid-row: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.1rem;
+  padding: 0.1rem 0.8rem 0.2rem;
+  background: var(--ui-deep);
+  box-shadow: var(--pixel-edge);
+  line-height: 1;
 }
-.hud .name {
-  max-width: 100%;
-  font-weight: 700;
-  font-size: 0.8rem;
-}
-.hud .is-me .name {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.hud .ok {
-  font-weight: 400;
-}
-.pips {
-  display: flex;
-  gap: 0.25rem;
-  margin-top: 0.2rem;
-}
-.side-1 .pips {
-  flex-direction: row-reverse;
-}
-.pip {
-  position: relative;
-  width: 2.4rem;
-  height: 0.45rem;
-  border: 1px solid currentColor;
-  overflow: hidden;
-}
-.pip > span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  box-shadow: 0 0 6px currentColor;
-  transition: width 0.4s ease-out;
-}
-.pip.is-down {
-  opacity: 0.35;
-}
-.wind {
-  font-size: 0.65rem;
+.clock .turn,
+.clock .wind {
+  font-size: 0.85rem;
+  color: var(--ui-dim);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
-.wind .gauge {
-  white-space: pre;
-  letter-spacing: 0;
-  color: var(--color-term);
+.clock .wind b {
+  font-weight: 400;
+  color: var(--ui-text);
+}
+.clock .seconds {
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-gold);
+}
+.clock .seconds.hurry {
+  color: #ff4a3a;
+  animation: hurry 0.5s steps(2) infinite;
+}
+@keyframes hurry {
+  50% { opacity: 0.35; }
 }
 
+/* ---------- On the battlefield ---------- */
 .feed {
   position: absolute;
-  top: 0.4rem;
+  top: 0.5rem;
   left: 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.35rem;
   max-width: calc(100% - 1rem);
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.25;
+  font-size: 1rem;
+  line-height: 1;
   pointer-events: none;
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000;
 }
 .feed.below-strip {
-  top: 1.9rem;
+  top: 2rem;
 }
 .feed li {
   display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 0.2rem 0.45rem;
   white-space: nowrap;
-  animation: feed-life 4.5s linear forwards;
+  background: rgb(16 14 30 / 0.85);
+  box-shadow: 0 0 0 2px #000;
+  animation: feed-life 4.5s steps(12) forwards;
 }
 .feed .who {
   max-width: 9rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.feed .hit {
+  color: var(--ui-gold);
+  font-size: 0.75rem;
+}
 .feed .down {
-  color: #9aa69a;
+  color: var(--ui-dim);
 }
 @keyframes feed-life {
-  0% { opacity: 0; transform: translateX(-0.4rem); }
-  6% { opacity: 1; transform: none; }
-  86% { opacity: 1; }
+  0% { opacity: 0; transform: translateX(-0.5rem); }
+  8% { opacity: 1; transform: none; }
+  88% { opacity: 1; }
   100% { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .feed li {
+  .feed li,
+  .clock .seconds.hurry {
     animation: none;
   }
 }
-
 .status {
   position: absolute;
   left: 50%;
   bottom: 0.75rem;
   transform: translateX(-50%);
   max-width: calc(100% - 1.5rem);
-  padding: 0.25rem 0.6rem;
-  background: rgb(0 0 0 / 0.75);
-  border: 1px solid var(--color-term-low);
-  font-size: 0.8rem;
+  padding: 0.3rem 0.7rem;
+  background: var(--ui-bg);
+  box-shadow: var(--pixel-edge);
+  font-size: 1.1rem;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
 }
 
+/* ---------- The controls ---------- */
 .controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem 0.6rem;
-  padding: 0.45rem 0.6rem calc(0.45rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--color-term-low);
+  gap: 0.5rem 0.7rem;
+  padding: 0.55rem 0.7rem calc(0.55rem + env(safe-area-inset-bottom));
+  background: var(--ui-bg);
+  border-top: 3px solid #000;
 }
 .controls-note {
-  min-height: 3.2rem;
+  min-height: 3.6rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top: 1px solid var(--color-term-low);
-  font-size: 0.85rem;
+  background: var(--ui-bg);
+  border-top: 3px solid #000;
+  color: var(--ui-dim);
+  font-size: 1.15rem;
   padding-bottom: env(safe-area-inset-bottom);
 }
-.ctl {
-  width: 2.9rem;
-  height: 2.6rem;
+.controls button {
+  font-family: var(--font-display);
+  color: var(--ui-text);
+  background: #2c2850;
+  box-shadow: 0 0 0 2px #000, inset 2px 2px 0 #4a4480, inset -2px -3px 0 #16132a;
+  touch-action: manipulation;
+}
+.controls button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 0 0 2px #000, inset 2px 2px 0 #16132a;
+}
+.controls button:focus-visible {
+  outline: 2px solid var(--ui-gold);
+  outline-offset: 3px;
+}
+.walk {
+  display: flex;
+  gap: 0.45rem;
+}
+.key {
+  width: 2.8rem;
+  height: 2.7rem;
   font-size: 1.1rem;
-  touch-action: none;
+  touch-action: none !important;
+}
+.weapons {
+  display: flex;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
 }
 .weapon {
   position: relative;
   flex: 1 1 0;
   min-width: 0;
-  min-height: 2.6rem;
-  padding: 0 0.3rem;
+  min-height: 2.9rem;
+  padding: 0.15rem 0.3rem;
+  display: flex;
   flex-direction: column;
-  gap: 0;
-  line-height: 1.1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
 }
 .weapon .icon {
-  font-weight: 700;
-  font-size: 1rem;
-  line-height: 1;
-}
-.weapon .icon.is-molotov {
-  color: #ffb000;
-}
-.weapon .icon.is-dynamite {
-  color: #ff4a3d;
-}
-.weapon .count {
-  position: absolute;
-  top: 1px;
-  right: 3px;
-  font-size: 0.6rem;
-  font-weight: 700;
-}
-.weapon:disabled {
-  opacity: 0.35;
+  width: 30px;
+  height: 30px;
+  image-rendering: pixelated;
 }
 .weapon .label {
-  font-size: 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
 }
+.weapon .count {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.35rem;
+  min-width: 1.15rem;
+  padding: 0 0.2rem;
+  font-size: 0.9rem;
+  line-height: 1.15;
+  color: #000;
+  background: var(--ui-text);
+  box-shadow: 0 0 0 2px #000;
+}
+.controls .weapon.is-active {
+  color: #000;
+  background: var(--ui-gold);
+  box-shadow: 0 0 0 2px #000, inset 2px 2px 0 #fff0a0, inset -2px -3px 0 #b88a10;
+}
+.weapon:disabled {
+  opacity: 0.35;
+}
 .readout {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  font-size: 0.75rem;
-  line-height: 1.25;
-  min-width: 2.6rem;
+  gap: 0.25rem;
+  line-height: 1;
+}
+.readout .angle {
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
 }
 .readout .power {
-  font-size: 0.6rem;
-  letter-spacing: 0;
+  display: flex;
+  gap: 2px;
+}
+.readout .seg {
+  width: 6px;
+  height: 10px;
+  background: #3a3440;
+  box-shadow: 0 0 0 1px #000;
+}
+.readout .seg.on {
+  background: #7ad94a;
+}
+.readout .seg.on.hot {
+  background: #ff8020;
+}
+.controls .fire {
+  min-height: 2.9rem;
+  padding: 0 1.2rem;
+  font-size: 1.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: #e8402a;
+  box-shadow: 0 0 0 2px #000, inset 2px 2px 0 #ff8a6a, inset -2px -4px 0 #8a1e10;
+}
+.controls .fire:active {
+  box-shadow: 0 0 0 2px #000, inset 2px 2px 0 #8a1e10;
 }
 @media (max-width: 520px) {
   .weapon .label {
     display: none;
   }
-}
-.fire {
-  min-height: 2.6rem;
-  padding: 0 0.9rem;
-  font-size: 0.9rem;
-}
-/* A phone held upright: walking and the aim readout on one row, the weapons and fire under
-   them, so each weapon gets a button a thumb can hit */
-@media (max-width: 520px) {
+  /* A phone held upright: walking and the aim readout on one row, the weapons and fire under */
   .controls {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -1137,25 +1217,26 @@ onUnmounted(() => {
   .controls .readout {
     grid-area: readout;
     flex-direction: row;
-    align-items: baseline;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.6rem;
   }
   .controls .weapons {
     grid-area: weapons;
   }
   .controls .fire {
     grid-area: fire;
+    padding: 0 0.8rem;
   }
 }
-/* Four or more sides on a narrow phone: slimmer health bars leave room for the names */
+/* Four or more sides on a narrow phone: slimmer bars leave room for the names */
 @media (max-width: 400px) {
-  .hud .compact .pip {
+  .team.compact .bar {
     width: 0.9rem;
   }
   .hud {
-    gap: 0.5rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    gap: 0.4rem;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
   }
 }
 </style>

@@ -1,35 +1,50 @@
-import { W, H, LEVELS } from './terrain'
-import { GREEN, DIM, LOW, MONO, paint, drawSprite, drawText, drawGlyph } from '../ascii/paint'
+import { W, H, LEVELS } from './terrain.js'
+import { GREEN, drawText } from '../ascii/paint.js'
+import { sprite, darken, mixHex, rgbOf, SOLDIER, GRAVE, ARROW, SHOTS, SHOT_COLORS } from './pixel.js'
 
-// Draws Crater Duel. The ground is made of characters on a wash of its level's color, drawn
-// once into a layer of its own and again only when a crater changes it. The view shows the
-// whole height of the map; when the screen is too narrow for its whole width it shows part of
-// it (camX, in cells, is its left edge), with a strip along the top showing all of it.
+// Draws Crater Duel as pixel art in daylight. The world is painted at a low resolution, P
+// pixels to a map cell, into a small picture of its own, then blown up onto the screen with
+// hard edges, so every pixel shows: a sky with a sun and hills (or a skyline, or a cave wall),
+// grass on top of dirt in bands with an outline round it, bricks of rock, scorch round the
+// craters, soldiers, shots and explosions as sprites and blocks of color, and a sea (or lava).
+// The view shows the whole height of the map; when the screen is too narrow for its whole width
+// it shows part of it (camX, in cells, is its left edge), with a strip along the top showing all
+// of it. Words go on top, at the screen's own resolution.
 
 // One color per side, up to six: white, amber, red, violet, pink and sky blue
 export const SIDE_COLORS = ['#f2f6ea', '#ffb000', '#ff5c5c', '#c58bff', '#ff8ad8', '#8ec8ff']
+const P = 4 // pixels of art to a map cell
 const MINIMAP_H = 16
-const FIRE = ['#ffe680', '#ffb000', '#ff6a2a']
-const SMOKE = '#7f8f7f'
 
-// Each level's look: the characters and colors of its ground, and its sea (or lava)
+// Each level's look. sky: bands from the top down; far and near: hills (or towers) behind;
+// top: the grass (or snow, or sand) from its lit edge down; dirt: bands from the top down;
+// rock: light, mid, dark; sea: foam, light, mid, deep
 const THEMES = {
-  grass: { top: ['"', "'", '^', '"'], topColor: GREEN, upper: ['#', '#', '%'], upperColor: DIM, deep: [':', '.', '%', ':', ' '], deepColor: LOW, mass: 'rgba(0, 255, 0, 0.11)', rock: ['=', 'H', '#'], rockColor: '#8fb08f', sea: '#3fd0ff', wash: 'rgba(30, 150, 220, 0.2)' },
-  snow: { top: ['*', '"', '*', "'"], topColor: '#e6ffe6', upper: ['#', '%', '#'], upperColor: '#9fe09f', deep: [':', '.', '%', ' '], deepColor: LOW, mass: 'rgba(160, 255, 160, 0.1)', rock: ['=', 'H'], rockColor: '#a8c8a8', sea: '#7fe6ff', wash: 'rgba(80, 180, 230, 0.2)' },
-  sand: { top: ['~', '.', ',', '~'], topColor: '#c8ff5a', upper: ['%', ':', '%'], upperColor: '#8fcf2a', deep: ['.', ':', ' ', '.'], deepColor: '#5a8a1a', mass: 'rgba(180, 255, 60, 0.1)', rock: ['=', 'H'], rockColor: '#a0b070', sea: '#3fd0ff', wash: 'rgba(30, 150, 220, 0.2)' },
-  cave: { top: ['^', '.', ':', '^'], topColor: '#7fdf7f', upper: ['%', '#', ':'], upperColor: '#3f9f3f', deep: [':', '.', ' ', ' '], deepColor: '#2f6f2f', mass: 'rgba(0, 200, 60, 0.09)', rock: ['@', 'H', '='], rockColor: '#6f8f6f', sea: '#ff6a2a', wash: 'rgba(255, 90, 30, 0.22)' },
-  sky: { top: ['"', '^', "'", '*'], topColor: '#b8ffb8', upper: ['#', '%'], upperColor: DIM, deep: [':', '.', ' '], deepColor: LOW, mass: 'rgba(120, 255, 120, 0.12)', rock: ['@', '='], rockColor: '#9ab89a', sea: '#3fd0ff', wash: 'rgba(30, 150, 220, 0.2)' },
-  city: { top: ['_', '=', '_', '-'], topColor: '#c8ffc8', upper: ['#', 'H', '#'], upperColor: '#7fcf7f', deep: ['#', ':', '.', ' '], deepColor: LOW, mass: 'rgba(120, 255, 120, 0.12)', rock: ['='], rockColor: '#9ab89a', sea: '#3fd0ff', wash: 'rgba(30, 150, 220, 0.2)' }
+  grass: { sky: ['#4aa4f0', '#62b2f4', '#7cc0f6', '#98cef8', '#b6dcfa'], sun: '#fff2a8', far: '#8cbce0', near: '#6aa86a', top: ['#c4f27a', '#7ad94a', '#4aa83a'], blades: true, dirt: ['#b07440', '#8c5830', '#6c4024', '#4e2c1a'], rock: ['#b4b4c0', '#8c8c9a', '#62626e'], edge: '#2a1a10', sea: ['#e8f6ff', '#5aa6ef', '#3a86d8', '#2462b0'] },
+  snow: { sky: ['#8aa8d0', '#9cb6da', '#b0c6e2', '#c6d6ea', '#dce6f2'], sun: '#ffffff', far: '#b8c8de', near: '#9ab0c8', top: ['#ffffff', '#e4eef8', '#b8cce0'], dirt: ['#8c9cb4', '#6e7e98', '#52607a', '#3a445c'], rock: ['#c0c8d4', '#98a2b0', '#6e7888'], edge: '#1e2436', sea: ['#ffffff', '#9ae0f4', '#6cc4e4', '#4a9cc4'] },
+  sand: { sky: ['#ff8a4a', '#ffa05a', '#ffb86e', '#ffd088', '#ffe6aa'], sun: '#fff6d0', far: '#e09a6a', near: '#c88250', top: ['#fff0a8', '#f2d27a', '#d8b050'], dirt: ['#d4a258', '#b4843e', '#90642e', '#6a4620'], rock: ['#c8b494', '#a08c6c', '#78664c'], edge: '#3a2410', sea: ['#f0fcff', '#4ab4e6', '#2e92cc', '#1e6ea6'] },
+  cave: { sky: ['#2a2018', '#30251c', '#372a20', '#3e3024', '#463628'], cave: true, top: ['#b4d87a', '#86b04a', '#5e8a34'], blades: true, dirt: ['#7a6450', '#5e4c3c', '#463a2e', '#322a22'], rock: ['#8a8478', '#6a655c', '#4a4640'], edge: '#140e0a', sea: ['#fff0a0', '#ffa030', '#f06a1a', '#b83a10'], lava: true },
+  sky: { sky: ['#2a86ee', '#3e96f2', '#58a8f6', '#74baf8', '#96ccfa'], sun: '#fff2a8', clouds: true, top: ['#c4f27a', '#7ad94a', '#4aa83a'], blades: true, dirt: ['#b07440', '#8c5830', '#6c4024', '#4e2c1a'], rock: ['#b4b4c0', '#8c8c9a', '#62626e'], edge: '#2a1a10', sea: ['#e8f6ff', '#5aa6ef', '#3a86d8', '#2462b0'] },
+  city: { sky: ['#2c2452', '#46306a', '#6c3c74', '#a04c70', '#d8706c'], sun: '#ffd0a0', far: '#3a2c5a', near: '#2a2044', towers: true, top: ['#d0d4dc', '#a4a8b4', '#7c808c'], dirt: ['#8a8c94', '#6c6e78', '#52545e', '#3a3c46'], rock: ['#c87850', '#a45c3a', '#7a4028'], windows: true, edge: '#16141e', sea: ['#e8f0ff', '#5a8ad8', '#3a68b8', '#284c90'] }
 }
 
-// The soldier, facing right; a step swaps the legs. The gun is drawn on its own, at the aim.
-const BODY = [[' @ ', '/|\\', '/ \\'], [' @ ', '/|\\', ' |\\']]
-const GRAVE = [' + ', '_|_']
-// What flies: shell, grenade, cluster, bomblet, molotov, dynamite, flame (see KINDS in physics.js)
-const SHOT_CHARS = ['o', '@', '*', '*', '!', '|', '^']
-
 const hash = (x, y) => (((x * 73856093) ^ (y * 19349663)) >>> 0) % 997
-const mirror = (line) => [...line].reverse().map(ch => ({ '/': '\\', '\\': '/' }[ch] || ch)).join('')
+const FIRE = ['#ffffff', '#fff0a0', '#ffc040', '#ff8020', '#e04010']
+
+// A filled round block, a row at a time, so its edge stays hard
+function disc (s, cx, cy, r, color) {
+  if (r <= 0) return
+  s.fillStyle = color
+  const x0 = Math.round(cx)
+  const y0 = Math.round(cy)
+  const R = Math.ceil(r)
+  for (let dy = -R; dy <= R; dy++) {
+    const span = r * r - dy * dy
+    if (span < 0) continue
+    const half = Math.floor(Math.sqrt(span))
+    s.fillRect(x0 - half, y0 + dy, half * 2 + 1, 1)
+  }
+}
 
 export function createRenderer (canvas) {
   const ctx = canvas.getContext('2d')
@@ -38,77 +53,411 @@ export function createRenderer (canvas) {
   let dpr = 1
   let cell = 6
   let oy = 0 // the map's top edge on screen
-  let sprites = null
-  let layer = null
-  let layerVersion = -1
-  let layerTerrain = null
   let theme = THEMES.grass
+  let sprites = null
+  let skyLayer = null
+  let ground = null
+  let groundVersion = -1
+  let groundTerrain = null
+  let groundScorch = -1
+  const art = document.createElement('canvas') // the view, at the art's resolution
+  const g = art.getContext('2d')
+
+  // ---------- Sprites ----------
 
   function build () {
-    const cw = cell * dpr
-    const glyph = (ch, color, glow = 0) => paint([ch], () => color, { cw, rh: cw, glow, weight: 700 })
-    const lit = Math.max(1, cell * 0.25) * dpr
-    const set = (chars, color, glow = 0) => chars.map(ch => (ch === ' ' ? null : glyph(ch, color, glow)))
+    const WHITE = { h: '#ffffff', s: '#ffffff', e: '#ffffff', c: '#ffffff', b: '#ffffff', p: '#ffffff', k: '#ffffff' }
+    const soldier = (color, mirror, white) => SOLDIER.map(rows => sprite(rows, white
+      ? WHITE
+      : { h: darken(color, 0.55), s: '#f2c8a0', e: '#1a1a1a', c: color, b: '#3a2a1a', p: '#4a5240', k: '#2a1e14' }, { mirror }))
     sprites = {
-      top: set(theme.top, theme.topColor, lit),
-      upper: set(theme.upper, theme.upperColor),
-      deep: set(theme.deep, theme.deepColor),
-      rock: set(theme.rock, theme.rockColor),
-      wave: glyph('~', theme.sea, lit),
-      // [side][facing: 0 right, 1 left][pose]
-      units: SIDE_COLORS.map(color => [0, 1].map(facing => BODY.map(rows => paint(facing ? rows.map(mirror) : rows, () => color, { cw, rh: cw, glow: lit * 1.5, weight: 700 })))),
-      hurt: BODY.map(rows => paint(rows, () => '#ffffff', { cw, rh: cw, glow: lit * 2, weight: 700 })),
-      graves: SIDE_COLORS.map(color => paint(GRAVE, () => color, { cw, rh: cw, glow: 0, weight: 600 }))
+      // [color][facing: 0 right, 1 left][pose]
+      units: SIDE_COLORS.map(color => [soldier(color, false), soldier(color, true)]),
+      hurt: [soldier('#ffffff', false, true), soldier('#ffffff', true, true)],
+      graves: SIDE_COLORS.map(color => sprite(GRAVE, { g: '#9a9aa6', c: color })),
+      arrows: SIDE_COLORS.map(color => sprite(ARROW, { a: color })),
+      shots: SIDE_COLORS.map(color => SHOTS.map(rows => sprite(rows, { ...SHOT_COLORS, c: color })))
     }
-    layerVersion = -1
+    skyLayer = paintSky()
+    groundVersion = -1
   }
 
-  // The ground, drawn whole into its own layer
-  function drawLayer (terrain) {
-    if (!layer) layer = document.createElement('canvas')
-    const cw = cell * dpr
-    layer.width = Math.ceil(W * cw)
-    layer.height = Math.ceil(H * cw)
-    const g = layer.getContext('2d')
-    g.clearRect(0, 0, layer.width, layer.height)
-    for (const [value, color] of [[1, theme.mass], [2, 'rgba(160, 200, 160, 0.16)']]) {
-      g.fillStyle = color
-      for (let y = 0; y < H; y++) {
-        let run = -1
-        for (let x = 0; x <= W; x++) {
-          const on = x < W && terrain.cells[y * W + x] === value
-          if (on && run < 0) run = x
-          if (!on && run >= 0) {
-            g.fillRect(Math.floor(run * cw), Math.floor(y * cw), Math.ceil((x - run) * cw), Math.ceil(cw))
-            run = -1
+  // ---------- The sky: bands with a dithered seam, a sun, and hills or towers behind ----------
+
+  function paintSky () {
+    const layer = document.createElement('canvas')
+    layer.width = W * P
+    layer.height = H * P
+    const s = layer.getContext('2d')
+    const bands = theme.sky
+    const bandH = layer.height / bands.length
+    for (let i = 0; i < bands.length; i++) {
+      s.fillStyle = bands[i]
+      s.fillRect(0, Math.floor(i * bandH), layer.width, Math.ceil(bandH))
+      // A checkered seam into the next band, the way pixel art blends
+      if (i < bands.length - 1) {
+        s.fillStyle = bands[i + 1]
+        const y0 = Math.floor((i + 1) * bandH) - 2
+        for (let y = y0; y < y0 + 2; y++) for (let x = (y % 2); x < layer.width; x += 2) s.fillRect(x, y, 1, 1)
+      }
+    }
+    if (theme.cave) {
+      // A cave wall: blotches of a darker stone, and stalactites hanging down
+      for (let i = 0; i < 260; i++) {
+        s.fillStyle = i % 3 ? '#241b14' : '#4e3e2e'
+        s.fillRect(hash(i, 1) % layer.width, hash(i, 2) % layer.height, 2 + (i % 3), 2)
+      }
+      s.fillStyle = '#1c150f'
+      for (let x = 0; x < layer.width; x += 6) {
+        const len = 4 + (hash(x, 9) % 22)
+        for (let y = 0; y < len; y++) s.fillRect(x + Math.floor(y / 3) % 2, y, Math.max(1, 4 - Math.floor((y / len) * 4)), 1)
+      }
+      return layer
+    }
+    // The sun, a round block with a ring of lighter pixels
+    const sx = Math.floor(layer.width * 0.78)
+    const sy = Math.floor(layer.height * 0.2)
+    disc(s, sx, sy, 13, mixHex(theme.sun, bands[1], 0.5))
+    disc(s, sx, sy, 10, theme.sun)
+    if (theme.towers) {
+      // A skyline, two rows, with lit windows in the nearer one
+      for (const [row, color] of [[0, theme.far], [1, theme.near]]) {
+        let x = 0
+        while (x < layer.width) {
+          const w = 10 + (hash(x, row) % 16)
+          const h = 30 + (hash(x, row + 5) % (row ? 46 : 70))
+          const top = layer.height - 40 - h + row * 18
+          s.fillStyle = color
+          s.fillRect(x, top, w, layer.height - top)
+          if (row) {
+            for (let wy = top + 3; wy < layer.height - 50; wy += 5) {
+              for (let wx = x + 2; wx < x + w - 2; wx += 4) {
+                if (hash(wx, wy) % 3 === 0) {
+                  s.fillStyle = '#ffd86a'
+                  s.fillRect(wx, wy, 2, 2)
+                }
+              }
+            }
           }
+          x += w + (hash(x, 7) % 4)
         }
       }
+      return layer
     }
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        const value = terrain.cells[y * W + x]
-        if (!value) continue
-        const h = hash(x, y)
-        let list
-        if (value === 2) list = sprites.rock
-        else {
-          const above = y > 0 && terrain.cells[(y - 1) * W + x] !== 0
-          const above2 = y > 1 && terrain.cells[(y - 2) * W + x] !== 0
-          list = !above ? sprites.top : !above2 ? sprites.upper : sprites.deep
-        }
-        const sprite = list[h % list.length]
-        if (!sprite) continue
-        g.drawImage(sprite.canvas, sprite.pad, sprite.pad, sprite.canvas.width - sprite.pad * 2, sprite.canvas.height - sprite.pad * 2, x * cw, y * cw, cw, cw)
+    if (theme.clouds) return layer
+    // Hills, far then near, as stepped pixel outlines
+    for (const [row, color] of [[0, theme.far], [1, theme.near]]) {
+      s.fillStyle = color
+      for (let x = 0; x < layer.width; x += 2) {
+        const u = x / P
+        const top = Math.round(layer.height * (0.5 + row * 0.12) - (Math.sin(u * (Math.PI * 4 / W) + row * 2) * 7 + Math.sin(u * (Math.PI * 10 / W) + row) * 3) * P)
+        s.fillRect(x, top, 2, layer.height - top)
       }
     }
-    layerVersion = terrain.version
-    layerTerrain = terrain
+    return layer
   }
+
+  // ---------- The ground, a pixel at a time ----------
+
+  function paintGround (terrain, scorch) {
+    const pw = W * P
+    const ph = H * P
+    if (!ground) ground = document.createElement('canvas')
+    ground.width = pw
+    ground.height = ph
+    const gg = ground.getContext('2d')
+    const image = gg.createImageData(pw, ph)
+    const data = image.data
+    const cells = terrain.cells
+    const at = (x, y) => (x >= 0 && x < W && y >= 0 && y < H ? cells[y * W + x] : 0)
+    // How far each cell is under the open air above it
+    const depth = new Uint8Array(W * H)
+    for (let x = 0; x < W; x++) {
+      let d = 0
+      for (let y = 0; y < H; y++) {
+        d = cells[y * W + x] ? d + 1 : 0
+        depth[y * W + x] = Math.max(0, d - 1)
+      }
+    }
+    // How scorched each cell is, from the craters round it
+    const burnt = new Float32Array(W * H)
+    for (const [cx, cy, r] of scorch) {
+      const reach = r + 2.5
+      for (let y = Math.max(0, Math.floor(cy - reach)); y <= Math.min(H - 1, cy + reach); y++) {
+        for (let x = Math.max(0, Math.floor(cx - reach)); x <= Math.min(W - 1, cx + reach); x++) {
+          const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy)
+          const k = 1 - (d - r) / 2.5
+          if (k > burnt[y * W + x]) burnt[y * W + x] = Math.min(1, k)
+        }
+      }
+    }
+    const top = theme.top.map(rgbOf)
+    const dirt = theme.dirt.map(rgbOf)
+    const rock = theme.rock.map(rgbOf)
+    const edge = rgbOf(theme.edge)
+    const soot = rgbOf('#2a1c12')
+    const lit = rgbOf('#ffd86a')
+    const put = (i, c, k = 0) => {
+      data[i] = k ? c[0] + (soot[0] - c[0]) * k : c[0]
+      data[i + 1] = k ? c[1] + (soot[1] - c[1]) * k : c[1]
+      data[i + 2] = k ? c[2] + (soot[2] - c[2]) * k : c[2]
+      data[i + 3] = 255
+    }
+    const SEAMS = [8, 22, 44] // where the dirt gets a band darker, in pixels under the surface
+    for (let py = 0; py < ph; py++) {
+      const cy = py >> 2
+      const ly = py & 3
+      for (let px = 0; px < pw; px++) {
+        const cx = px >> 2
+        const lx = px & 3
+        const i = (py * pw + px) * 4
+        const v = cells[cy * W + cx]
+        if (!v) {
+          // Blades of grass standing up out of the top of the ground below
+          if (theme.blades && ly >= 2 && at(cx, cy + 1) === 1 && !burnt[(cy + 1) * W + cx]) {
+            const n = hash(px, 3)
+            if (n % 3 === 0 && (ly === 3 || n % 2 === 0)) put(i, top[1])
+          }
+          continue
+        }
+        const n = hash(px, py)
+        const sooty = burnt[cy * W + cx]
+        // Scorch fades out in a checker at its edge
+        const k = sooty > 0.6 ? 0.6 : sooty > 0.2 && (px + py) % 2 ? 0.45 : 0
+        const openLeft = lx === 0 && !at(cx - 1, cy)
+        const openRight = lx === 3 && !at(cx + 1, cy)
+        const openBelow = ly === 3 && !at(cx, cy + 1)
+        const openAbove = !at(cx, cy - 1)
+        if (v === 2) {
+          // Rock: bricks, lit along their top and left, with dark mortar
+          const mortar = ly === 3 || ((px + (cy % 2) * 4) % 8 === 7)
+          if (openLeft || openRight || openBelow || (openAbove && ly === 0)) put(i, edge)
+          else if (theme.windows && !mortar && hash(cx, cy) % 4 === 0 && lx > 0 && lx < 3 && ly > 0) put(i, lit)
+          else put(i, mortar ? rock[2] : ly === 0 || (px + (cy % 2) * 4) % 8 === 0 ? rock[0] : rock[1], k)
+          continue
+        }
+        if (openLeft || openRight || openBelow) {
+          put(i, edge)
+          continue
+        }
+        if (openAbove && ly < 3 && !k) {
+          put(i, top[ly])
+          continue
+        }
+        // Dirt in bands, darker deeper, with a checkered seam and a few specks
+        const d = depth[cy * W + cx] * P + ly // pixels under the surface
+        let band = d >= SEAMS[2] ? 3 : d >= SEAMS[1] ? 2 : d >= SEAMS[0] ? 1 : 0
+        if (band < 3 && d >= SEAMS[band] - 2 && (px + py) % 2) band++
+        if (n % 29 === 0) band = Math.min(3, band + 1)
+        else if (n % 31 === 0) band = Math.max(0, band - 1)
+        put(i, dirt[band], k)
+      }
+    }
+    gg.putImageData(image, 0, 0)
+    groundVersion = terrain.version
+    groundTerrain = terrain
+    groundScorch = scorch.length
+  }
+
+  // ---------- Drawing in art pixels ----------
 
   const view = { camX: 0, visible: W, ox: 0 }
+  let ax = 0 // the view's left edge on the map, in art pixels
+  let origin = 0 // where the picture's left edge is on the map, in art pixels (left of ax past a narrow map's end)
+  const AX = (x) => Math.round(x * P - origin)
+  const AY = (y) => Math.round(y * P)
   const X = (x) => (x - view.camX) * cell + view.ox
   const Y = (y) => y * cell + oy
+
+  function clouds (time, aw) {
+    for (let i = 0; i < 6; i++) {
+      const span = aw + 120
+      const x = ((hash(i, 5) + time * (3 + i) - origin * 0.4) % span + span) % span - 60
+      const y = 14 + (hash(i, 9) % 60)
+      const size = 6 + (i % 3) * 3
+      for (const [dy, color] of [[2, '#c8def4'], [0, '#ffffff']]) {
+        disc(g, x, y + dy, size, color)
+        disc(g, x - size, y + dy + 1, size * 0.7, color)
+        disc(g, x + size, y + dy + 1, size * 0.75, color)
+      }
+    }
+  }
+
+  // A windsock at the top of the view: its flag points the way the wind blows, longer the stronger
+  function windsock (wind, time) {
+    const x = AX(view.camX + view.visible / 2)
+    const y = 6
+    g.fillStyle = '#3a3a44'
+    g.fillRect(x, y, 1, 14)
+    const n = Math.round(Math.abs(wind) * 5)
+    const dir = wind < 0 ? -1 : 1
+    for (let k = 0; k < Math.max(1, n); k++) {
+      const wave = n ? Math.round(Math.sin(time * 8 - k) * 0.6) : k * 3
+      g.fillStyle = k % 2 ? '#ffffff' : '#e83a2a'
+      if (n) g.fillRect(x + (dir > 0 ? 1 + k * 3 : -3 - k * 3), y + wave, 3, 3)
+      else g.fillRect(x + 1, y + wave, 2, 3) // no wind: the sock hangs down the pole
+    }
+  }
+
+  // A soldier: its sprite, its gun at its aim, a bar of health over it, and on the one being
+  // aimed with a marching ring under its feet and an arrow bobbing over it
+  function unit (u, time) {
+    const x = AX(u.x)
+    const feet = AY(u.y)
+    if (!u.alive) {
+      const grave = sprites.graves[u.color] || sprites.graves[0]
+      g.drawImage(grave, x - Math.floor(grave.width / 2), feet - grave.height + 1)
+      return
+    }
+    const color = SIDE_COLORS[u.color] || GREEN
+    if (u.selected) {
+      g.fillStyle = color
+      for (let k = 0; k < 24; k++) {
+        if ((k + Math.floor(time * 10)) % 4 > 1) continue
+        const a = (k / 24) * Math.PI * 2
+        g.fillRect(Math.round(x + Math.cos(a) * 7), Math.round(feet + Math.sin(a) * 2), 1, 1)
+      }
+    }
+    const pose = u.walking ? Math.floor(time * 8) % 2 : 0
+    const facing = u.facing ? 1 : 0
+    const body = u.flash > 0 ? sprites.hurt[facing][pose] : (sprites.units[u.color] || sprites.units[0])[facing][pose]
+    const bob = u.selected && !u.walking && Math.floor(time * 2) % 2 ? 1 : 0
+    const left = x - Math.floor(body.width / 2)
+    const topY = feet - body.height + 1 + bob
+    g.drawImage(body, left, topY)
+    // Soot on it once it's been hurt
+    if (u.hp < 50) {
+      g.fillStyle = '#2a1c12'
+      g.fillRect(left + 2, topY + 6, 1, 1)
+      g.fillRect(left + 5, topY + 8, 1, 1)
+      if (u.hp < 25) {
+        g.fillRect(left + 4, topY + 7, 1, 1)
+        g.fillRect(left + 3, topY + 2, 1, 1)
+      }
+    }
+    // The gun: two pixels thick, from the shoulder along the aim, the side's color at its end
+    const angle = u.angle ?? (u.facing ? Math.PI : 0)
+    const dx = Math.cos(angle)
+    const dy = -Math.sin(angle)
+    for (let k = 1; k <= 7; k++) {
+      g.fillStyle = k === 7 ? color : '#26262e'
+      g.fillRect(Math.round(x + dx * k), Math.round(topY + 7 + dy * k), 1, 2)
+    }
+    // Health: a bar over its head
+    const bx = x - 6
+    const by = topY - 4
+    g.fillStyle = '#141018'
+    g.fillRect(bx - 1, by - 1, 14, 4)
+    g.fillStyle = '#3a3440'
+    g.fillRect(bx, by, 12, 2)
+    g.fillStyle = u.hp < 25 ? '#ff4a3a' : color
+    g.fillRect(bx, by, Math.max(0, Math.round((12 * u.hp) / 100)), 2)
+    if (u.selected && Math.floor(time * 3) % 3) {
+      const arrow = sprites.arrows[u.color] || sprites.arrows[0]
+      g.drawImage(arrow, x - Math.floor(arrow.width / 2), by - 15 + (Math.floor(time * 4) % 2))
+    }
+  }
+
+  function shot (s, time) {
+    const x = AX(s.x)
+    const y = AY(s.y)
+    if (s.kind === 6) {
+      // A flame: a few pixels of fire, never the same twice
+      for (let k = 0; k < 4; k++) {
+        g.fillStyle = FIRE[1 + Math.floor(Math.random() * 4)]
+        const size = k === 0 ? 2 : 1
+        g.fillRect(x + Math.floor(Math.random() * 3) - 1, y - Math.floor(Math.random() * 4), size, size)
+      }
+      return
+    }
+    const list = sprites.shots[s.color] || sprites.shots[1]
+    const art = list[s.kind] || list[0]
+    if (s.kind === 4) {
+      // A molotov turns over in quarter turns, so it stays crisp
+      g.save()
+      g.translate(x, y)
+      g.rotate((Math.floor(time * 8) % 4) * Math.PI / 2)
+      g.drawImage(art, -Math.floor(art.width / 2), -Math.floor(art.height / 2))
+      g.restore()
+      return
+    }
+    g.drawImage(art, x - Math.floor(art.width / 2), y - Math.floor(art.height / 2))
+    // Dynamite's fuse fizzes
+    if (s.kind === 5 && Math.random() < 0.7) {
+      g.fillStyle = FIRE[Math.floor(Math.random() * 3)]
+      g.fillRect(x + Math.floor(Math.random() * 3) - 1, y - 5 - Math.floor(Math.random() * 2), 1, 1)
+    }
+  }
+
+  // The aim: blocks along the first stretch of the flight, getting smaller, and a cross
+  function aim (a) {
+    const color = SIDE_COLORS[a.color] || GREEN
+    const pts = a.points
+    for (let i = 0; i < pts.length; i += 4) {
+      const size = i < pts.length * 0.5 ? 2 : 1
+      g.fillStyle = (i / 4) % 2 ? '#ffffff' : color
+      g.fillRect(AX(pts[i]) - (size >> 1), AY(pts[i + 1]) - (size >> 1), size, size)
+    }
+    const x = AX(a.tip.x)
+    const y = AY(a.tip.y)
+    g.fillStyle = '#141018'
+    g.fillRect(x - 3, y - 1, 7, 3)
+    g.fillRect(x - 1, y - 3, 3, 7)
+    g.fillStyle = color
+    g.fillRect(x - 2, y, 5, 1)
+    g.fillRect(x, y - 2, 1, 5)
+  }
+
+  // Effects (see effects.js): smoke under, then fire, then bits on top
+  function particles (list) {
+    for (const pass of ['puff', 'disc', 'bit']) {
+      for (const p of list) {
+        if (p.kind !== pass) continue
+        const age = 1 - p.life / p.ttl
+        const color = p.colors[Math.min(p.colors.length - 1, Math.floor(age * p.colors.length))]
+        if (pass === 'bit') {
+          g.fillStyle = color
+          g.fillRect(AX(p.x), AY(p.y), p.size || 1, p.size || 1)
+        } else {
+          disc(g, AX(p.x), AY(p.y), Math.max(0, (p.r + (p.grow || 0) * (p.ttl - p.life)) * P), color)
+        }
+      }
+    }
+  }
+
+  // The sea, or lava: a wavy top with foam running along it, then bands, deeper and darker
+  function sea (water, time, aw, ah) {
+    const [foam, light, mid, deep] = theme.sea
+    const base = water * P
+    g.save()
+    if (!theme.lava) g.globalAlpha = 0.85
+    for (let x = 0; x < aw; x++) {
+      const wx = x + origin
+      const surface = Math.round(base + Math.sin(time * 2 + wx * 0.12) * 1.2)
+      g.fillStyle = (wx + Math.floor(time * 10)) % 14 < 4 ? foam : light
+      g.fillRect(x, surface, 1, 1)
+      g.fillStyle = light
+      g.fillRect(x, surface + 1, 1, 2)
+      g.fillStyle = mid
+      g.fillRect(x, surface + 3, 1, 5)
+      g.fillStyle = deep
+      g.fillRect(x, surface + 8, 1, Math.max(0, ah - surface - 8))
+    }
+    g.restore()
+    // Light glinting on the water, or lava bubbling up
+    for (let i = 0; i < aw / 24; i++) {
+      const k = (Math.sin(time * 1.7 + i * 2.1) + 1) / 2
+      const x = Math.floor((hash(i, 1) / 997) * aw)
+      if (theme.lava) {
+        if (k > 0.5) disc(g, x, base + 4 - Math.round(k * 3), Math.round(k * 2), foam)
+      } else if (k > 0.6) {
+        g.fillStyle = foam
+        g.fillRect(x, Math.round(base + 4 + (hash(i, 4) % 6)), 3, 1)
+      }
+    }
+  }
+
+  // ---------- The strip along the top ----------
 
   function minimapRect () {
     if (view.visible >= W) return null
@@ -122,165 +471,102 @@ export function createRenderer (canvas) {
     const sx = rect.w / W
     const sy = rect.h / H
     ctx.save()
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)'
+    ctx.fillStyle = theme.sky[2]
     ctx.fillRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4)
-    ctx.fillStyle = 'rgba(0, 255, 0, 0.35)'
+    ctx.strokeStyle = '#141018'
+    ctx.lineWidth = 2
+    ctx.strokeRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4)
+    ctx.fillStyle = theme.dirt[1]
     for (let x = 0; x < W; x += 2) {
       const top = scene.terrain.top(x)
       if (top < H) ctx.fillRect(rect.x + x * sx, rect.y + top * sy, Math.max(1, sx * 2), rect.h - top * sy)
     }
-    ctx.fillStyle = theme.wash
+    ctx.fillStyle = theme.sea[2]
     ctx.fillRect(rect.x, rect.y + scene.water * sy, rect.w, rect.h - scene.water * sy)
     for (const u of scene.units) {
       if (!u.alive) continue
-      ctx.fillStyle = SIDE_COLORS[u.color]
+      ctx.fillStyle = '#141018'
+      ctx.fillRect(rect.x + u.x * sx - 2.5, rect.y + (u.y - 2) * sy - 1, 5, 6)
+      ctx.fillStyle = SIDE_COLORS[u.color] || GREEN
       ctx.fillRect(rect.x + u.x * sx - 1.5, rect.y + (u.y - 2) * sy, 3, 4)
     }
-    ctx.strokeStyle = GREEN
+    ctx.strokeStyle = '#ffffff'
     ctx.lineWidth = 1
     ctx.strokeRect(rect.x + view.camX * sx + 0.5, rect.y - 1.5, view.visible * sx - 1, rect.h + 3)
     ctx.restore()
   }
 
-  // A soldier: its body facing its way, its gun at its aim, a health bar over its head, and
-  // under the one being aimed with, a ring
-  function unit (u, time) {
-    const x = X(u.x)
-    const feet = Y(u.y)
-    if (!u.alive) {
-      drawSprite(ctx, sprites.graves[u.color], x, feet - cell, { dpr, alpha: 0.55 })
-      return
-    }
-    const color = SIDE_COLORS[u.color]
-    if (u.selected) {
-      ctx.save()
-      ctx.strokeStyle = color
-      ctx.globalAlpha = 0.45 + Math.sin(time * 6) * 0.25
-      ctx.lineWidth = Math.max(1, cell * 0.18)
-      ctx.beginPath()
-      ctx.ellipse(x, feet, cell * 2, cell * 0.6, 0, 0, Math.PI * 2)
-      ctx.stroke()
-      ctx.restore()
-    }
-    // The gun, out from the shoulder
-    const angle = u.angle ?? (u.facing ? Math.PI : 0)
-    const sx = x
-    const sy = feet - cell * 1.55
-    const ex = sx + Math.cos(angle) * cell * 2.1
-    const ey = sy - Math.sin(angle) * cell * 2.1
-    ctx.save()
-    ctx.strokeStyle = color
-    ctx.lineCap = 'round'
-    ctx.lineWidth = Math.max(1.5, cell * 0.38)
-    ctx.shadowColor = color
-    ctx.shadowBlur = cell * 0.6
-    ctx.beginPath()
-    ctx.moveTo(sx, sy)
-    ctx.lineTo(ex, ey)
-    ctx.stroke()
-    ctx.restore()
-    const pose = u.walking ? Math.floor(time * 8) % 2 : 0
-    const body = u.flash > 0 ? sprites.hurt[pose] : sprites.units[u.color][u.facing ? 1 : 0][pose]
-    const bob = u.selected && !u.walking ? Math.sin(time * 4) * cell * 0.08 : 0
-    drawSprite(ctx, body, x, feet - cell * 1.5 + bob, { dpr })
-    // Health: a bar, and the number over it
-    const bw = cell * 3.2
-    const bh = Math.max(2, cell * 0.32)
-    const by = feet - cell * 3.9
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-    ctx.fillRect(x - bw / 2 - 1, by - 1, bw + 2, bh + 2)
-    ctx.fillStyle = color
-    ctx.fillRect(x - bw / 2, by, (bw * Math.max(0, u.hp)) / 100, bh)
-    drawText(ctx, String(u.hp), x, by - cell * 0.9, { px: Math.max(9, cell * 1.25), dpr, color, glow: false })
-    if (u.selected && u.blink) drawText(ctx, 'v', x, by - cell * 2.3, { px: Math.max(10, cell * 1.6), dpr, color })
-  }
-
-  function shot (s, time) {
-    const x = X(s.x)
-    const y = Y(s.y)
-    const color = SIDE_COLORS[s.color] || GREEN
-    if (s.kind === 6) {
-      // A flame: flickering, never quite the same size
-      const flicker = 0.75 + Math.random() * 0.5
-      drawGlyph(ctx, Math.random() < 0.5 ? '^' : 'A', x, y - cell * 0.4, { px: cell * 1.5 * flicker, color: FIRE[Math.floor(Math.random() * 3)], weight: 700 })
-      return
-    }
-    if (s.kind === 5) {
-      // Dynamite: a red stick with its fuse fizzing
-      drawGlyph(ctx, '|', x, y, { px: cell * 2.2, color: '#ff4a3d', weight: 700 })
-      drawGlyph(ctx, '*', x + cell * 0.3, y - cell * 1.1, { px: cell * (1 + Math.random() * 0.6), color: FIRE[Math.floor(Math.random() * 2)], weight: 700 })
-      return
-    }
-    const spin = s.kind === 1 || s.kind === 4 ? time * 12 + s.x : 0
-    ctx.save()
-    ctx.shadowColor = color
-    ctx.shadowBlur = cell * 0.9
-    drawGlyph(ctx, SHOT_CHARS[s.kind] || 'o', x, y, { px: Math.max(11, cell * (s.kind === 3 ? 1.5 : 2)), color: s.kind === 4 ? '#ffd27f' : color, weight: 700, angle: spin })
-    ctx.restore()
-  }
-
   /**
    * scene: {
-   *   terrain, water, time (seconds), camX,
-   *   units: [{ x, y, color (index into SIDE_COLORS), alive, hp, facing, angle, walking, selected, blink, flash }],
-   *   shots: [{ x, y, kind (see SHOT_CHARS), color }],
+   *   terrain, water, wind, time (seconds), camX, scorch: [[x, y, r], ...] (the craters so far),
+   *   units: [{ x, y, color (index into SIDE_COLORS), alive, hp, facing, angle, walking, selected, flash }],
+   *   shots: [{ x, y, kind (see SHOTS), color }],
    *   aim: { points: [x, y, ...], tip: { x, y }, color } | null,
-   *   particles, texts: [{ text, x, y, size, color, alpha }], flash, shake
+   *   particles (see effects.js), texts: [{ text, x, y, size, color, alpha }], flash, shake
    * }
    */
   function draw (scene) {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    if (!sprites) return
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    if (!width) return
     const wanted = THEMES[LEVELS[scene.terrain.style]?.theme] || THEMES.grass
-    if (wanted !== theme) {
+    if (wanted !== theme || !sprites) {
       theme = wanted
       build()
     }
-    if (scene.terrain !== layerTerrain || scene.terrain.version !== layerVersion) drawLayer(scene.terrain)
+    const scorch = scene.scorch || []
+    if (scene.terrain !== groundTerrain || scene.terrain.version !== groundVersion || scorch.length !== groundScorch) paintGround(scene.terrain, scorch)
     view.camX = Math.max(0, Math.min(W - view.visible, scene.camX))
 
-    ctx.save()
-    if (scene.shake > 0) ctx.translate((Math.random() * 2 - 1) * scene.shake * cell, (Math.random() * 2 - 1) * scene.shake * cell)
-
-    const cw = cell * dpr
-    ctx.drawImage(layer, view.camX * cw, 0, Math.min(layer.width, view.visible * cw), layer.height, view.ox, oy, Math.min(W, view.visible) * cell, H * cell)
-
+    // The view at the art's resolution, the whole width of the screen: a map narrower than the
+    // screen has sky and sea on past its ends
+    const scale = cell / P
+    ax = Math.floor(view.camX * P)
+    const mapW = Math.min(W * P - ax, Math.ceil(view.visible * P) + 1) // of the map, in view
+    const pad = view.ox > 0 ? Math.ceil(view.ox / scale) : 0
+    origin = ax - pad
+    const aw = Math.max(mapW, Math.ceil(width / scale) + 2)
+    const ah = H * P
+    if (art.width !== aw || art.height !== ah) {
+      art.width = aw
+      art.height = ah
+    }
+    g.setTransform(1, 0, 0, 1, 0, 0)
+    g.imageSmoothingEnabled = false
+    g.globalAlpha = 1
+    // The sky moves at a little over half the view's speed, and goes on round
+    const span = W * P
+    const skyAt = ((Math.floor(origin * 0.6) % span) + span) % span
+    for (let x = -skyAt; x < aw; x += span) g.drawImage(skyLayer, x, 0)
+    if (theme.clouds) clouds(scene.time, aw)
+    if (!theme.cave) windsock(scene.wind || 0, scene.time)
+    const shake = scene.shake > 0 ? scene.shake * 3 : 0
+    g.translate(shake ? Math.round((Math.random() * 2 - 1) * shake) : 0, shake ? Math.round((Math.random() * 2 - 1) * shake) : 0)
+    g.drawImage(ground, ax, 0, mapW, ah, pad, 0, mapW, ah)
     for (const u of scene.units) unit(u, scene.time)
-
-    // The aim: the first stretch of the flight, and a cross where the barrel points
-    if (scene.aim) {
-      const color = SIDE_COLORS[scene.aim.color]
-      const pts = scene.aim.points
-      for (let i = 0; i < pts.length; i += 2) {
-        drawGlyph(ctx, '.', X(pts[i]), Y(pts[i + 1]), { px: Math.max(10, cell * 2), color, alpha: 1 - (i / pts.length) * 0.8 })
-      }
-      drawGlyph(ctx, '+', X(scene.aim.tip.x), Y(scene.aim.tip.y), { px: Math.max(12, cell * 2.2), color, weight: 700 })
-    }
-
-    for (const p of scene.particles) {
-      const alpha = Math.max(0, Math.min(1, p.life / p.ttl)) * (p.alpha ?? 1)
-      drawGlyph(ctx, p.ch, X(p.x), Y(p.y), { px: cell * (p.size || 1.4), color: p.color, alpha, angle: p.angle || 0, font: p.font || MONO })
-    }
+    if (scene.aim) aim(scene.aim)
+    particles(scene.particles)
     for (const s of scene.shots) shot(s, scene.time)
+    sea(scene.water, scene.time, aw, ah)
+    g.setTransform(1, 0, 0, 1, 0, 0)
 
-    // The sea, or lava: a wash with waves rolling along its top
-    const sea = Y(scene.water)
-    ctx.fillStyle = theme.wash
-    ctx.fillRect(0, sea, width, Math.max(0, height - sea))
-    const shift = (scene.time * 2) % 2
-    for (let x = Math.floor(view.camX) - 2; x < view.camX + view.visible + 2; x += 2) {
-      drawSprite(ctx, sprites.wave, X(x + shift), sea + Math.sin(scene.time * 2 + x * 0.4) * cell * 0.25, { dpr })
+    // Blown up onto the screen, with hard edges
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.fillStyle = theme.sky[0]
+    ctx.fillRect(0, 0, width, height)
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(art, 0, 0, aw, ah, view.ox + (origin - view.camX * P) * scale, oy, aw * scale, ah * scale)
+
+    // Words, on top
+    for (const u of scene.units) {
+      if (u.alive) drawText(ctx, String(u.hp), X(u.x), Y(u.y) - 22 * scale, { px: Math.max(10, cell * 1.2), dpr, color: '#ffffff', glow: false })
     }
-    ctx.restore()
-
     for (const item of scene.texts) {
-      drawText(ctx, item.text, item.screen ? item.x : X(item.x), item.screen ? item.y : Y(item.y), { px: Math.max(item.min || 0, item.size * cell), dpr, color: item.color || GREEN, alpha: item.alpha ?? 1, display: item.display ?? true })
+      drawText(ctx, item.text, item.screen ? item.x : X(item.x), item.screen ? item.y : Y(item.y), { px: Math.max(item.min || 0, item.size * cell), dpr, color: item.color || '#ffffff', alpha: item.alpha ?? 1, display: item.display ?? true, glow: false })
     }
     minimap(scene)
-    if (scene.flash > 0) {
-      ctx.fillStyle = `rgba(255, 220, 120, ${0.18 * scene.flash})`
+    if (scene.flash > 0.25) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.5, 0.3 * scene.flash)})`
       ctx.fillRect(0, 0, width, height)
     }
   }
@@ -301,16 +587,19 @@ export function createRenderer (canvas) {
       view.visible = Math.min(W, width / cell)
       view.ox = view.visible >= W ? (width - W * cell) / 2 : 0
       oy = Math.max(0, height - H * cell)
-      build()
     },
     // Screen point -> map position, in cells
     toMap: (px, py) => ({ x: (px - view.ox) / cell + view.camX, y: (py - oy) / cell }),
     get cell () { return cell },
     get visible () { return view.visible },
     get width () { return width },
+    // This level's dirt, grass and sea, for what a blast throws up and a splash
+    get dirt () { return theme.dirt },
+    get top () { return theme.top },
+    get sea () { return theme.sea },
     minimapRect,
-    // Fonts that finish loading later need the sprites painted again
-    rebuild: build,
+    // Nothing is painted from fonts, so there's nothing to do when they load
+    rebuild: () => {},
     draw
   }
 }
