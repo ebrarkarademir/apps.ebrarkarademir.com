@@ -26,6 +26,7 @@ const props = defineProps({
   profile: { type: Object, required: true },
   social: { type: Object, default: null }, // { feed, items } from the room
   names: { type: Object, default: () => ({}) }, // player id -> name
+  avs: { type: Object, default: () => ({}) }, // player id -> avatar number (who they are at the table)
   myId: { type: String, required: true },
   exitLabel: { type: String, required: true },
   canLobby: { type: Boolean, default: false },
@@ -334,6 +335,7 @@ function buy (order) {
         :hidden="flying"
         :bubbles="bubbles"
         :name-of="nameOf"
+        :avs="avs"
         :keys="!sheet"
         :watching="watching"
         :chat-beside="beside"

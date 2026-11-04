@@ -90,7 +90,8 @@ export const SITE = [
   { v: '1.54.0', date: '2026-11-04', commit: '9127e36', note: 'Crater Duel: bigger soldiers, rifles and shots; charging, a power gauge and a guide from the last shot' },
   { v: '1.55.0', date: '2026-11-04', commit: '4367e2e', note: 'Crater Duel: a simple aim, one line that grows with the power' },
   { v: '1.55.1', date: '2026-11-04', commit: '6e7759b', note: 'The Lobby page fits a phone: no more buttons running off the screen' },
-  { v: '1.55.2', date: '2026-11-04', note: 'Futsal guests see their own player where the host has it again, so it can’t walk into the ball' }
+  { v: '1.55.2', date: '2026-11-04', commit: 'b65cb42', note: 'Futsal guests see their own player where the host has it again, so it can’t walk into the ball' },
+  { v: '1.56.0', date: '2026-11-04', note: 'Pick your character: the man in the suit, in the sweatshirt or in the hat, on the Users tab, in lobbies and their chat, and at the Blackjack table' }
 ]
 
 export const GAMES = {
@@ -118,7 +119,7 @@ export const GAMES = {
     { v: '2.2.3', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
     { v: '2.3.0', date: '2026-11-02', commit: '3d1cd53', note: 'A new look: courts, kits, boards, goal effects' },
     { v: '2.3.1', date: '2026-11-02', commit: 'cc277f1', note: 'Back to the earlier look' },
-    { v: '2.3.2', date: '2026-11-04', note: 'A guest’s own player is drawn where the host has it again (the moving-ahead from 2.2.1 taken back): it went through the ball and other players on the guest’s screen; the connection corner goes with it' }
+    { v: '2.3.2', date: '2026-11-04', commit: 'b65cb42', note: 'A guest’s own player is drawn where the host has it again (the moving-ahead from 2.2.1 taken back): it went through the ball and other players on the guest’s screen; the connection corner goes with it' }
   ],
   flappy: [
     { v: '1.0.0', date: '2026-10-26', commit: '4cfe810', note: 'First version, solo and online' },
@@ -154,7 +155,8 @@ export const GAMES = {
     { v: '1.4.0', date: '2026-11-04', commit: 'b14812f', note: 'More detailed people, smoke you can see' },
     { v: '1.5.0', date: '2026-11-04', commit: '8456288', note: 'Everyone is the man in the navy suit' },
     { v: '1.6.0', date: '2026-11-04', commit: 'c5a38dc', note: 'He is animated and reacts to wins and losses' },
-    { v: '1.6.1', date: '2026-11-04', commit: '3df5a60', note: 'He plays his own frames' }
+    { v: '1.6.1', date: '2026-11-04', commit: '3df5a60', note: 'He plays his own frames' },
+    { v: '1.7.0', date: '2026-11-04', note: 'Each player sits as the character they picked: the man in the suit, in the sweatshirt or in the hat, drinking and smoking from their own frames' }
   ],
   sudoku: [
     { v: '1.0.0', date: '2026-10-26', commit: '031f28b', note: 'First version, solo' },

@@ -56,7 +56,7 @@ onUnmounted(() => document.removeEventListener('visibilitychange', seen))
         <span v-if="line.sys" class="term-muted italic">*** {{ systemText(line) }}</span>
         <template v-else>
           <span :class="['mr-2 whitespace-nowrap', line.from === session.myId ? 'term-muted' : 'font-semibold']">
-            <PixelPerson face size="1.85em" class="-my-1.5 mr-1" />{{ line.name }}&gt;
+            <PixelPerson face :av="line.av || 0" size="1.85em" class="-my-1.5 mr-1" />{{ line.name }}&gt;
           </span>
           <span>{{ line.text }}</span>
         </template>

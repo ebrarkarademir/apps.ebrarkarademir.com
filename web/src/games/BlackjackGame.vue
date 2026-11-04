@@ -63,6 +63,9 @@ const seated = computed(() => !!table.value?.seats.some(seat => seat?.me))
 const myChips = computed(() => view.value?.me || { balance: 0, stats: {} })
 const myId = computed(() => (mode.value === 'solo' ? LOCAL_ID : room.myId))
 const names = computed(() => Object.fromEntries((view.value?.players || []).map(player => [player.id, player.name])))
+// Everyone's avatar number, which says who they are at the table (see online/characters.js);
+// this player's own from their profile, so a solo table has them too
+const avs = computed(() => ({ ...Object.fromEntries((view.value?.players || []).map(player => [player.id, player.av])), [myId.value]: siteProfile.avatar }))
 
 // ---------- Chips on this device ----------
 
@@ -202,6 +205,7 @@ function leaveSolo () {
       :profile="myChips"
       :social="view?.social"
       :names="names"
+      :avs="avs"
       :my-id="myId"
       :exit-label="t.back"
       :error="errorText"
@@ -243,6 +247,7 @@ function leaveSolo () {
       :profile="myChips"
       :social="view?.social"
       :names="names"
+      :avs="avs"
       :my-id="myId"
       :exit-label="t.onlineLeave"
       :can-lobby="room.isHost"

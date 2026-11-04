@@ -1,3 +1,4 @@
+import { CHARACTER_IDS, withCharacter } from './characters'
 import { reactive, ref, watch } from 'vue'
 
 // Who this visitor is on the site, kept in this browser: a name, a user number, an ASCII face,
@@ -37,12 +38,16 @@ function load () {
     // Storage blocked: start fresh every time
   }
   const stats = { ...blankStats(), ...(saved?.stats || {}) }
+  // Who they are rides in the avatar number (see characters.js); until they pick, the man in the suit
+  const picked = !!saved?.picked
+  const avatar = Number.isInteger(saved?.avatar) ? saved.avatar : Math.floor(Math.random() * 2 ** 31)
   return {
     name: cleanName(saved?.name ?? oldName),
     // A name the visitor picked (or typed before names were made up) isn't offered for a change
     custom: saved ? !!saved.custom : !!oldName,
     uid: Number.isInteger(saved?.uid) && saved.uid > 0 ? saved.uid : 0,
-    avatar: Number.isInteger(saved?.avatar) ? saved.avatar : Math.floor(Math.random() * 2 ** 31),
+    avatar: picked ? avatar : withCharacter(avatar, 'suit'),
+    picked,
     bio: cleanBio(saved?.bio),
     country: /^[A-Z]{2}$/.test(saved?.country || '') ? saved.country : '', // '' = from the IP address
     stats
@@ -50,6 +55,13 @@ function load () {
 }
 
 export const profile = reactive(load())
+
+/** Picks who the visitor is: here, on the Users tab and in the room they're in, at once. */
+export function setCharacter (id) {
+  if (!CHARACTER_IDS.includes(id)) return
+  profile.avatar = withCharacter(profile.avatar, id)
+  profile.picked = true
+}
 
 // Where the visitor's IP address is, as a country code; their own pick wins over it
 export const autoCountry = ref('')

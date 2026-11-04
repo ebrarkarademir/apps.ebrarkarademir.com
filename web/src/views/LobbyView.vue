@@ -70,7 +70,7 @@ function create (game) {
           </div>
           <ul class="grid grid-cols-2 gap-2">
             <li v-for="player in mine.players" :key="player.id" :class="['flex items-center gap-2 border px-2 py-1.5 text-sm', player.id === session.myId ? 'border-term bg-term-deep' : 'border-term-low']">
-              <PixelPerson face size="1.75rem" class="-my-1" />
+              <PixelPerson face :av="player.av || 0" size="1.75rem" class="-my-1" />
               <span class="truncate">{{ player.name }}</span>
               <span v-if="player.host" class="ml-auto text-[10px] uppercase tracking-wider term-muted">{{ t.onlineHostBadge }}</span>
             </li>
@@ -114,7 +114,7 @@ function create (game) {
               <h3 class="term-label">{{ t.lobbyInside }}</h3>
               <ul class="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2">
                 <li v-for="player in lobby.players" :key="player.name" class="flex items-center gap-2 border border-term-low px-2 py-1.5 text-sm">
-                  <PixelPerson face size="1.75rem" class="-my-1" />
+                  <PixelPerson face :av="player.av || 0" size="1.75rem" class="-my-1" />
                   <span class="truncate">{{ player.name }}</span>
                   <span v-if="player.host" class="ml-auto text-[10px] uppercase tracking-wider term-muted">{{ t.onlineHostBadge }}</span>
                 </li>

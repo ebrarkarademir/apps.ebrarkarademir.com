@@ -1,10 +1,11 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import sheet from './people/suit-frames.png'
-import { FRAMES, FRAME_W, FRAME_H, TICKS_PER_SECOND, frameAt, breathAt } from './suitFrames'
+import { SHEETS } from './people/sheets'
+import { LOOKS, FRAME_W, FRAME_H, TICKS_PER_SECOND, frameAt, breathAt } from './suitFrames'
 
-// The man in the suit at the table, played from his own frames (see suitFrames.js): standing and
-// now and then talking with his hands, drinking or smoking if he has something from the bar, and
+// Someone at the table, played from their own frames (see suitFrames.js): `character` is who
+// (the man in the suit, in the sweatshirt or in the hat). Standing, drinking or smoking if they
+// have something from the bar; the man in the suit now and then talks with his hands, and is
 // pleased when he wins a hand (`react`: { kind: 'win', id }, a new id each time). Players stand
 // behind the table's padded rail; the dealer has the cards in front of him instead.
 // `size` is the picture's width (any CSS length).
@@ -13,6 +14,7 @@ const props = defineProps({
   seed: { type: Number, default: 0 },
   react: { type: Object, default: null },
   dealer: { type: Boolean, default: false },
+  character: { type: String, default: 'suit' },
   size: { type: String, default: '' }
 })
 
@@ -31,14 +33,16 @@ watch(() => props.react?.id, (id) => {
   if (id && props.react?.kind) reaction.value = { kind: props.react.kind, at: tick.value }
 })
 
-const frame = computed(() => frameAt(tick.value, { held: props.held, seed: props.seed, reaction: reaction.value }))
+const who = computed(() => (LOOKS[props.character] ? props.character : 'suit'))
+const frameCount = computed(() => LOOKS[who.value].frames.length)
+const frame = computed(() => frameAt(tick.value, { held: props.held, seed: props.seed, reaction: reaction.value, character: who.value }))
 const up = computed(() => breathAt(tick.value, props.seed))
 
 const style = computed(() => ({ ...(props.size ? { '--av': props.size } : {}) }))
 const spriteStyle = computed(() => ({
-  backgroundImage: `url(${sheet})`,
-  backgroundSize: `${FRAMES.length * 100}% 100%`,
-  backgroundPosition: `${(frame.value / (FRAMES.length - 1)) * 100}% 0`,
+  backgroundImage: `url(${SHEETS[who.value]})`,
+  backgroundSize: `${frameCount.value * 100}% 100%`,
+  backgroundPosition: `${(frame.value / (frameCount.value - 1)) * 100}% 0`,
   transform: up.value ? 'translateY(calc(var(--p) * -1))' : 'none'
 }))
 </script>

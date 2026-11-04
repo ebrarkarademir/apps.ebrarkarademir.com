@@ -1,20 +1,21 @@
-// Who sits at the Blackjack table, and how to draw them. For now everyone, the players and the
-// dealer alike, is the man in the suit, played from his own frames (SuitAvatar.vue,
-// suitFrames.js). The people drawn from scratch, a look for each player id (avatars.js), stay
-// here for when there's a choice of people again.
+// Who sits at the Blackjack table, and how to draw them. Each player is the person they picked
+// (the man in the suit, in the sweatshirt or in the hat; see online/characters.js), played from
+// their own frames (SuitAvatar.vue, suitFrames.js); the dealer is the man in the suit. The people
+// drawn from scratch, a look for each player id (avatars.js), stay here unused.
 //
 // A drawn figure: { w, h } its grid, url(options) its layers as images (see avatars.js
 // avatarUrl), ember(held) where a cigarette's lit end is, mouth where smoke comes out of.
 
 import { lookOf as drawnLook, DEALER_LOOK as DRAWN_DEALER, avatarUrl, emberOf, MOUTH_AT, W, H } from './avatars.js'
+import { characterOf } from '../../online/characters.js'
 
 export const DEFAULT_FIGURE = 'suit'
 
-/** Who a player is at the table. */
-export const lookOf = (id) => (DEFAULT_FIGURE === 'suit' ? { figure: 'suit' } : drawnLook(id))
+/** Who a player is at the table, from their avatar number. */
+export const lookOf = (id, av = 0) => (DEFAULT_FIGURE === 'suit' ? { figure: 'suit', character: characterOf(av) } : drawnLook(id))
 
 /** Who the dealer is. */
-export const DEALER_LOOK = DEFAULT_FIGURE === 'suit' ? Object.freeze({ figure: 'suit', dealer: true }) : DRAWN_DEALER
+export const DEALER_LOOK = DEFAULT_FIGURE === 'suit' ? Object.freeze({ figure: 'suit', character: 'suit', dealer: true }) : DRAWN_DEALER
 
 /**
  * Whether this person shows what they have from the bar in their own hands (the drawn people);

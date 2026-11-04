@@ -5,6 +5,7 @@ import QrCode from '../components/QrCode.vue'
 import LobbyChat from './LobbyChat.vue'
 import { switchTargets, appNav } from './gameSwitch'
 import PixelPerson from '../components/PixelPerson.vue'
+import CharacterPicker from '../components/CharacterPicker.vue'
 import { SESSION_MS } from './session'
 
 // Shared frame for online games: header, name + create/join screen, connecting spinner and
@@ -130,6 +131,11 @@ function onCodeInput (event) {
         <input v-model="room.playerName" maxlength="18" :placeholder="t.onlineNamePlaceholder" class="term-input mt-2" />
       </label>
 
+      <div>
+        <span class="term-label">&gt; {{ t.charPick }}</span>
+        <CharacterPicker :t="t" class="mt-2 max-w-sm" />
+      </div>
+
       <div class="grid sm:grid-cols-2 gap-4">
         <div class="term-panel p-4 flex flex-col gap-3">
           <div>
@@ -209,7 +215,7 @@ function onCodeInput (event) {
               ]"
             >
               <span :class="['term-dot', { 'is-off': !player.online }]"></span>
-              <PixelPerson face size="1.9rem" class="-my-1" />
+              <PixelPerson face :av="player.av || 0" size="1.9rem" class="-my-1" />
               <span class="truncate font-medium">{{ player.name }}</span>
               <span v-if="player.id === view.hostId" class="ml-auto text-[10px] uppercase tracking-wider term-muted">
                 {{ t.onlineHostBadge }}

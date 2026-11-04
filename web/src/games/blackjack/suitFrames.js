@@ -1,6 +1,12 @@
-// The man in the suit, animated from his own frames: people/suit-frames.png, one sheet of twelve
-// 160×160 frames side by side (made from the drawings, background taken out, each lined up on his
-// suit so he doesn't jump between them). Pure: which frame shows at a given moment.
+// The people you can be, animated from their own frames: one sheet each in people/, frames of
+// 160×160 side by side (made from the drawings, background taken out, each lined up on the one
+// before so nobody jumps between them, all at one size: a head about 46 px tall). Pure: which
+// frame shows at a given moment.
+//
+// The man in the suit (suit-frames.png) has twelve: talking with his hands, drinking, smoking.
+// The man in the sweatshirt (casual-frames.png) and the man in the hat (explorer-frames.png)
+// have eight: drinking and smoking; standing is the last drinking frame, the glass by his side,
+// down below the picture.
 //
 //   idle    standing, now and then talking with his hands (empty_hand 1..3)
 //   drink   his glass at his chest, raised, a sip, and down by his side (drinking 1..4)
@@ -51,12 +57,49 @@ function frameIn (name, tick) {
  * The frame (an index into FRAMES) at a tick. held: what he has from the bar; seed: so people at
  * one table don't move together; reaction: { kind, at } (the tick it began), played once.
  */
-export function frameAt (tick, { held = '', seed = 0, reaction = null } = {}) {
-  if (reaction && SEQUENCES[reaction.kind]) {
+export function frameAt (tick, { held = '', seed = 0, reaction = null, character = 'suit' } = {}) {
+  const look = LOOKS[character] || LOOKS.suit
+  if (reaction && look.sequences[reaction.kind]) {
     const r = tick - reaction.at
-    if (r >= 0 && r < LENGTHS[reaction.kind]) return frameIn(reaction.kind, r)
+    if (r >= 0 && r < look.lengths[reaction.kind]) return look.frameIn(reaction.kind, r)
   }
-  return frameIn(animationFor(held), tick + seed * 23)
+  return look.frameIn(animationFor(held), tick + seed * 23)
+}
+
+// ---------- Everyone you can be ----------
+
+const PLAIN_FRAMES = ['drinking_1', 'drinking_2', 'drinking_3', 'drinking_4', 'smoking_1', 'smoking_2', 'smoking_3', 'smoking_4']
+const PLAIN_SEQUENCES = {
+  idle: [['drinking_4', 10]],
+  drink: SEQUENCES.drink,
+  smoke: SEQUENCES.smoke
+}
+
+function lookFrom (frames, sequences, still) {
+  const index = Object.fromEntries(frames.map((name, i) => [name, i]))
+  const lengths = Object.fromEntries(Object.entries(sequences).map(([name, steps]) => [name, steps.reduce((sum, [, n]) => sum + n, 0)]))
+  return {
+    frames,
+    sequences,
+    lengths,
+    still: index[still],
+    frameIn (name, tick) {
+      const steps = sequences[name] || sequences.idle
+      let t = tick % lengths[name in sequences ? name : 'idle']
+      for (const [frame, n] of steps) {
+        if (t < n) return index[frame]
+        t -= n
+      }
+      return index[steps[0][0]]
+    }
+  }
+}
+
+/** Each person's frames (in the order of their sheet), animations and still frame (standing, for faces). */
+export const LOOKS = {
+  suit: lookFrom(FRAMES, SEQUENCES, 'empty_hand_4'),
+  casual: lookFrom(PLAIN_FRAMES, PLAIN_SEQUENCES, 'drinking_4'),
+  explorer: lookFrom(PLAIN_FRAMES, PLAIN_SEQUENCES, 'drinking_4')
 }
 
 /** Breathing: up a pixel every other second or so. */

@@ -26,6 +26,7 @@ const props = defineProps({
   hidden: { type: Object, default: null }, // numbers of items still flying in
   bubbles: { type: Object, default: () => ({}) }, // player id or 'dealer' -> { k, id }
   nameOf: { type: Function, default: (id) => id },
+  avs: { type: Object, default: () => ({}) }, // player id -> avatar number (who they are at the table)
   keys: { type: Boolean, default: true }, // off while the sheet is open
   watching: { type: String, default: '' }, // why this player has no seat
   chatBeside: { type: Boolean, default: false }, // the chat is up beside the table already
@@ -269,7 +270,7 @@ function heldOf (id) {
   const list = itemsOf(id).filter(item => item.until > now.value && !props.hidden?.has(item.n) && canHold(item.k))
   return list[list.length - 1] || null
 }
-const lookFor = (id) => lookOf(id)
+const lookFor = (id) => lookOf(id, props.avs[id])
 
 // How a round went for each seat, for the people to react to: a fist in the air for a win, a hand
 // to the forehead for a loss (the dealer the other way round when they bust or have Blackjack)

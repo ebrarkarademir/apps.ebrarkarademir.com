@@ -50,7 +50,7 @@ const style = computed(() => ({
 </script>
 
 <template>
-  <SuitAvatar v-if="suit" :held="item" :seed="seed" :react="react" :dealer="!!look.dealer" :size="size" />
+  <SuitAvatar v-if="suit" :character="look.character || 'suit'" :held="item" :seed="seed" :react="react" :dealer="!!look.dealer" :size="size" />
   <div v-else :class="['avatar', kind && `does-${kind}`]" :style="style" aria-hidden="true">
     <span class="ground"></span>
     <img class="layer" :src="layers.chair" alt="" draggable="false" />

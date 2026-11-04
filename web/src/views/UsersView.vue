@@ -2,6 +2,7 @@
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import TermWindow from '../components/TermWindow.vue'
 import PixelPerson from '../components/PixelPerson.vue'
+import CharacterPicker from '../components/CharacterPicker.vue'
 import MedalBadge from '../components/MedalBadge.vue'
 import { flagPng } from '../online/ipInfo'
 import { MAX_TEXT } from '../online/useUsers'
@@ -224,7 +225,7 @@ onUnmounted(() => {
               ]"
               @click="select(item.id)"
             >
-              <PixelPerson face size="2.75rem" class="-my-1 border border-term-low" />
+              <PixelPerson face :av="item.av || 0" size="2.75rem" class="-my-1 border border-term-low" />
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-2">
                   <img
@@ -268,7 +269,7 @@ onUnmounted(() => {
         <!-- On a phone the lettered name goes under the face, where it has the whole width -->
         <header class="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
           <div class="self-start shrink-0 border border-term-low bg-term-deep px-1 pt-1">
-            <PixelPerson size="8.5rem" :seed="(person.av || 0) % 7" />
+            <PixelPerson size="8.5rem" :av="person.av || 0" :seed="(person.av || 0) % 7" />
           </div>
           <div class="min-w-0 flex-1 w-full">
             <h2 id="users-person-title" class="min-w-0">
@@ -422,6 +423,10 @@ onUnmounted(() => {
           <!-- Your own profile -->
           <form v-else class="term-panel p-4 space-y-4" aria-labelledby="users-edit-title" @submit.prevent="saveProfile">
             <h3 id="users-edit-title" class="term-label">{{ t.usersEditProfile }}</h3>
+            <div>
+              <span class="term-label">&gt; {{ t.charPick }}</span>
+              <CharacterPicker :t="t" class="mt-2" />
+            </div>
             <label class="block">
               <span class="term-label">&gt; {{ t.usersName }}</span>
               <span class="flex gap-2 mt-2">
