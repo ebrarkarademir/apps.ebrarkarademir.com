@@ -91,7 +91,8 @@ export const SITE = [
   { v: '1.55.0', date: '2026-11-04', commit: '4367e2e', note: 'Crater Duel: a simple aim, one line that grows with the power' },
   { v: '1.55.1', date: '2026-11-04', commit: '6e7759b', note: 'The Lobby page fits a phone: no more buttons running off the screen' },
   { v: '1.55.2', date: '2026-11-04', commit: 'b65cb42', note: 'Futsal guests see their own player where the host has it again, so it can’t walk into the ball' },
-  { v: '1.56.0', date: '2026-11-04', note: 'Pick your character: the man in the suit, in the sweatshirt or in the hat, on the Users tab, in lobbies and their chat, and at the Blackjack table' }
+  { v: '1.56.0', date: '2026-11-04', commit: '6295836', note: 'Pick your character: the man in the suit, in the sweatshirt or in the hat, on the Users tab, in lobbies and their chat, and at the Blackjack table' },
+  { v: '1.57.0', date: '2026-11-04', note: 'Blackjack: bets and side bets up to $10,000,000, with $25K, $100K and $1M chips' }
 ]
 
 export const GAMES = {
@@ -156,7 +157,8 @@ export const GAMES = {
     { v: '1.5.0', date: '2026-11-04', commit: '8456288', note: 'Everyone is the man in the navy suit' },
     { v: '1.6.0', date: '2026-11-04', commit: 'c5a38dc', note: 'He is animated and reacts to wins and losses' },
     { v: '1.6.1', date: '2026-11-04', commit: '3df5a60', note: 'He plays his own frames' },
-    { v: '1.7.0', date: '2026-11-04', note: 'Each player sits as the character they picked: the man in the suit, in the sweatshirt or in the hat, drinking and smoking from their own frames' }
+    { v: '1.7.0', date: '2026-11-04', commit: '6295836', note: 'Each player sits as the character they picked: the man in the suit, in the sweatshirt or in the hat, drinking and smoking from their own frames' },
+    { v: '1.8.0', date: '2026-11-04', note: 'Bets up to $10,000,000, side bets too (they had their own $1,000 limit); $25K, $100K and $1M chips' }
   ],
   sudoku: [
     { v: '1.0.0', date: '2026-10-26', commit: '031f28b', note: 'First version, solo' },

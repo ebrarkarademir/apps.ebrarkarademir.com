@@ -11,7 +11,7 @@ const props = defineProps({
   max: { type: Number, default: 8 }
 })
 
-const VALUES = [500000, 100000, 50000, 10000, 2500, 500]
+const VALUES = [100000000, 10000000, 2500000, 500000, 100000, 50000, 10000, 2500, 500]
 const RISE = 3 // px each chip sits above the one under it
 
 const chips = computed(() => {

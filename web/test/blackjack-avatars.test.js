@@ -59,6 +59,6 @@ test('a cigarette has a lit end to glow and smoke, in both poses, on the picture
 
 test('everyone starts with $100,000, and chips read in dollars', () => {
   assert.equal(RULES.startBalance, 10000000)
-  assert.deepEqual(CHIPS.map(chipLabel), ['$25', '$100', '$500', '$1K', '$5K'])
+  assert.deepEqual(CHIPS.map(chipLabel), ['$25', '$100', '$500', '$1K', '$5K', '$25K', '$100K', '$1M'])
   for (const chip of CHIPS) assert.ok(CHIP_LOOKS[chip], `no colours for ${chip}`)
 })

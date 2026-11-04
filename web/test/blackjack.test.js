@@ -270,3 +270,16 @@ test('the next round offers the last bet again, and leaving mid-round waits for 
   game.table.tick(game.later(RULES.settleMs + 1))
   assert.equal(game.table.players, 0)
 })
+
+test('a bet can go as high as $10,000,000, side bets too, with the money for it, and no higher', () => {
+  const TEN_MILLION = 1000000000 // cents
+  assert.equal(RULES.maxBet, TEN_MILLION)
+  assert.equal(RULES.sideMax, TEN_MILLION)
+  const wallet = makeWallet({ p: 3 * TEN_MILLION })
+  const table = new Table({ id: 't', wallet, shoe: ['TS', '9H', '7D', '8C', 'TH', '6D'] })
+  table.sit('p', 'Pat')
+  assert.equal(table.bet('p', TEN_MILLION + 2500).err, 'max')
+  assert.ok(!table.bet('p', TEN_MILLION).err, 'the most there is')
+  assert.ok(!table.sideBet('p', 'pp', TEN_MILLION, 0).err, 'a side bet as big')
+  assert.equal(table.sideBet('p', 't3', TEN_MILLION + 2500, 0).err, 'sideMax')
+})

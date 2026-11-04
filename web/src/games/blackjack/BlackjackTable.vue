@@ -1459,8 +1459,10 @@ button.plate:focus-visible {
 
 .tray {
   display: flex;
+  flex-wrap: wrap; /* eight chips: on a narrow phone, two rows */
   justify-content: center;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .chip-button {
