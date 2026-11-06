@@ -1,28 +1,33 @@
 import { colorOf, typeOf } from './engine'
-import { PIECES, SIDES, LINE_WIDTH } from './pieces'
-import { GREEN, DIM, LOW, GLOW, MONO, paint, drawSprite, drawText, drawGlyph } from '../ascii/paint'
-import { drawBolt } from '../ascii/fx'
+import { PIECES } from './pieces'
+import { pieceArt } from './pixelPieces'
+import { GREEN, DIM } from '../ascii/paint'
+import { PAL, toCanvas, pixelText, pixelBit, pixelBolt, inkOf } from '../../pixel/kit'
 
-// Draws Chess on a canvas that covers the whole play area, so lightning can come down
-// from the top of the screen and fireworks can go up anywhere. The board sits wherever the
-// page lays out its slot (setBoard). Positions in a scene are in squares on screen, from the
-// board's top-left corner, whichever way round it is; effects off the board are just numbers
-// outside 0-8.
+// Draws Chess (and Dama, with its own set) as a pixel-art board on a canvas that covers the
+// whole play area, so lightning can come down from the top of the screen and fireworks can go
+// up anywhere. The board sits wherever the page lays out its slot (setBoard). Positions in a
+// scene are in squares on screen, from the board's top-left corner, whichever way round it is;
+// effects off the board are just numbers outside 0-8.
 //
-// The pieces look like a real set (see pieces.js): White's glow white, Black's amber.
+// The board is wood in two tones inside a dark frame; the pieces are 16 by 16 pixel sprites
+// (see pixelPieces.js), White's white and Black's slate blue, blown up with hard edges.
 
 // The chess set; another game can bring its own (see createRenderer)
 const CHESS = { letters: 'PNBRQKpnbrqk', colorOf, typeOf, pieces: PIECES }
 const PIECE_SIZE = 0.9 // of a square
-const DARK = 'rgba(0, 255, 0, 0.13)'
-const LAST_WASH = 'rgba(0, 255, 0, 0.2)'
+const LIGHT = '#e4c08a'
+const DARK = '#b07a48'
+const FRAME = '#5d3a22'
+const LAST_WASH = 'rgba(255, 205, 117, 0.45)'
+const CHECK_WASH = 'rgba(177, 62, 83, 0.75)'
+const SELECT_WASH = 'rgba(65, 166, 246, 0.6)'
 
 /**
  * `set` is the pieces to draw: { letters (every piece character), colorOf(ch) -> 'w' | 'b',
- * typeOf(ch) -> a key of `pieces`, pieces (shapes in the format of pieces.js) }.
+ * typeOf(ch) -> a key of `pieces` (a chess letter, or man / king) }.
  */
 export function createRenderer (canvas, set = CHESS) {
-  const paths = Object.fromEntries(Object.entries(set.pieces).map(([type, parts]) => [type, parts.map(part => ({ ...part, path: new Path2D(part.d) }))]))
   const ctx = canvas.getContext('2d')
   let width = 0
   let height = 0
@@ -33,57 +38,23 @@ export function createRenderer (canvas, set = CHESS) {
   let cell = 0
   let sprites = null
 
-  // One piece, as big as a square: a glow in its side's color behind it, then each part
-  // shaded from the light side and outlined
-  function piece (ch) {
-    const side = SIDES[set.colorOf(ch)]
-    const parts = paths[set.typeOf(ch)]
-    const size = Math.ceil(cell * dpr)
-    const glow = Math.max(2, cell * 0.1) * dpr
-    const pad = Math.ceil(glow * 2) + 2
-    const image = document.createElement('canvas')
-    image.width = image.height = size + pad * 2
-    const g = image.getContext('2d')
-    const scale = (size * PIECE_SIZE) / 100
-    g.translate(pad + (size - 100 * scale) / 2, pad + (size - 100 * scale) / 2)
-    g.scale(scale, scale)
-    g.lineJoin = 'round'
-    g.lineCap = 'round'
-    g.lineWidth = LINE_WIDTH
-    g.save()
-    g.shadowColor = side.glow
-    g.shadowBlur = glow
-    g.fillStyle = side.fill
-    for (const part of parts) if (!part.line) g.fill(part.path)
-    g.restore()
-    const shading = g.createLinearGradient(20, 0, 82, 0)
-    shading.addColorStop(0, side.fill)
-    shading.addColorStop(0.45, side.fill)
-    shading.addColorStop(1, side.shade)
-    g.strokeStyle = side.line
-    for (const part of parts) {
-      if (!part.line) {
-        g.fillStyle = part.ink ? side.line : shading
-        g.fill(part.path)
-      }
-      g.stroke(part.path)
-    }
-    return { canvas: image, cx: image.width / 2, cy: image.height / 2 }
+  function build () {
+    sprites = { piece: Object.fromEntries([...set.letters].map(ch => [ch, toCanvas(pieceArt(set.typeOf(ch), set.colorOf(ch)))])) }
   }
 
-  function build () {
-    if (!cell) return
-    const cw = cell * dpr
-    const glyph = (ch, color, px, lit = true) => paint([ch], () => color, { cw, rh: px * dpr, glow: lit ? Math.max(1.5, cell * 0.08) * dpr : 0, weight: 700 })
-    sprites = {
-      piece: Object.fromEntries([...set.letters].map(ch => [ch, piece(ch)])),
-      // Where the selected piece can go: a dot on an empty square, brackets round a capture
-      dot: glyph('•', DIM, cell * 0.5, false),
-      open: glyph('[', GREEN, cell * 0.8),
-      close: glyph(']', GREEN, cell * 0.8),
-      // A dark square: phosphor dots, so the board reads like a screen of characters
-      grain: paint(['. . ', ' . .', '. . ', ' . .'], () => LOW, { cw: cw / 4, rh: cw / 4, glow: 0, weight: 400 })
-    }
+  // A piece centered on (x, y) CSS pixels, a square across, grown by `scale`
+  function drawPiece (ch, x, y, { scale = 1, alpha = 1, angle = 0, lighter = false } = {}) {
+    const image = sprites.piece[ch]
+    if (!image) return
+    const s = cell * PIECE_SIZE * scale
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    ctx.globalAlpha = alpha
+    if (lighter) ctx.globalCompositeOperation = 'lighter'
+    ctx.translate(x, y)
+    if (angle) ctx.rotate(angle)
+    ctx.drawImage(image, -s / 2, -s / 2, s, s)
+    ctx.restore()
   }
 
   // Square edges snap to whole device pixels, so fills meet exactly
@@ -98,40 +69,46 @@ export function createRenderer (canvas, set = CHESS) {
   }
 
   function squares (scene) {
-    ctx.fillStyle = '#000'
-    ctx.fillRect(bx, by, size, size)
-    const { canvas: grain, pad } = sprites.grain
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) fill(x, y, (x + y) % 2 ? DARK : LIGHT)
+    }
+    // A little grain in the wood: a darker pixel here and there
+    const g = Math.max(1, Math.round(cell / 12))
+    ctx.fillStyle = 'rgba(93, 58, 34, 0.22)'
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
-        if ((x + y) % 2 === 0) continue
-        fill(x, y, DARK)
-        ctx.globalAlpha = 0.55
-        ctx.drawImage(grain, pad, pad, grain.width - pad * 2, grain.height - pad * 2, edgeX(x), edgeY(y), cell, cell)
-        ctx.globalAlpha = 1
+        for (let k = 0; k < 3; k++) ctx.fillRect(Math.round(X(x) + ((x * 7 + y * 3 + k * 5) % 11) / 11 * cell), Math.round(Y(y) + ((k * 4 + x + y * 5) % 9 + 1) / 10 * cell), g * 3, g)
       }
     }
     for (const at of scene.lastMove || []) fill(at.x, at.y, LAST_WASH)
-    if (scene.check && scene.blink) fill(scene.check.x, scene.check.y, 'rgba(0, 255, 0, 0.42)')
-    if (scene.selected) fill(scene.selected.x, scene.selected.y, GREEN)
+    if (scene.check && scene.blink) fill(scene.check.x, scene.check.y, CHECK_WASH)
+    if (scene.selected) fill(scene.selected.x, scene.selected.y, SELECT_WASH)
   }
 
+  // A thick dark wooden frame with a hard shadow under it
   function frame () {
-    const thick = Math.max(2, Math.round(cell * 0.05 * dpr)) / dpr
-    ctx.save()
-    ctx.shadowColor = GLOW
-    ctx.shadowBlur = cell * 0.3 * dpr
-    ctx.strokeStyle = GREEN
-    ctx.lineWidth = thick
-    ctx.strokeRect(bx - thick / 2, by - thick / 2, size + thick, size + thick)
-    ctx.restore()
+    const t = Math.max(4, Math.round(cell * 0.12))
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
+    ctx.fillRect(bx - t, by + size + t, size + t * 2, t)
+    ctx.fillStyle = FRAME
+    ctx.fillRect(bx - t, by - t, size + t * 2, t)
+    ctx.fillRect(bx - t, by + size, size + t * 2, t)
+    ctx.fillRect(bx - t, by, t, size)
+    ctx.fillRect(bx + size, by, t, size)
+    ctx.fillStyle = PAL.k
+    const o = Math.max(2, Math.round(t / 3))
+    ctx.fillRect(bx - t - o, by - t - o, size + (t + o) * 2, o)
+    ctx.fillRect(bx - t - o, by + size + t, size + (t + o) * 2, o)
+    ctx.fillRect(bx - t - o, by - t, o, size + t * 2)
+    ctx.fillRect(bx + size + t, by - t, o, size + t * 2)
   }
 
   // Files along the bottom row and ranks up the left column, inside the corner of each square
   function coordinates (scene) {
-    const px = Math.max(8, cell * 0.2)
+    const px = Math.max(7, Math.round(cell * 0.15))
     ctx.save()
-    ctx.font = `600 ${px}px ${MONO}`
-    ctx.fillStyle = DIM
+    ctx.font = `${px}px "Press Start 2P", monospace`
+    ctx.fillStyle = 'rgba(93, 58, 34, 0.85)'
     ctx.textBaseline = 'alphabetic'
     for (let k = 0; k < 8; k++) {
       ctx.textAlign = 'right'
@@ -155,63 +132,62 @@ export function createRenderer (canvas, set = CHESS) {
         const cy = Y(y + 0.5)
         // Flickering in (a new game, a promotion): other pieces of its side flash past first
         if (scene.decode[sq] > 0) {
-          drawSprite(ctx, sprites.piece[scene.glitches[sq] || ch], cx, cy, { alpha: 0.35 + Math.random() * 0.65, dpr })
+          drawPiece(scene.glitches[sq] || ch, cx, cy, { alpha: 0.35 + Math.random() * 0.65 })
           continue
         }
         const isSelected = selected && selected.x === x && selected.y === y
         const scale = scene.pops[sq] || 1
         const alpha = scene.ghost === sq ? 0.3 : 1
-        drawSprite(ctx, sprites.piece[ch], cx, cy, { scale, alpha, dpr })
-        if (!isSelected && scene.glow[sq] > 0) {
-          ctx.save()
-          ctx.globalCompositeOperation = 'lighter'
-          drawSprite(ctx, sprites.piece[ch], cx, cy, { scale, alpha: scene.glow[sq] * alpha * 0.6, dpr })
-          ctx.restore()
-        }
+        drawPiece(ch, cx, cy, { scale, alpha })
+        if (!isSelected && scene.glow[sq] > 0) drawPiece(ch, cx, cy, { scale, alpha: scene.glow[sq] * alpha * 0.6, lighter: true })
       }
     }
   }
 
+  // Where the selected piece can go: a square dot on an empty square, red corners round a capture
   function targets (scene) {
+    const s = Math.max(2, Math.round(cell * 0.07))
     for (const target of scene.targets) {
-      const cx = X(target.x + 0.5)
-      const cy = Y(target.y + 0.5)
       if (target.capture) {
-        drawSprite(ctx, sprites.open, cx - cell * 0.39, cy, { dpr })
-        drawSprite(ctx, sprites.close, cx + cell * 0.39, cy, { dpr })
+        corners(target, PAL.r, s * 1.5, cell * 0.28)
       } else {
-        drawSprite(ctx, sprites.dot, cx, cy, { dpr })
+        const d = Math.round(cell * 0.22)
+        ctx.fillStyle = 'rgba(16, 17, 29, 0.35)'
+        ctx.fillRect(Math.round(X(target.x + 0.5) - d / 2), Math.round(Y(target.y + 0.5) - d / 2), d, d)
       }
     }
   }
 
-  // The keyboard cursor: corner marks round the square, gliding between squares
-  function cursor ({ x, y }) {
-    const inset = cell * 0.06
-    const arm = cell * 0.24
-    const left = X(x) + inset
-    const top = Y(y) + inset
-    const right = X(x + 1) - inset
-    const bottom = Y(y + 1) - inset
-    ctx.save()
-    ctx.strokeStyle = GREEN
-    ctx.lineWidth = Math.max(2, cell * 0.05)
-    ctx.shadowColor = GLOW
-    ctx.shadowBlur = cell * 0.2 * dpr
-    ctx.beginPath()
-    for (const [cx, cy, dx, dy] of [[left, top, 1, 1], [right, top, -1, 1], [left, bottom, 1, -1], [right, bottom, -1, -1]]) {
-      ctx.moveTo(cx, cy + dy * arm)
-      ctx.lineTo(cx, cy)
-      ctx.lineTo(cx + dx * arm, cy)
-    }
-    ctx.stroke()
-    ctx.restore()
+  // Corner marks round a square
+  function corners ({ x, y }, color, thick, arm) {
+    const t = Math.round(thick)
+    const a = Math.round(arm)
+    const inset = Math.round(cell * 0.05)
+    const left = Math.round(X(x)) + inset
+    const top = Math.round(Y(y)) + inset
+    const right = Math.round(X(x + 1)) - inset
+    const bottom = Math.round(Y(y + 1)) - inset
+    ctx.fillStyle = color
+    ctx.fillRect(left, top, a, t)
+    ctx.fillRect(left, top, t, a)
+    ctx.fillRect(right - a, top, a, t)
+    ctx.fillRect(right - t, top, t, a)
+    ctx.fillRect(left, bottom - t, a, t)
+    ctx.fillRect(left, bottom - a, t, a)
+    ctx.fillRect(right - a, bottom - t, a, t)
+    ctx.fillRect(right - t, bottom - a, t, a)
+  }
+
+  // The keyboard cursor: gold corner marks round the square, gliding between squares
+  function cursor (at) {
+    corners(at, PAL.k, Math.max(3, cell * 0.09), cell * 0.3)
+    corners(at, PAL.y, Math.max(2, cell * 0.06), cell * 0.27)
   }
 
   function particle (p) {
     let alpha = Math.max(0, Math.min(1, p.life / p.ttl))
     if (p.twinkle && p.life < p.ttl * 0.6) alpha *= 0.4 + Math.random() * 0.6
-    drawGlyph(ctx, p.ch, X(p.x), Y(p.y), { px: cell * (p.size || 0.42), color: p.color, alpha, angle: p.angle || 0, font: p.font })
+    pixelBit(ctx, p.ch, X(p.x), Y(p.y), cell * (p.size || 0.42) * 0.2, inkOf(p.color, p.spin !== undefined ? { [GREEN]: '#ffb3d9', [DIM]: '#f4f4f4' } : null), alpha)
   }
 
   /**
@@ -233,7 +209,7 @@ export function createRenderer (canvas, set = CHESS) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
     ctx.save()
-    if (scene.shake > 0) ctx.translate((Math.random() * 2 - 1) * scene.shake * cell * 0.2, (Math.random() * 2 - 1) * scene.shake * cell * 0.2)
+    if (scene.shake > 0) ctx.translate(Math.round((Math.random() * 2 - 1) * scene.shake * cell * 0.2), Math.round((Math.random() * 2 - 1) * scene.shake * cell * 0.2))
     squares(scene)
     frame()
     coordinates(scene)
@@ -241,20 +217,20 @@ export function createRenderer (canvas, set = CHESS) {
     targets(scene)
     if (scene.cursor) cursor(scene.cursor)
     for (const item of scene.moving) {
-      drawSprite(ctx, sprites.piece[item.piece], X(item.x + 0.5), Y(item.y + 0.5), { scale: item.scale || 1, alpha: item.alpha ?? 1, dpr })
+      drawPiece(item.piece, X(item.x + 0.5), Y(item.y + 0.5), { scale: item.scale || 1, alpha: item.alpha ?? 1 })
     }
     for (const piece of scene.debris) {
-      drawSprite(ctx, sprites.piece[piece.piece], X(piece.x), Y(piece.y), { angle: piece.angle, alpha: piece.alpha ?? 1, dpr })
+      drawPiece(piece.piece, X(piece.x), Y(piece.y), { angle: piece.angle, alpha: piece.alpha ?? 1 })
     }
     for (const p of scene.particles) particle(p)
-    for (const bolt of scene.bolts) drawBolt(ctx, bolt.glyphs, { px: cell * 0.5, alpha: bolt.alpha, dpr, toX: X, toY: Y })
+    for (const bolt of scene.bolts) pixelBolt(ctx, bolt.glyphs, { size: cell * 0.12, alpha: bolt.alpha, toX: X, toY: Y })
     ctx.restore()
 
     for (const item of scene.texts) {
-      drawText(ctx, item.text, X(item.x ?? 4), Y(item.y), { px: item.size * cell, dpr, ...item })
+      pixelText(ctx, item.text, X(item.x ?? 4), Y(item.y), { px: item.size * cell * (item.display ? 0.55 : 0.62), color: inkOf(item.color === GREEN || !item.color ? PAL.w : item.color), alpha: item.alpha ?? 1 })
     }
     if (scene.flash > 0) {
-      ctx.fillStyle = `rgba(0, 255, 0, ${0.2 * scene.flash})`
+      ctx.fillStyle = `rgba(255, 205, 117, ${0.25 * scene.flash})`
       ctx.fillRect(0, 0, width, height)
     }
   }
@@ -268,21 +244,20 @@ export function createRenderer (canvas, set = CHESS) {
       canvas.height = Math.max(1, Math.round(height * dpr))
       canvas.style.width = `${width}px`
       canvas.style.height = `${height}px`
-      build()
+      if (!sprites) build()
     },
     // Where the board is on the canvas, in CSS pixels
     setBoard (x, y, boardSize) {
-      const changed = boardSize !== size
       bx = Math.round(x * dpr) / dpr
       by = Math.round(y * dpr) / dpr
       size = boardSize
       cell = size / 8
-      if (changed || !sprites) build()
+      if (!sprites) build()
     },
     // The edges of the canvas in squares, for effects that start off the board
     bounds: () => (cell ? { left: -bx / cell, top: -by / cell, right: (width - bx) / cell, bottom: (height - by) / cell } : { left: 0, top: -1, right: 8, bottom: 9 }),
-    // Fonts that finish loading later need the sprites painted again
-    rebuild: build,
+    // The pieces are pictures and the words are drawn fresh every frame: nothing to redo
+    rebuild () {},
     draw
   }
 }

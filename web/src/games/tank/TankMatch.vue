@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import PixelArt from '../../components/PixelArt.vue'
+import { menuArt } from '../../pixel/menuArt'
 import confetti from 'canvas-confetti'
 import TermWindow from '../../components/TermWindow.vue'
 import TankStage from './TankStage.vue'
@@ -20,7 +22,6 @@ const props = defineProps({
 
 const emit = defineEmits(['exit', 'setup'])
 
-const WINNER_ART = ['  \\|/', ' #=#=#', ' [(@)]=-', ' #=#=#'].join('\n')
 
 // How a tank came out of the round, in words: intact, scratched, battered, burning or wrecked
 const conditionText = (entry) => props.t[`tankState${entry.alive ? Math.max(0, Math.min(3, ARMOR - entry.hp)) : 4}`]
@@ -137,7 +138,7 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
   <component :is="frame.is" v-else-if="view.phase === 'results'" v-bind="frame.attrs" @back="emit('setup')">
     <div class="space-y-6">
       <div class="text-center">
-        <span class="inline-block whitespace-pre text-left text-sm leading-tight mb-3" aria-hidden="true">{{ WINNER_ART }}</span>
+        <PixelArt :art="menuArt.trophy" class="h-14 w-auto mx-auto mb-3" />
         <h2 class="font-display text-5xl leading-none uppercase">{{ heading }}</h2>
         <p class="term-muted mt-2">&gt; {{ summary }}</p>
         <p v-if="nextIn !== null" class="term-muted mt-1 text-sm" role="status">{{ fmt(t.tankNextRoundIn, { s: nextIn }) }}</p>

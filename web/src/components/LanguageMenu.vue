@@ -123,7 +123,7 @@ onUnmounted(() => document.removeEventListener('pointerdown', onPointerDown))
           :class="['lang-item', { 'is-active': lang.code === currentLang }]"
           @click="choose(lang.code)"
         >
-          <span aria-hidden="true">{{ lang.code === currentLang ? '(*)' : '( )' }}</span>
+          <i :class="['pxi pxi-check', { invisible: lang.code !== currentLang }]" aria-hidden="true"></i>
           <span class="w-5" aria-hidden="true">{{ lang.code }}</span>
           <span>{{ lang.name }}</span>
         </button>

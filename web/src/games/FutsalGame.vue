@@ -1,5 +1,8 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted, markRaw } from 'vue'
+import PixelArt from '../components/PixelArt.vue'
+import { menuArt } from '../pixel/menuArt'
+import { cardArt } from '../cardArt'
 import confetti from 'canvas-confetti'
 import { recordWin } from '../online/profile'
 import TermWindow from '../components/TermWindow.vue'
@@ -22,20 +25,7 @@ const emit = defineEmits(['go-back'])
 const SETUP_KEY = 'futsalSolo'
 const LEVEL_NAMES = Object.keys(LEVELS)
 const TEAMS = [0, 1]
-const SHAPE = ['(#)', '( )']
 
-const LETTERS = {
-  F: [' ___ ', '| __|', '| _| ', '|_|  '],
-  U: [' _   _ ', '| | | |', '| |_| |', ' \\___/ '],
-  T: [' _____ ', '|_   _|', '  | |  ', '  |_|  '],
-  S: [' ___ ', '/ __|', '\\__ \\', '|___/'],
-  A: ['   _   ', '  /_\\  ', ' / _ \\ ', '/_/ \\_\\'],
-  L: [' _    ', '| |   ', '| |__ ', '|____|']
-}
-const TITLE_ART = [0, 1, 2, 3].map(row => [...'FUTSAL'].map(letter => LETTERS[letter][row]).join(' ')).join('\n')
-const SOLO_ART = [' .-.            .-.', '(#*#)   o      ( 2 )', " '-'            '-'"].join('\n')
-const ONLINE_ART = [' .-. .-.      .-. .-.', '(#A#)(#B#)  o ( C )( D )', " '-' '-'      '-' '-'"].join('\n')
-const TROPHY_ART = [' .---.', '(|   |)', " '-.-'", '  _|_'].join('\n')
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 const shuffle = (list) => {
@@ -112,7 +102,7 @@ function kickOffSolo () {
 function onSoloEnd (result) {
   solo.result = result
   if (result.winner === 0) recordWin('futsal')
-  if (result.winner === 0) confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
+  if (result.winner === 0) confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#ffcd75', '#41a6f6', '#b13e53', '#a7f070', '#f4f4f4'], shapes: ['square'] })
 }
 
 function togglePause () {
@@ -306,7 +296,7 @@ const resultText = computed(() => {
 watch(() => (view.value?.phase === 'results' ? view.value.round : 0), (round) => {
   if (round && result.value?.winner !== null && result.value?.winner === view.value.roster.find(e => e.id === room.myId)?.team) {
     recordWin('futsal')
-    confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
+    confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#ffcd75', '#41a6f6', '#b13e53', '#a7f070', '#f4f4f4'], shapes: ['square'] })
   }
 })
 
@@ -325,25 +315,25 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
   <TermWindow v-if="mode === null" class="max-w-2xl" :title="t.futsalTitle" :backLabel="t.back" @back="emit('go-back')">
     <div class="space-y-6">
       <div class="overflow-hidden text-center" aria-hidden="true">
-        <span class="inline-block whitespace-pre text-left text-[0.55rem] min-[400px]:text-xs sm:text-sm leading-tight">{{ TITLE_ART }}</span>
+        <PixelArt :art="cardArt['futsal']" class="title-art mx-auto w-36 sm:w-44 h-auto" />
       </div>
 
       <div class="grid sm:grid-cols-2 gap-4">
         <button type="button" :class="cardClass" @click="mode = 'setup'">
-          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ SOLO_ART }}</span>
+          <PixelArt :art="menuArt.solo" class="h-9 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.futsalSolo }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.futsalSoloDesc }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
 
         <button type="button" :class="cardClass" @click="mode = 'online'">
-          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ ONLINE_ART }}</span>
+          <PixelArt :art="menuArt.online" class="h-10 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.futsalOnline }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.futsalOnlineDesc }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
       </div>
@@ -359,20 +349,20 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
 
       <div class="space-y-4">
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-40">&gt; {{ t.futsalTeamSize }}</span>
+          <span class="term-label w-full sm:w-40">{{ t.futsalTeamSize }}</span>
           <button v-for="size in MAX_TEAM" :key="size" type="button" :class="optionClass(setup.size === size)" @click="setup.size = size">{{ size }} v {{ size }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-40">&gt; {{ t.futsalLevel }}</span>
+          <span class="term-label w-full sm:w-40">{{ t.futsalLevel }}</span>
           <button v-for="level in LEVEL_NAMES" :key="level" type="button" :class="optionClass(setup.level === level)" @click="setup.level = level">{{ levelName(level) }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-40">&gt; {{ t.futsalLength }}</span>
+          <span class="term-label w-full sm:w-40">{{ t.futsalLength }}</span>
           <button v-for="minutes in MINUTES" :key="minutes" type="button" :class="optionClass(setup.minutes === minutes)" @click="setup.minutes = minutes">{{ fmt(t.futsalMinutes, { n: minutes }) }}</button>
         </div>
       </div>
 
-      <p class="term-muted text-sm leading-relaxed">&gt; {{ setup.size > 1 ? fmt(t.futsalSoloTeamHint, { n: setup.size - 1 }) : t.futsalSoloAloneHint }} {{ t.futsalRulesHint }}</p>
+      <p class="term-muted text-sm leading-relaxed">{{ setup.size > 1 ? fmt(t.futsalSoloTeamHint, { n: setup.size - 1 }) : t.futsalSoloAloneHint }} {{ t.futsalRulesHint }}</p>
 
       <button type="button" class="term-btn term-btn-primary w-full min-h-12" @click="kickOffSolo">{{ t.futsalKickOffButton }}</button>
       <p class="term-muted text-center text-xs sm:text-sm leading-relaxed">{{ t.futsalControls }}</p>
@@ -405,7 +395,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
         :disabled="!!solo.result"
         @click="onPauseClick"
       >
-        {{ solo.paused ? '[>]' : '[||]' }}
+        <i :class="['pxi', solo.paused ? 'pxi-play' : 'pxi-pause']" aria-hidden="true"></i>
       </button>
     </template>
 
@@ -414,13 +404,13 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
         <div class="term-window w-full max-w-sm max-h-full overflow-y-auto p-5 text-center" role="dialog" aria-modal="false" :aria-label="t.futsalFullTime">
           <h2 class="font-display text-5xl leading-none uppercase">{{ t.futsalFullTime }}</h2>
           <p class="mt-3 font-display text-5xl leading-none tabular-nums">{{ solo.result.score[0] }} : {{ solo.result.score[1] }}</p>
-          <p class="term-muted text-xs uppercase tracking-widest mt-1">{{ SHAPE[0] }} {{ t.futsalHome }} · {{ t.futsalAway }} {{ SHAPE[1] }}</p>
+          <p class="term-muted text-xs uppercase tracking-widest mt-1"><span :class="['px-team', 'px-team-' + (0)]" aria-hidden="true"></span> {{ t.futsalHome }} · {{ t.futsalAway }} <span :class="['px-team', 'px-team-' + (1)]" aria-hidden="true"></span></p>
           <p :class="['inline-block mt-3 px-2 py-0.5 text-sm font-bold uppercase tracking-widest', { 'term-inverse': solo.result.winner === 0 }]">{{ soloVerdict }}</p>
 
           <ul v-if="soloGoals.length" class="mt-4 space-y-1 text-left text-sm">
             <li v-for="(goal, index) in soloGoals" :key="index" class="flex gap-2">
               <span class="w-10 shrink-0 tabular-nums term-muted">{{ clockText(goal.at) }}</span>
-              <span class="shrink-0" aria-hidden="true">{{ SHAPE[goal.team] }}</span>
+              <span class="shrink-0"><span :class="['px-team', 'px-team-' + (goal.team)]" aria-hidden="true"></span></span>
               <span class="truncate">{{ goal.name }}<span v-if="goal.own" class="term-muted"> ({{ t.futsalOwnGoalShort }})</span></span>
             </li>
           </ul>
@@ -460,7 +450,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
           <div v-for="team in TEAMS" :key="team" :class="['term-panel p-3 space-y-2 min-w-0', { 'border-term': myTeam === team }]">
             <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
               <h2 class="font-display text-2xl leading-none uppercase whitespace-nowrap">
-                <span class="mr-2" aria-hidden="true">{{ SHAPE[team] }}</span>{{ teamName(team) }}
+                <span class="mr-2" aria-hidden="true"><span :class="['px-team', 'px-team-' + (team)]" aria-hidden="true"></span></span>{{ teamName(team) }}
                 <span class="text-base term-muted tabular-nums">{{ teamCount(team) }}/{{ MAX_TEAM }}</span>
               </h2>
               <button
@@ -469,7 +459,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
                 class="term-link text-xs"
                 @click="room.act('team', { team })"
               >
-                [+] {{ t.futsalJoin }}
+                <i class="pxi pxi-plus" aria-hidden="true"></i> {{ t.futsalJoin }}
               </button>
             </div>
             <ul class="space-y-1.5">
@@ -489,7 +479,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
                   :aria-label="fmt(t.futsalRemoveBot, { name: member.name })"
                   @click="room.act('removeBot', { id: member.id })"
                 >
-                  [x]
+                  <i class="pxi pxi-close" aria-hidden="true"></i>
                 </button>
               </li>
             </ul>
@@ -499,20 +489,20 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
               class="term-link text-xs"
               @click="room.act('addBot', { team })"
             >
-              [+] {{ t.futsalAddBot }}
+              <i class="pxi pxi-plus" aria-hidden="true"></i> {{ t.futsalAddBot }}
             </button>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <span class="term-label">{{ t.futsalWatchers }} [{{ watchers.length }}]</span>
+          <span class="term-label">{{ t.futsalWatchers }} · {{ watchers.length }}</span>
           <span v-for="player in watchers" :key="player.id" :class="['flex items-center gap-2', { 'font-semibold': player.id === room.myId }]">
             <span :class="['term-dot', { 'is-off': !player.online }]"></span>
             <span class="truncate max-w-[10rem]">{{ player.name }}</span>
           </span>
-          <button v-if="myTeam !== null" type="button" class="term-link text-xs" @click="room.act('team', { team: null })">[~] {{ t.futsalJustWatch }}</button>
+          <button v-if="myTeam !== null" type="button" class="term-link text-xs" @click="room.act('team', { team: null })"><i class="pxi pxi-swap" aria-hidden="true"></i> {{ t.futsalJustWatch }}</button>
           <button v-if="room.isHost" type="button" class="term-link text-xs ml-auto" @click="room.act('shuffle')">
-            <span aria-hidden="true">[~]</span>
+            <span aria-hidden="true"><i class="pxi pxi-swap" aria-hidden="true"></i></span>
             <span>{{ t.futsalShuffle }}</span>
           </button>
         </div>
@@ -523,21 +513,21 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
       <div class="space-y-4">
         <div class="space-y-3">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="term-label w-full sm:w-36">&gt; {{ t.futsalLength }}</span>
+            <span class="term-label w-full sm:w-36">{{ t.futsalLength }}</span>
             <button v-for="minutes in MINUTES" :key="minutes" type="button" :disabled="!isHost" :class="optionClass(lobby.minutes === minutes)" @click="room.act('settings', { minutes })">{{ fmt(t.futsalMinutes, { n: minutes }) }}</button>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <span class="term-label w-full sm:w-36">&gt; {{ t.futsalGoalsToWin }}</span>
+            <span class="term-label w-full sm:w-36">{{ t.futsalGoalsToWin }}</span>
             <button v-for="goals in GOAL_LIMITS" :key="goals" type="button" :disabled="!isHost" :class="optionClass(lobby.goalLimit === goals)" @click="room.act('settings', { goals })">{{ goalsName(goals) }}</button>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <span class="term-label w-full sm:w-36">&gt; {{ t.futsalLevel }}</span>
+            <span class="term-label w-full sm:w-36">{{ t.futsalLevel }}</span>
             <button v-for="level in LEVEL_NAMES" :key="level" type="button" :disabled="!isHost" :class="optionClass(lobby.level === level)" @click="room.act('settings', { level })">{{ levelName(level) }}</button>
           </div>
         </div>
         <div class="space-y-2 text-sm leading-relaxed">
-          <p class="term-muted">&gt; {{ t.futsalLobbyHint }}</p>
-          <p class="term-muted">&gt; {{ t.futsalControls }}</p>
+          <p class="term-muted">{{ t.futsalLobbyHint }}</p>
+          <p class="term-muted">{{ t.futsalControls }}</p>
         </div>
       </div>
     </template>
@@ -567,14 +557,14 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
     <!-- Full time -->
     <div v-else-if="view.phase === 'results' && result" class="space-y-6">
       <div class="text-center">
-        <span class="inline-block whitespace-pre text-left text-sm leading-tight mb-3" aria-hidden="true">{{ TROPHY_ART }}</span>
+        <PixelArt :art="menuArt.trophy" class="h-14 w-auto mx-auto mb-3" />
         <h2 class="font-display text-5xl leading-none uppercase">{{ t.futsalFullTime }}</h2>
         <div class="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <p :class="['text-right text-sm font-semibold uppercase tracking-wider', { 'term-inverse px-2 py-1 justify-self-end': result.winner === 0 }]">{{ SHAPE[0] }} {{ t.futsalHome }}</p>
+          <p :class="['text-right text-sm font-semibold uppercase tracking-wider', { 'term-inverse px-2 py-1 justify-self-end': result.winner === 0 }]"><span :class="['px-team', 'px-team-' + (0)]" aria-hidden="true"></span> {{ t.futsalHome }}</p>
           <p class="font-display text-6xl leading-none tabular-nums">{{ result.score[0] }} : {{ result.score[1] }}</p>
-          <p :class="['text-left text-sm font-semibold uppercase tracking-wider', { 'term-inverse px-2 py-1 justify-self-start': result.winner === 1 }]">{{ t.futsalAway }} {{ SHAPE[1] }}</p>
+          <p :class="['text-left text-sm font-semibold uppercase tracking-wider', { 'term-inverse px-2 py-1 justify-self-start': result.winner === 1 }]">{{ t.futsalAway }} <span :class="['px-team', 'px-team-' + (1)]" aria-hidden="true"></span></p>
         </div>
-        <p class="term-muted mt-3">&gt; {{ resultText }}</p>
+        <p class="term-muted mt-3">{{ resultText }}</p>
       </div>
 
       <div>
@@ -582,7 +572,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
         <ol v-if="resultGoals.length" class="border border-term-low divide-y divide-term-low">
           <li v-for="(goal, index) in resultGoals" :key="index" class="flex items-center gap-3 px-4 py-2 text-sm">
             <span class="w-12 tabular-nums term-muted">{{ clockText(goal.at) }}</span>
-            <span aria-hidden="true">{{ SHAPE[goal.team] }}</span>
+            <span aria-hidden="true"><span :class="['px-team', 'px-team-' + (goal.team)]" aria-hidden="true"></span></span>
             <span :class="['flex-1 truncate', { 'font-semibold': goal.id === room.myId }]">{{ goal.name }}<span v-if="goal.own" class="term-muted"> ({{ t.futsalOwnGoalShort }})</span></span>
           </li>
         </ol>
@@ -592,10 +582,10 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
 
       <!-- Someone who only watched can get on a team for the next match -->
       <div v-if="myTeam === null" class="term-panel p-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        <span class="term-muted">&gt; {{ t.futsalPickTeam }}</span>
+        <span class="term-muted">{{ t.futsalPickTeam }}</span>
         <template v-for="team in TEAMS" :key="team">
           <button v-if="teamCount(team) < MAX_TEAM" type="button" class="term-link" @click="room.act('team', { team })">
-            [+] {{ SHAPE[team] }} {{ teamName(team) }}
+            <i class="pxi pxi-plus" aria-hidden="true"></i> <span :class="['px-team', 'px-team-' + (team)]" aria-hidden="true"></span> {{ teamName(team) }}
           </button>
         </template>
       </div>

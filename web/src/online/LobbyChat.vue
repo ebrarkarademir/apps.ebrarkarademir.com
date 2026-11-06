@@ -52,11 +52,11 @@ onUnmounted(() => document.removeEventListener('visibilitychange', seen))
     <ol ref="log" :class="[height, 'overflow-y-auto px-3 py-2 space-y-1 text-sm']" aria-live="polite">
       <li v-if="!lines.length" class="term-muted leading-relaxed">{{ t.lobbyChatEmpty }}</li>
       <li v-for="line in lines" :key="line.id" class="break-words leading-relaxed">
-        <span class="term-muted tabular-nums mr-2">[{{ clock(line.at) }}]</span>
+        <span class="term-muted tabular-nums mr-2">{{ clock(line.at) }}</span>
         <span v-if="line.sys" class="term-muted italic">*** {{ systemText(line) }}</span>
         <template v-else>
           <span :class="['mr-2 whitespace-nowrap', line.from === session.myId ? 'term-muted' : 'font-semibold']">
-            <PixelPerson face :av="line.av || 0" size="1.85em" class="-my-1.5 mr-1" />{{ line.name }}&gt;
+            <PixelPerson face :av="line.av || 0" size="1.85em" class="-my-1.5 mr-1" />{{ line.name }}:
           </span>
           <span>{{ line.text }}</span>
         </template>

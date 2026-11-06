@@ -3,6 +3,8 @@ import { ref, computed, watch, provide, onMounted, onUnmounted, defineAsyncCompo
 import LanguageMenu from './components/LanguageMenu.vue'
 import TermWindow from './components/TermWindow.vue'
 import VersionsPanel from './components/VersionsPanel.vue'
+import PixelArt from './components/PixelArt.vue'
+import { sprite } from './pixel/kit'
 import GameMenu from './views/GameMenu.vue'
 import UsersView from './views/UsersView.vue'
 import LobbyView from './views/LobbyView.vue'
@@ -37,6 +39,18 @@ import { session, currentRoom, roomInfo } from './online/session'
 import { switchTargets, appNav } from './online/gameSwitch'
 import { profile, autoCountry, earnedMedals, randomName, cleanName, ensureName, MAX_NAME } from './online/profile'
 import { lookUpIp as lookUpIpInfo } from './online/ipInfo'
+
+// The logo: a little game pad
+const logoArt = sprite([
+  '..yyyyyyyyyy..',
+  '.yYYYYYYYYYYy.',
+  'yYYkYYYYYYrYYy',
+  'yYkkkYYYYbYgYy',
+  'yYYkYYYYYYlYYy',
+  'yYYYYYyyYYYYYy',
+  '.yYYYy..yYYYy.',
+  '..yyy....yyy..'
+], { colors: { y: 'o', Y: 'y' } })
 
 // The language menu lists every language in translations.js, each by its own name
 const languages = Object.entries(translations).map(([code, text]) => ({ code, name: text.languageName }))
@@ -702,11 +716,11 @@ const currentRules = computed(() => {
 })
 const rulesText = computed(() => rulesLabels[currentLang.value] || rulesLabels.EN)
 
-// Same tile styles as Password Hack: inverted = right spot, dashed = wrong spot, faint = not in word
+// Same tile colors as Password Hack: lime = right spot, gold = wrong spot, dark = not in word
 const legendStyles = {
-  green: 'term-inverse',
-  yellow: 'border border-dashed border-term',
-  gray: 'border border-term-low text-term-low'
+  green: 'bg-lime text-black',
+  yellow: 'bg-gold text-black',
+  gray: 'bg-well text-term-low'
 }
 
 const isTyping = (target) => !!target.closest?.('input, textarea, select, [contenteditable="true"]')
@@ -755,20 +769,24 @@ onUnmounted(() => {
 
 <template>
   <div class="crt min-h-screen bg-black text-term font-mono">
-    <nav :aria-label="t.navLabel" class="sticky top-0 z-30 bg-black/90 border-b border-term-low">
+    <nav :aria-label="t.navLabel" class="app-nav sticky top-0 z-30">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-wrap lg:flex-nowrap items-center gap-x-6 gap-y-3">
         <button v-if="isDevSite" type="button" class="order-1 -mr-3 term-inverse px-1.5 text-xs font-bold tracking-widest" :title="t.versionsTitle" @click="showVersions = true">DEV {{ appVersion }}</button>
         <button v-else type="button" class="order-1 -mr-3 border border-term-low px-1.5 text-xs font-bold tracking-widest term-muted hover:text-term" :title="t.versionsTitle" @click="showVersions = true">{{ appVersion }}</button>
 
-        <!-- Shell prompt -->
-        <p class="order-1 flex-1 basis-0 lg:flex-none lg:basis-auto min-w-0 truncate text-sm font-semibold">
-          <span aria-hidden="true"><span class="term-muted">{{ profile.name || t.usersGuest }}@apps</span>:</span>
-          <template v-for="(crumb, index) in crumbs" :key="crumb.text">
-            <span v-if="index" aria-hidden="true">/</span>
-            <button v-if="crumb.path" type="button" class="term-crumb" :aria-label="crumb.label" @click="navigate(crumb.path)">{{ crumb.text }}</button>
-            <span v-else aria-current="page">{{ crumb.text }}</span>
-          </template>
-          <span class="term-cursor" aria-hidden="true">$</span>
+        <!-- The logo, then where we are: home / party / tabu. Every part but the last is a link. -->
+        <p class="order-1 flex-1 basis-0 lg:flex-none lg:basis-auto min-w-0 flex items-center gap-2 text-sm font-semibold">
+          <button type="button" class="shrink-0 flex items-center gap-2 group" :aria-label="t.crumbHome" @click="navigate('/')">
+            <PixelArt :art="logoArt" class="h-7 w-auto shrink-0 transition-transform group-hover:-translate-y-0.5" />
+            <span class="font-display text-base leading-none uppercase text-gold max-sm:hidden">{{ profile.name || t.usersGuest }}</span>
+          </button>
+          <span class="min-w-0 truncate">
+            <template v-for="(crumb, index) in crumbs.slice(1)" :key="crumb.text">
+              <span class="mx-1 term-muted" aria-hidden="true">›</span>
+              <button v-if="crumb.path" type="button" class="term-crumb uppercase" :aria-label="crumb.label" @click="navigate(crumb.path)">{{ crumb.text }}</button>
+              <span v-else aria-current="page" class="uppercase">{{ crumb.text }}</span>
+            </template>
+          </span>
         </p>
 
         <!-- Category items: their own scrollable row on phones and tablets, in the middle on a wide screen -->
@@ -779,21 +797,19 @@ onUnmounted(() => {
               :aria-current="activeCategory === category.key ? 'page' : undefined"
               :class="['term-tab px-2 sm:px-3 text-xs sm:text-sm', { 'is-active': activeCategory === category.key }]"
             >
-              <span aria-hidden="true">{{ activeCategory === category.key ? '(*)' : '( )' }}</span>
               <span>{{ category.label }}</span>
             </button>
           </li>
-          <li class="shrink-0 flex items-center px-1 text-term-low" aria-hidden="true">|</li>
+          <li class="shrink-0 my-1.5 mx-1 w-0.5 bg-term-deep" aria-hidden="true"></li>
           <li class="shrink-0">
             <button
               @click="navigate('/lobby')"
               :aria-current="page === 'lobby' ? 'page' : undefined"
               :class="['term-tab px-2 sm:px-3 text-xs sm:text-sm', { 'is-active': page === 'lobby' }]"
             >
-              <span aria-hidden="true">{{ page === 'lobby' ? '(*)' : '( )' }}</span>
               <span>{{ t.navLobby }}</span>
-              <span class="tabular-nums">[{{ users.online ? users.lobbies.length : '-' }}]</span>
-              <span v-if="session.chatUnread" :class="['px-1 tabular-nums', page === 'lobby' ? 'bg-black text-term' : 'term-inverse']">
+              <span class="nav-count tabular-nums">{{ users.online ? users.lobbies.length : '-' }}</span>
+              <span v-if="session.chatUnread" :class="['px-1 tabular-nums', page === 'lobby' ? 'bg-black text-term' : 'bg-red text-term']">
                 <span aria-hidden="true">{{ session.chatUnread }}</span>
                 <span class="sr-only">{{ t.usersUnread.replace('{n}', session.chatUnread) }}</span>
               </span>
@@ -805,10 +821,9 @@ onUnmounted(() => {
               :aria-current="page === 'users' ? 'page' : undefined"
               :class="['term-tab px-2 sm:px-3 text-xs sm:text-sm', { 'is-active': page === 'users' }]"
             >
-              <span aria-hidden="true">{{ page === 'users' ? '(*)' : '( )' }}</span>
               <span>{{ t.navUsers }}</span>
-              <span class="tabular-nums">[{{ users.online ? users.list.length : '-' }}]</span>
-              <span v-if="users.unread" :class="['px-1 tabular-nums', page === 'users' ? 'bg-black text-term' : 'term-inverse']">
+              <span class="nav-count tabular-nums">{{ users.online ? users.list.length : '-' }}</span>
+              <span v-if="users.unread" :class="['px-1 tabular-nums', page === 'users' ? 'bg-black text-term' : 'bg-red text-term']">
                 <span aria-hidden="true">{{ users.unread }}</span>
                 <span class="sr-only">{{ t.usersUnread.replace('{n}', users.unread) }}</span>
               </span>
@@ -825,7 +840,7 @@ onUnmounted(() => {
             :aria-label="fmt(t.onlineBackToRoom, { code: currentRoom.code })"
             @click="navigate('/' + currentRoom.game)"
           >
-            [~] {{ currentRoom.code }}
+            <i class="pxi pxi-swap" aria-hidden="true"></i> {{ currentRoom.code }}
           </button>
           <button
             @click="showRules = true"
@@ -833,7 +848,7 @@ onUnmounted(() => {
             :aria-label="t.gameRules"
             :title="t.gameRules"
           >
-            [?]
+            <i class="pxi pxi-help" aria-hidden="true"></i>
           </button>
           <LanguageMenu
             :currentLang="currentLang"
@@ -1021,7 +1036,7 @@ onUnmounted(() => {
 
           <div class="term-panel mt-6 p-4 text-left">
             <p class="term-label mb-2">{{ t.comingSoonStatus }}</p>
-            <p class="text-sm leading-relaxed">&gt; {{ t.comingSoonStatusText }}</p>
+            <p class="text-sm leading-relaxed">{{ t.comingSoonStatusText }}</p>
           </div>
         </div>
       </TermWindow>
@@ -1049,7 +1064,7 @@ onUnmounted(() => {
               class="term-icon-btn absolute top-3 right-3"
               :aria-label="rulesText.close"
             >
-              [x]
+              <i class="pxi pxi-close" aria-hidden="true"></i>
             </button>
 
             <div class="flex items-center gap-4 pr-12">
@@ -1101,7 +1116,7 @@ onUnmounted(() => {
                 :key="item.color"
                 class="flex items-center gap-3"
               >
-                <span :class="['h-8 w-8 shrink-0 flex items-center justify-center font-bold', legendStyles[item.color]]">A</span>
+                <span :class="['px-frame h-8 w-8 shrink-0 flex items-center justify-center font-display text-lg', legendStyles[item.color]]">A</span>
                 <span class="text-sm">{{ item.text }}</span>
               </div>
             </div>
@@ -1173,7 +1188,7 @@ onUnmounted(() => {
           class="flex-1 min-w-0 text-left"
           @click="toast.run?.()"
         >
-          <span class="term-label block">[&gt;] {{ toast.title }}</span>
+          <span class="term-label block"><i class="pxi pxi-next" aria-hidden="true"></i> {{ toast.title }}</span>
           <span v-if="toast.text" class="block truncate mt-1">{{ toast.text }}</span>
           <span v-if="toast.hint" class="block text-xs term-muted mt-1 uppercase tracking-wider">{{ toast.hint }}</span>
           <span v-if="toast.actions" class="flex flex-wrap gap-2 mt-2">
@@ -1183,7 +1198,7 @@ onUnmounted(() => {
           </span>
         </component>
         <button type="button" class="term-icon-btn shrink-0 h-8 min-w-8" :aria-label="t.usersDismiss" @click="toast = null">
-          [x]
+          <i class="pxi pxi-close" aria-hidden="true"></i>
         </button>
       </div>
     </Transition>
@@ -1191,7 +1206,7 @@ onUnmounted(() => {
 </template>
 
 <style>
-/* Rules dialog: the backdrop fades while the panel switches on like a CRT */
+/* Rules dialog: the backdrop fades while the panel pops up in steps, like a game's menu */
 .rules-enter-active,
 .rules-leave-active {
   transition: opacity 0.18s ease;
@@ -1201,21 +1216,19 @@ onUnmounted(() => {
   opacity: 0;
 }
 .rules-enter-active .rules-panel {
-  animation: crt-on 0.22s ease-out;
+  animation: crt-on 0.2s steps(4) both;
 }
 .rules-leave-active .rules-panel {
-  animation: crt-off 0.16s ease-in forwards;
+  animation: crt-off 0.16s steps(3) forwards;
 }
 
 @keyframes crt-on {
-  0% { transform: scale(1, 0.01); filter: brightness(3); }
-  60% { transform: scale(1, 1.03); filter: brightness(1.4); }
-  100% { transform: none; filter: none; }
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: none; opacity: 1; }
 }
 @keyframes crt-off {
-  0% { transform: none; }
-  60% { transform: scale(1, 0.01); filter: brightness(3); }
-  100% { transform: scale(0, 0.01); }
+  0% { transform: none; opacity: 1; }
+  100% { transform: scale(0.6); opacity: 0; }
 }
 
 /* Chat message pop-up: slides up from the bottom edge */
@@ -1242,6 +1255,19 @@ onUnmounted(() => {
   .toast-leave-to {
     transform: none;
   }
+}
+
+/* The top bar: a panel with a dark edge and a hard shadow under it */
+.app-nav {
+  background: var(--color-panel);
+  border-bottom: var(--px) solid var(--color-well);
+  box-shadow: 0 var(--px) 0 0 rgb(0 0 0 / 0.35), inset 0 calc(var(--px) * -1) 0 0 rgb(0 0 0 / 0.2);
+}
+.nav-count {
+  min-width: 1.25rem;
+  padding: 0 0.25rem;
+  background: rgb(0 0 0 / 0.3);
+  text-align: center;
 }
 
 /* Horizontally scrollable nav items without a visible scrollbar */

@@ -85,7 +85,7 @@ function create (game) {
 
       <!-- Everyone else's -->
       <section aria-labelledby="lobby-list-title" :class="{ 'lg:col-span-2': !mine }">
-        <h2 id="lobby-list-title" class="term-label mb-3">{{ t.lobbyList }} [{{ lobbies.length }}]</h2>
+        <h2 id="lobby-list-title" class="term-label mb-3">{{ t.lobbyList }} · {{ lobbies.length }}</h2>
         <p v-if="!lobbies.length" class="term-panel border-dashed p-4 text-sm term-muted leading-relaxed">{{ t.lobbyNone }}</p>
         <ul v-else :class="['grid grid-cols-1 gap-3', mine ? '' : 'md:grid-cols-2']">
           <li v-for="lobby in lobbies" :key="lobby.code" class="term-panel">
@@ -108,7 +108,7 @@ function create (game) {
                 <span class="sm:hidden block text-xs tabular-nums term-muted mt-0.5">{{ fmt(t.onlineTimeLeft, { n: minutesLeft(lobby.ends) }) }}</span>
               </span>
               <span class="max-sm:hidden shrink-0 text-xs tabular-nums term-muted">{{ fmt(t.onlineTimeLeft, { n: minutesLeft(lobby.ends) }) }}</span>
-              <span class="shrink-0" aria-hidden="true">{{ openCode === lobby.code ? '[-]' : '[+]' }}</span>
+              <span class="shrink-0" aria-hidden="true">{{ openCode === lobby.code ? '−' : '+' }}</span>
             </button>
             <div v-if="openCode === lobby.code" class="px-3 pb-3 space-y-3 border-t border-term-low pt-3">
               <h3 class="term-label">{{ t.lobbyInside }}</h3>
@@ -129,7 +129,7 @@ function create (game) {
 
         <!-- A new lobby -->
         <div class="mt-6">
-          <button type="button" class="term-btn w-full min-h-10" :aria-expanded="picking" @click="picking = !picking">[+] {{ t.lobbyNew }}</button>
+          <button type="button" class="term-btn w-full min-h-10" :aria-expanded="picking" @click="picking = !picking"><i class="pxi pxi-plus" aria-hidden="true"></i> {{ t.lobbyNew }}</button>
           <div v-if="picking" class="mt-3 space-y-3">
             <p class="term-muted text-sm text-center">{{ mine?.host ? t.lobbyNewSwitches : mine ? t.lobbyJoinLeaves : t.lobbyNewHint }}</p>
             <ul class="grid grid-cols-2 sm:grid-cols-3 gap-2">

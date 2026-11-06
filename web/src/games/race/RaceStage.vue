@@ -1108,7 +1108,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" :bare="full" @exit="emit('exit')">
+  <ArcadeStage :t="t" :title="title" :exitLabel="exitLabel" :bare="full" @exit="emit('exit')" classic>
     <template #actions>
       <FullscreenButton :t="t" @toggle="onFullClick" />
     </template>

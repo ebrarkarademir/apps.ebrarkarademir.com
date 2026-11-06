@@ -1,5 +1,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import PixelArt from '../components/PixelArt.vue'
+import { menuArt } from '../pixel/menuArt'
+import { cardArt } from '../cardArt'
 import TermWindow from '../components/TermWindow.vue'
 import HackStage from './hack/HackStage.vue'
 import { LANGS, LENGTHS } from './hack/words'
@@ -13,14 +16,6 @@ const emit = defineEmits(['go-back'])
 const BEST_KEY = 'hackBest'
 const LANG_KEY = 'hackLang'
 
-const TITLE_ART = [
-  'login: root',
-  'password: [C][_][D][E]_',
-  'TRACE [#######.......] 35%',
-  '> ACCESS GRANTED'
-].join('\n')
-const RUN_ART = ['[_][A][_][_]', 'TRACE [##..]'].join('\n')
-const PRACTICE_ART = ['[C][O][D][E]', 'TRIES 3'].join('\n')
 
 const LANG_NAMES = { EN: 'English', TR: 'Türkçe', RU: 'Русский', KK: 'Қазақша' }
 
@@ -79,11 +74,11 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
   <TermWindow v-else class="max-w-2xl" :title="t.hackTitle" :backLabel="t.back" @back="emit('go-back')">
     <div class="space-y-6">
       <div class="overflow-hidden text-center" aria-hidden="true">
-        <span class="inline-block whitespace-pre text-left text-xs sm:text-sm leading-relaxed">{{ TITLE_ART }}</span>
+        <PixelArt :art="cardArt['hack']" class="title-art mx-auto w-36 sm:w-44 h-auto" />
       </div>
 
       <div class="flex flex-wrap items-center gap-2 text-sm">
-        <span class="term-label w-full sm:w-auto sm:mr-1">&gt; {{ t.hackLanguage }}</span>
+        <span class="term-label w-full sm:w-auto sm:mr-1">{{ t.hackLanguage }}</span>
         <button
           v-for="code in LANGS"
           :key="code"
@@ -97,19 +92,19 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
 
       <div class="grid sm:grid-cols-2 gap-4">
         <button type="button" :class="modeCardClass" @click="playing = { mode: 'run', length: 4 }">
-          <span class="whitespace-pre text-sm leading-tight" aria-hidden="true">{{ RUN_ART }}</span>
+          <PixelArt :art="menuArt.lock" class="h-9 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.hackRun }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.hackRunDesc }}</span>
           <span class="mt-auto flex items-center justify-between gap-2 pt-1">
             <span class="term-chip tabular-nums">
               {{ t.hackBest }}: {{ bestHere.score }}<template v-if="bestHere.layer"> · {{ fmt(t.hackLayer, { n: bestHere.layer }) }}</template>
             </span>
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true"><i class="pxi pxi-play"></i> run</span>
           </span>
         </button>
 
         <div :class="modeCardClass">
-          <span class="whitespace-pre text-sm leading-tight" aria-hidden="true">{{ PRACTICE_ART }}</span>
+          <PixelArt :art="menuArt.keys" class="h-9 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.hackPractice }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.hackPracticeDesc }}</span>
           <div class="flex flex-wrap items-center gap-1.5" role="group" :aria-label="t.hackLength">

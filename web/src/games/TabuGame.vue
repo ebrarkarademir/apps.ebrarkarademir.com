@@ -210,7 +210,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-14'
                 @click="room.act('setTeam', { team })"
                 class="term-link text-xs"
               >
-                [+] {{ t.tabuJoinTeam }}
+                <i class="pxi pxi-plus" aria-hidden="true"></i> {{ t.tabuJoinTeam }}
               </button>
             </div>
             <ul class="space-y-1.5">
@@ -227,7 +227,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-14'
         </div>
         <div v-if="room.isHost" class="text-center">
           <button @click="room.act('shuffleTeams')" class="term-link">
-            <span aria-hidden="true">[~]</span>
+            <span aria-hidden="true"><i class="pxi pxi-swap" aria-hidden="true"></i></span>
             <span>{{ t.tabuShuffleTeams }}</span>
           </button>
         </div>
@@ -245,7 +245,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-14'
         >
           <span class="min-w-0">
             <span class="block text-sm font-semibold uppercase truncate">
-              <span v-if="team === view.currentTeam" aria-hidden="true">&gt; </span>{{ teamName(team) }}
+              <span v-if="team === view.currentTeam" aria-hidden="true"></span>{{ teamName(team) }}
             </span>
             <span v-if="myTeam === team" class="block term-muted text-xs truncate">{{ t.tabuYourTeam }}</span>
           </span>
@@ -268,7 +268,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-14'
       <!-- Before the round -->
       <template v-if="!view.playing">
         <div class="term-panel p-6 text-center text-lg">
-          &gt; {{ amExplainer ? t.tabuYouExplain : fmt(t.tabuGetReady, { name: nameOf(view.explainer), team: teamName(view.currentTeam) }) }}
+          {{ amExplainer ? t.tabuYouExplain : fmt(t.tabuGetReady, { name: nameOf(view.explainer), team: teamName(view.currentTeam) }) }}
         </div>
         <button v-if="amExplainer || room.isHost" @click="room.act('startRound')" :class="primary">
           {{ t.startRound }}
@@ -285,7 +285,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-14'
           <h3 class="font-display text-6xl leading-none mb-5 break-words">{{ shownCard.word }}</h3>
           <div class="border-t border-dashed border-term-low pt-4 space-y-1.5">
             <div v-for="(word, index) in shownCard.taboo" :key="index" class="text-lg font-medium">
-              <span class="term-muted" aria-hidden="true">[x] </span>{{ word }}
+              <span class="term-muted" aria-hidden="true"><i class="pxi pxi-close" aria-hidden="true"></i> </span>{{ word }}
             </div>
           </div>
         </div>
@@ -325,7 +325,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-14'
         </div>
       </div>
 
-      <div class="text-xl font-bold">&gt; {{ winnerText }}</div>
+      <div class="text-xl font-bold">{{ winnerText }}</div>
 
       <button v-if="room.isHost" @click="room.act('again')" :class="primary">{{ t.playAgain }}</button>
       <p v-else class="term-muted text-sm"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>

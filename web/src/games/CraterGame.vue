@@ -1,5 +1,8 @@
 <script setup>
 import { ref, reactive, computed, watch, markRaw } from 'vue'
+import PixelArt from '../components/PixelArt.vue'
+import { menuArt } from '../pixel/menuArt'
+import { cardArt } from '../cardArt'
 import TermWindow from '../components/TermWindow.vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom, currentRoom } from '../online/useOnlineRoom'
@@ -34,17 +37,6 @@ const RESULT_MS = 1600 // the last turn settles before the results come up (see 
 const NEXT_ROUND_MS = 8000 // the results show this long before the next round of a match starts
 const SETUP_KEY = 'craterSolo'
 
-const LETTERS = {
-  C: ['  ___ ', ' / __|', '| (__ ', ' \\___|'],
-  R: [' ___ ', '| _ \\', '|   /', '|_|_\\'],
-  A: ['   _   ', '  /_\\  ', ' / _ \\ ', '/_/ \\_\\'],
-  T: [' _____ ', '|_   _|', '  | |  ', '  |_|  '],
-  E: [' ___ ', '| __|', '| _| ', '|___|']
-}
-const TITLE_ART = [0, 1, 2, 3].map(row => [...'CRATER'].map(letter => LETTERS[letter][row]).join(' ')).join('\n')
-const SOLO_ART = [' o          o   o', '/|\\  ~*~   /|\\ /|\\', '/ \\        / \\ / \\'].join('\n')
-const ONLINE_ART = [' o    o    o    o', '/|\\  /|\\  /|\\  /|\\', '/ \\  / \\  / \\  / \\'].join('\n')
-const UNIT_ART = [' o      o ', '/|\\ ~~ /|\\', '/ \\    / \\'].join('\n')
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 const botLevelName = (level) => props.t[`bot${level[0].toUpperCase()}${level.slice(1)}`]
@@ -413,25 +405,25 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
   <TermWindow v-if="mode === null" class="max-w-2xl" :title="t.craterTitle" :backLabel="t.back" @back="emit('go-back')">
     <div class="space-y-6">
       <div class="overflow-hidden text-center" aria-hidden="true">
-        <span class="inline-block whitespace-pre text-left text-[0.55rem] min-[400px]:text-xs sm:text-sm leading-tight">{{ TITLE_ART }}</span>
+        <PixelArt :art="cardArt['crater']" class="title-art mx-auto w-36 sm:w-44 h-auto" />
       </div>
 
       <div class="grid sm:grid-cols-2 gap-4">
         <button type="button" :class="cardClass" @click="mode = 'setup'">
-          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ SOLO_ART }}</span>
+          <PixelArt :art="menuArt.solo" class="h-9 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.gameSolo }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.craterSoloDesc }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
 
         <button type="button" :class="cardClass" @click="mode = 'online'">
-          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ ONLINE_ART }}</span>
+          <PixelArt :art="menuArt.online" class="h-10 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.gameOnline }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.craterOnlineDesc }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
       </div>
@@ -447,32 +439,32 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
 
       <div class="space-y-4 text-sm">
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.craterEnemies }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.craterEnemies }}</span>
           <button v-for="n in MAX_SIDES - 1" :key="n" type="button" :class="optionClass(setup.bots === n)" @click="setup.bots = n">{{ n }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.botLevel }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.botLevel }}</span>
           <button v-for="level in BOT_LEVEL_NAMES" :key="level" type="button" :class="optionClass(setup.botLevel === level)" @click="setup.botLevel = level">{{ botLevelName(level) }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.craterUnits }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.craterUnits }}</span>
           <button v-for="n in UNIT_OPTIONS" :key="n" type="button" :class="optionClass(setup.perSide === n)" @click="setup.perSide = n">{{ n }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.craterTurnTime }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.craterTurnTime }}</span>
           <button v-for="n in TIME_OPTIONS" :key="n" type="button" :class="optionClass(setup.aimSeconds === n)" @click="setup.aimSeconds = n">{{ fmt(t.craterSeconds, { n }) }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.craterMap }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.craterMap }}</span>
           <button v-for="id in LEVEL_OPTIONS" :key="id" type="button" :class="optionClass(setup.level === id)" @click="setup.level = id">{{ t[LEVEL_KEYS[id]] }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.tankRounds }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.tankRounds }}</span>
           <button v-for="n in ROUND_OPTIONS" :key="n" type="button" :class="optionClass(setup.rounds === n)" @click="setup.rounds = n">{{ n }}</button>
         </div>
       </div>
 
-      <p class="term-muted text-sm leading-relaxed">&gt; {{ fmt(t.craterSoloHint, { n: setup.bots }) }} {{ t.craterAmmoHint }}</p>
+      <p class="term-muted text-sm leading-relaxed">{{ fmt(t.craterSoloHint, { n: setup.bots }) }} {{ t.craterAmmoHint }}</p>
 
       <button type="button" class="term-btn term-btn-primary w-full min-h-12" @click="startSolo">{{ t.startGame }}</button>
       <p class="term-muted text-center text-xs sm:text-sm leading-relaxed">{{ t.craterControls }}</p>
@@ -496,24 +488,24 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
     <template #lobby="{ view: lobby, isHost }">
       <div class="space-y-4">
         <div class="text-center" aria-hidden="true">
-          <span class="inline-block whitespace-pre text-left text-sm leading-tight">{{ UNIT_ART }}</span>
+          <PixelArt :art="menuArt.duel" class="h-8 w-auto" />
         </div>
 
         <!-- Bots fill the battle up to six sides -->
         <div class="space-y-2">
-          <h2 class="term-label">{{ t.gameBots }} [{{ lobby.bots.length }}]</h2>
+          <h2 class="term-label">{{ t.gameBots }} · {{ lobby.bots.length }}</h2>
           <ul v-if="lobby.bots.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <li v-for="bot in lobby.bots" :key="bot.id" class="flex items-center gap-2 border border-term-low px-3 py-2 text-sm">
               <span class="shrink-0 text-[10px] uppercase tracking-wider term-muted">[bot]</span>
               <span class="truncate">{{ fmt(t.botName, { n: bot.n }) }}</span>
-              <button v-if="isHost" type="button" class="ml-auto shrink-0 term-link text-xs" :aria-label="fmt(t.removeBot, { name: fmt(t.botName, { n: bot.n }) })" @click="room.act('removeBot', { id: bot.id })">[x]</button>
+              <button v-if="isHost" type="button" class="ml-auto shrink-0 term-link text-xs" :aria-label="fmt(t.removeBot, { name: fmt(t.botName, { n: bot.n }) })" @click="room.act('removeBot', { id: bot.id })"><i class="pxi pxi-close" aria-hidden="true"></i></button>
             </li>
           </ul>
-          <button v-if="isHost && lobbyCount < MAX_SIDES" type="button" class="term-link text-xs" @click="room.act('addBot')">[+] {{ t.addBot }}</button>
+          <button v-if="isHost && lobbyCount < MAX_SIDES" type="button" class="term-link text-xs" @click="room.act('addBot')"><i class="pxi pxi-plus" aria-hidden="true"></i> {{ t.addBot }}</button>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.botLevel }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.botLevel }}</span>
           <button
             v-for="level in BOT_LEVEL_NAMES"
             :key="level"
@@ -524,7 +516,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
           >{{ botLevelName(level) }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.craterUnits }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.craterUnits }}</span>
           <button
             v-for="n in UNIT_OPTIONS"
             :key="n"
@@ -535,7 +527,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
           >{{ n }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.craterTurnTime }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.craterTurnTime }}</span>
           <button
             v-for="n in TIME_OPTIONS"
             :key="n"
@@ -546,7 +538,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
           >{{ fmt(t.craterSeconds, { n }) }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.craterMap }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.craterMap }}</span>
           <button
             v-for="id in LEVEL_OPTIONS"
             :key="id"
@@ -557,7 +549,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
           >{{ t[LEVEL_KEYS[id]] }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.tankRounds }}</span>
+          <span class="term-label w-full sm:w-44">{{ t.tankRounds }}</span>
           <button
             v-for="n in ROUND_OPTIONS"
             :key="n"
@@ -568,9 +560,9 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
           >{{ n }}</button>
         </div>
         <div class="space-y-2 text-sm leading-relaxed">
-          <p class="term-muted">&gt; {{ t.craterLobbyHint }}</p>
-          <p class="term-muted">&gt; {{ t.craterAmmoHint }}</p>
-          <p class="term-muted">&gt; {{ t.craterControls }}</p>
+          <p class="term-muted">{{ t.craterLobbyHint }}</p>
+          <p class="term-muted">{{ t.craterAmmoHint }}</p>
+          <p class="term-muted">{{ t.craterControls }}</p>
         </div>
       </div>
     </template>

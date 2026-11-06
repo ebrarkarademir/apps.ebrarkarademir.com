@@ -114,7 +114,7 @@ function onCodeInput (event) {
       <!-- In a lobby that plays another game: it stays open until they leave it -->
       <div v-if="room.elsewhere" class="term-panel border-term p-4 flex flex-col sm:flex-row sm:items-center gap-3" role="status">
         <p class="flex-1 text-sm leading-relaxed">
-          <span aria-hidden="true">[~] </span>{{ fmt(t.onlineElsewhere, { code: room.elsewhere.code, game: elsewhereTitle }) }}
+          <span aria-hidden="true"><i class="pxi pxi-swap" aria-hidden="true"></i> </span>{{ fmt(t.onlineElsewhere, { code: room.elsewhere.code, game: elsewhereTitle }) }}
         </p>
         <button type="button" class="term-btn term-btn-primary min-h-10 text-sm shrink-0" @click="appNav.openGame(room.elsewhere.game)">
           {{ fmt(t.onlineBackToRoom, { code: room.elsewhere.code }) }}
@@ -122,24 +122,24 @@ function onCodeInput (event) {
       </div>
 
       <div v-if="room.errorKey" role="alert" class="flex gap-3 border border-dashed border-term px-4 py-3 text-sm">
-        <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
+        <span class="shrink-0 term-blink" aria-hidden="true"><i class="pxi pxi-alert" aria-hidden="true"></i></span>
         <span>{{ t[room.errorKey] }}</span>
       </div>
 
       <label class="block">
-        <span class="term-label">&gt; {{ t.onlineYourName }}</span>
+        <span class="term-label">{{ t.onlineYourName }}</span>
         <input v-model="room.playerName" maxlength="18" :placeholder="t.onlineNamePlaceholder" class="term-input mt-2" />
       </label>
 
       <div>
-        <span class="term-label">&gt; {{ t.charPick }}</span>
+        <span class="term-label">{{ t.charPick }}</span>
         <CharacterPicker :t="t" class="mt-2 max-w-sm" />
       </div>
 
       <div class="grid sm:grid-cols-2 gap-4">
         <div class="term-panel p-4 flex flex-col gap-3">
           <div>
-            <h2 class="font-display text-2xl leading-none uppercase">[+] {{ t.onlineCreateRoom }}</h2>
+            <h2 class="font-display text-2xl leading-none uppercase"><i class="pxi pxi-plus" aria-hidden="true"></i> {{ t.onlineCreateRoom }}</h2>
             <p class="term-muted text-sm mt-2">{{ t.onlineCreateHint }}</p>
           </div>
           <button
@@ -152,7 +152,7 @@ function onCodeInput (event) {
 
         <div class="term-panel p-4 flex flex-col gap-3">
           <div>
-            <h2 class="font-display text-2xl leading-none uppercase">[&gt;] {{ t.onlineJoinRoom }}</h2>
+            <h2 class="font-display text-2xl leading-none uppercase"><i class="pxi pxi-next" aria-hidden="true"></i> {{ t.onlineJoinRoom }}</h2>
             <p class="term-muted text-sm mt-2">{{ t.onlineJoinHint }}</p>
           </div>
           <input
@@ -198,13 +198,13 @@ function onCodeInput (event) {
         <!-- Friends in the same room can scan the host's screen instead of typing the code -->
         <figure class="mx-auto flex flex-col items-center gap-2">
           <QrCode :text="room.shareLink" class="w-56 h-56 sm:w-64 sm:h-64" />
-          <figcaption class="term-label">&gt; {{ t.onlineScanHint }}</figcaption>
+          <figcaption class="term-label">{{ t.onlineScanHint }}</figcaption>
         </figure>
       </div>
 
       <slot name="players" :players="view.players">
         <div>
-          <h2 class="term-label mb-3">{{ t.onlinePlayers }} [{{ view.players.length }}]</h2>
+          <h2 class="term-label mb-3">{{ t.onlinePlayers }} · {{ view.players.length }}</h2>
           <ul class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <li
               v-for="player in view.players"
@@ -226,7 +226,7 @@ function onCodeInput (event) {
       </slot>
 
       <button v-if="room.me" type="button" class="term-btn -mt-3 min-h-9 text-sm" @click="appNav.renameSelf()">
-        [~] {{ t.onlineChangeName }}
+        <i class="pxi pxi-swap" aria-hidden="true"></i> {{ t.onlineChangeName }}
       </button>
 
       <slot name="lobby" :view="view" :is-host="room.isHost" />
@@ -234,7 +234,7 @@ function onCodeInput (event) {
       <!-- Another game for the same lobby -->
       <div v-if="room.isHost && otherGames.length">
         <button type="button" class="term-btn w-full min-h-10" :aria-expanded="picking" @click="picking = !picking">
-          [~] {{ t.onlineChangeGame }}
+          <i class="pxi pxi-swap" aria-hidden="true"></i> {{ t.onlineChangeGame }}
         </button>
         <div v-if="picking" class="mt-3 space-y-3">
           <p class="term-muted text-sm text-center">{{ t.onlineChangeGameHint }}</p>

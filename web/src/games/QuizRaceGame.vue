@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import PixelBar from '../components/PixelBar.vue'
 import { quizQuestions } from './quizQuestions'
 import { useOnlineRoom } from '../online/useOnlineRoom'
 import { recordWin } from '../online/profile'
@@ -169,7 +170,7 @@ const optionClass = {
   wrong: 'border-dashed border-term-low text-term-low line-through',
   dim: 'border-term-low opacity-40'
 }
-const optionMark = { idle: '', chosen: '<', correct: '[ok]', wrong: '[x]', dim: '' }
+const optionMark = { idle: '', chosen: 'next', correct: 'check', wrong: 'close', dim: '' }
 
 const listClass = 'border border-term-low divide-y divide-term-low'
 const primary = 'term-btn term-btn-primary w-full min-h-12'
@@ -179,7 +180,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
   <OnlineRoom :room="room" :t="t" :title="t.quizTitle" @go-back="$emit('go-back')" @start="room.act('start')">
     <template #lobby="{ view: lobby, isHost }">
       <div class="flex items-center gap-2 text-sm">
-        <span class="term-label mr-1">&gt; {{ t.quizRounds }}</span>
+        <span class="term-label mr-1">{{ t.quizRounds }}</span>
         <button
           v-for="count in ROUND_OPTIONS"
           :key="count"
@@ -202,9 +203,9 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
         <span v-else class="term-muted">{{ t.quizTimeUpOrDone }}</span>
       </div>
 
-      <p class="text-sm whitespace-pre overflow-hidden" aria-hidden="true">[{{ timerBar }}]</p>
+      <PixelBar :bar="timerBar" :warn="timerBar.indexOf('.') !== -1 && timerBar.indexOf('.') < timerBar.length * 0.25" />
 
-      <h2 class="text-xl sm:text-2xl font-semibold leading-snug min-h-[3.5rem]">&gt; {{ currentQuestion.text }}</h2>
+      <h2 class="text-xl sm:text-2xl font-semibold leading-snug min-h-[3.5rem]">{{ currentQuestion.text }}</h2>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
@@ -217,9 +218,9 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
             optionClass[optionState(option)]
           ]"
         >
-          <span class="shrink-0" aria-hidden="true">[{{ ANSWER_KEYS[slot] }}]</span>
+          <span class="shrink-0 inline-flex items-center justify-center min-w-6 h-6 px-1 bg-black/30 font-display text-xs" aria-hidden="true">{{ ANSWER_KEYS[slot] }}</span>
           <span class="flex-1">{{ option.label }}</span>
-          <span v-if="optionMark[optionState(option)]" class="shrink-0" aria-hidden="true">{{ optionMark[optionState(option)] }}</span>
+          <i v-if="optionMark[optionState(option)]" :class="['pxi shrink-0', 'pxi-' + optionMark[optionState(option)]]" aria-hidden="true"></i>
         </button>
       </div>
 
@@ -230,7 +231,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
 
       <template v-else>
         <div :class="['px-4 py-3 text-center font-semibold', myResult.lastPoints > 0 ? 'term-inverse' : 'border border-dashed border-term']">
-          {{ myResult.lastPoints > 0 ? '[+] ' + fmt(t.quizCorrect, { points: myResult.lastPoints }) : '[x] ' + (myResult.answered ? t.quizWrong : t.quizNoAnswer) }}
+          {{ myResult.lastPoints > 0 ? '+ ' + fmt(t.quizCorrect, { points: myResult.lastPoints }) : '✗ ' + (myResult.answered ? t.quizWrong : t.quizNoAnswer) }}
         </div>
 
         <ol :class="listClass">
@@ -265,7 +266,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
    '-------'</pre>
         <h2 class="font-display text-5xl leading-none uppercase">{{ t.quizFinalTitle }}</h2>
         <p v-if="leaderboard[0]" class="term-muted mt-2">
-          &gt; {{ isTie ? t.quizTie : fmt(t.quizWinner, { name: leaderboard[0].name }) }}
+          {{ isTie ? t.quizTie : fmt(t.quizWinner, { name: leaderboard[0].name }) }}
         </p>
       </div>
 

@@ -7,7 +7,6 @@ import MedalBadge from '../components/MedalBadge.vue'
 import { flagPng } from '../online/ipInfo'
 import { MAX_TEXT } from '../online/useUsers'
 import { profile, autoCountry, cleanName, cleanBio, randomName, MAX_NAME, MAX_BIO, MEDALS, medalProgress } from '../online/profile'
-import { banner } from '../online/asciiFont'
 import { COUNTRY_CODES } from '../online/countries'
 import { currentRoom } from '../online/session'
 
@@ -91,7 +90,6 @@ const unreadFrom = (item) => props.users.chats.get(item.id)?.unread || 0
 
 // ---------- Their profile ----------
 
-const nameBanner = computed(() => (person.value ? banner(person.value.name) : null))
 const medals = computed(() => {
   const have = new Set(person.value?.md || [])
   return MEDALS.map(medal => ({ medal, earned: have.has(medal.id) }))
@@ -99,22 +97,12 @@ const medals = computed(() => {
 const pickedMedal = ref(null)
 watch(() => person.value?.id, () => { pickedMedal.value = null })
 const medalShown = computed(() => medals.value.find(item => item.medal.id === pickedMedal.value) || null)
-const medalBanner = computed(() => (medalShown.value ? banner(medalShown.value.medal.id) : null))
 const medalStatus = (item) => {
   if (item.earned) return props.t.usersMedalEarned
   if (!person.value?.self) return props.t.usersMedalLocked
   const { have, goal } = medalProgress(item.medal)
   return item.medal.id === 'sys' ? props.t.usersMedalLocked : fmt(props.t.usersMedalProgress, { have, goal })
 }
-
-// The "id" command's answer, with the medals as groups
-const idLine = computed(() => {
-  const p = person.value
-  if (!p) return ''
-  const name = p.name || 'guest'
-  const groups = ['100(users)', ...medals.value.filter(item => item.earned).map(item => `${item.medal.gid}(${item.medal.id})`)]
-  return `uid=${p.uid || '?'}(${name}) gid=100(users) groups=${groups.join(',')}`
-})
 
 // Asking to join their lobby only makes sense when they're in one and you aren't
 const canAsk = computed(() => {
@@ -213,7 +201,7 @@ onUnmounted(() => {
     <div class="grid gap-6 md:grid-cols-[17rem_minmax(0,1fr)] lg:grid-cols-[19rem_minmax(0,1fr)]">
       <!-- Everyone here -->
       <section :class="{ 'hidden md:block': showingDetail }" aria-labelledby="users-list-title">
-        <h2 id="users-list-title" class="term-label mb-3">{{ t.usersOnlineNow }} [{{ users.list.length }}]</h2>
+        <h2 id="users-list-title" class="term-label mb-3">{{ t.usersOnlineNow }} · {{ users.list.length }}</h2>
         <ul class="space-y-2">
           <li v-for="item in users.list" :key="item.id">
             <button
@@ -221,11 +209,11 @@ onUnmounted(() => {
               :aria-current="item.id === selected ? 'true' : undefined"
               :class="[
                 'term-card w-full flex items-center gap-3 px-3 py-2 text-left',
-                { 'border-term bg-term-deep': item.id === selected }
+                { 'is-picked': item.id === selected }
               ]"
               @click="select(item.id)"
             >
-              <PixelPerson face :av="item.av || 0" size="2.75rem" class="-my-1 border border-term-low" />
+              <PixelPerson face :av="item.av || 0" size="2.75rem" class="-my-1 bg-term-deep" />
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-2">
                   <img
@@ -254,7 +242,7 @@ onUnmounted(() => {
 
       <!-- They left while picked -->
       <section v-if="departed" class="term-panel border-term p-6 text-center self-start" role="status">
-        <p class="font-display text-5xl leading-none mb-3" aria-hidden="true">[x]</p>
+        <p class="font-display text-5xl leading-none mb-3" aria-hidden="true"><i class="pxi pxi-close" aria-hidden="true"></i></p>
         <p class="leading-relaxed">{{ fmt(t.usersGone, { name: nameOf(departed) }) }}</p>
         <button type="button" class="term-btn mt-5" @click="select(null)">{{ t.usersBackToList }}</button>
       </section>
@@ -262,20 +250,19 @@ onUnmounted(() => {
       <!-- The one picked -->
       <section v-else-if="person" class="min-w-0 space-y-5" aria-labelledby="users-person-title">
         <button type="button" class="term-link -ml-1.5 md:hidden" @click="select(null)">
-          <span aria-hidden="true">[&lt;]</span>
+          <span aria-hidden="true"><i class="pxi pxi-back" aria-hidden="true"></i></span>
           <span>{{ t.usersBackToList }}</span>
         </button>
 
         <!-- On a phone the lettered name goes under the face, where it has the whole width -->
         <header class="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-          <div class="self-start shrink-0 border border-term-low bg-term-deep px-1 pt-1">
+          <div class="px-frame self-start shrink-0 bg-term-deep px-1 pt-1">
             <PixelPerson size="8.5rem" :av="person.av || 0" :seed="(person.av || 0) % 7" />
           </div>
           <div class="min-w-0 flex-1 w-full">
             <h2 id="users-person-title" class="min-w-0">
               <span class="sr-only">{{ nameOf(person) }}</span>
-              <pre v-if="nameBanner" class="name-banner overflow-x-auto no-scrollbar text-[10px] sm:text-xs leading-none" aria-hidden="true">{{ nameBanner }}</pre>
-              <span v-else class="block font-display text-4xl sm:text-5xl leading-none truncate" aria-hidden="true">{{ nameOf(person) }}</span>
+              <span class="name-banner block font-display text-4xl sm:text-5xl leading-tight truncate" aria-hidden="true">{{ nameOf(person) }}</span>
             </h2>
             <p class="flex flex-wrap items-center gap-2 mt-3">
               <span v-if="person.self" class="term-chip text-term">{{ t.usersYou }}</span>
@@ -308,19 +295,19 @@ onUnmounted(() => {
             <!-- As a Linux box would describe them -->
             <section class="term-panel p-3 text-xs sm:text-sm overflow-x-auto" aria-labelledby="users-finger-title">
               <h3 id="users-finger-title" class="sr-only">{{ t.usersAbout }}</h3>
-              <pre class="leading-relaxed whitespace-pre-wrap break-words"><span class="term-muted">$ finger {{ nameOf(person) }}</span>
-{{ t.usersLogin }}: {{ nameOf(person) }}
-{{ t.usersFrom }}: {{ person.cc ? regionName(person.cc) : '?' }}
-{{ t.usersOnSince }}: {{ clock(person.since) }} ({{ onlineFor(person.since) }})
-{{ t.usersNow }}: {{ activity(person) }}
-{{ t.usersPlan }}: {{ person.bio || '-' }}
-<span class="term-muted">$ id {{ nameOf(person) }}</span>
-{{ idLine }}</pre>
+              <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5">
+                <dt class="term-label leading-5">{{ t.usersLogin }}</dt><dd class="break-words">{{ nameOf(person) }}</dd>
+                <dt class="term-label leading-5">{{ t.usersFrom }}</dt><dd class="break-words">{{ person.cc ? regionName(person.cc) : '?' }}</dd>
+                <dt class="term-label leading-5">{{ t.usersOnSince }}</dt><dd class="break-words">{{ clock(person.since) }} ({{ onlineFor(person.since) }})</dd>
+                <dt class="term-label leading-5">{{ t.usersNow }}</dt><dd class="break-words">{{ activity(person) }}</dd>
+                <dt class="term-label leading-5">{{ t.usersPlan }}</dt><dd class="break-words">{{ person.bio || '-' }}</dd>
+                <dt class="term-label leading-5">UID</dt><dd class="tabular-nums">{{ person.uid || '?' }}</dd>
+              </dl>
             </section>
 
             <!-- Medals -->
             <section aria-labelledby="users-medals-title">
-              <h3 id="users-medals-title" class="term-label mb-3">{{ t.usersMedals }} [{{ medals.filter(item => item.earned).length }}/{{ medals.length }}]</h3>
+              <h3 id="users-medals-title" class="term-label mb-3">{{ t.usersMedals }} · {{ medals.filter(item => item.earned).length }}/{{ medals.length }}</h3>
               <ul class="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 <li v-for="(item, index) in medals" :key="item.medal.id">
                   <button
@@ -335,7 +322,7 @@ onUnmounted(() => {
                 </li>
               </ul>
               <div v-if="medalShown" class="term-panel border-term mt-3 p-3 space-y-2" role="status">
-                <pre v-if="medalBanner" :class="['medal-title overflow-x-auto no-scrollbar text-[10px] sm:text-xs leading-none', { 'is-earned': medalShown.earned }]" aria-hidden="true">{{ medalBanner }}</pre>
+                <p :class="['medal-title font-display text-2xl leading-tight uppercase truncate', { 'is-earned': medalShown.earned }]" aria-hidden="true">{{ medalShown.medal.id }}</p>
                 <p class="text-sm"><span class="font-semibold">{{ medalShown.medal.id }}</span> · {{ t['medal_' + medalShown.medal.id] }}</p>
                 <p class="text-xs term-muted">{{ medalStatus(medalShown) }}</p>
               </div>
@@ -353,8 +340,8 @@ onUnmounted(() => {
                 {{ !users.canChat ? t.usersCantChatHere : !theyCanChat ? t.usersCantChatThem : t.usersChatEmpty }}
               </li>
               <li v-for="message in messages" :key="message.id" class="break-words leading-relaxed">
-                <span class="term-muted tabular-nums mr-2">[{{ clock(message.at) }}]</span>
-                <span :class="['mr-2', message.mine ? 'term-muted' : 'font-semibold']">{{ message.mine ? t.usersYou : nameOf(person) }}&gt;</span>
+                <span class="term-muted tabular-nums mr-2">{{ clock(message.at) }}</span>
+                <span :class="['mr-2', message.mine ? 'term-muted' : 'font-semibold']">{{ message.mine ? t.usersYou : nameOf(person) }}:</span>
                 <template v-if="message.invite">
                   <span class="mr-2">{{ fmt(message.mine ? t.usersInvitedThem : t.usersInvitedYou, { game: gameTitle(message.invite.game) }) }}</span>
                   <span class="term-chip mr-2 tracking-[0.25em]">{{ message.invite.code }}</span>
@@ -402,7 +389,7 @@ onUnmounted(() => {
                 :disabled="!theyCanChat"
                 @click="picking = !picking"
               >
-                <span aria-hidden="true">{{ picking ? '[-]' : '[+]' }}</span>
+                <span aria-hidden="true">{{ picking ? '−' : '+' }}</span>
                 <span>{{ t.usersInvite }}</span>
               </button>
               <div v-if="picking" class="mt-2 px-1">
@@ -410,7 +397,6 @@ onUnmounted(() => {
                 <ul class="grid grid-cols-2 gap-2">
                   <li v-for="game in games" :key="game.id">
                     <button type="button" class="term-option w-full min-h-10 justify-start text-left text-sm" @click="invite(game.id)">
-                      <span class="shrink-0" aria-hidden="true">{{ game.icon }}</span>
                       <span class="truncate">{{ game.title }}</span>
                     </button>
                   </li>
@@ -424,22 +410,22 @@ onUnmounted(() => {
           <form v-else class="term-panel p-4 space-y-4" aria-labelledby="users-edit-title" @submit.prevent="saveProfile">
             <h3 id="users-edit-title" class="term-label">{{ t.usersEditProfile }}</h3>
             <div>
-              <span class="term-label">&gt; {{ t.charPick }}</span>
+              <span class="term-label">{{ t.charPick }}</span>
               <CharacterPicker :t="t" class="mt-2" />
             </div>
             <label class="block">
-              <span class="term-label">&gt; {{ t.usersName }}</span>
+              <span class="term-label">{{ t.usersName }}</span>
               <span class="flex gap-2 mt-2">
                 <input v-model="edit.name" :maxlength="MAX_NAME" autocomplete="off" spellcheck="false" class="term-input h-10 min-w-0" />
                 <button type="button" class="term-btn min-h-10 px-3 text-sm shrink-0" @click="newName">{{ t.usersRandomName }}</button>
               </span>
             </label>
             <label class="block">
-              <span class="term-label">&gt; {{ t.usersBio }}</span>
+              <span class="term-label">{{ t.usersBio }}</span>
               <textarea v-model="edit.bio" :maxlength="MAX_BIO" rows="2" :placeholder="t.usersBioPlaceholder" class="term-input mt-2 h-auto py-2 resize-none"></textarea>
             </label>
             <label class="block">
-              <span class="term-label">&gt; {{ t.usersNationality }}</span>
+              <span class="term-label">{{ t.usersNationality }}</span>
               <select v-model="edit.country" class="term-input mt-2 h-10">
                 <option value="">{{ autoCountry ? fmt(t.usersNationalityAuto, { country: regionName(autoCountry) }) : t.usersNationalityNone }}</option>
                 <option v-for="country in countries" :key="country.code" :value="country.code">{{ country.name }}</option>
@@ -461,18 +447,12 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* The name, lettered like a login banner, with a slow glow */
+/* The name, big, shining gold now and then */
 .name-banner {
-  margin: 0;
-  font-family: inherit;
-  white-space: pre;
-  animation: banner-glow 3s ease-in-out infinite;
+  animation: banner-glow 3s steps(1) infinite;
 }
 
 .medal-title {
-  margin: 0;
-  font-family: inherit;
-  white-space: pre;
   color: var(--color-term-low);
 }
 
@@ -482,8 +462,8 @@ onUnmounted(() => {
 }
 
 @keyframes banner-glow {
-  0%, 100% { text-shadow: 0 0 4px rgb(0 255 0 / 0.35); }
-  50% { text-shadow: 0 0 10px rgb(0 255 0 / 0.9); }
+  0%, 70%, 100% { color: var(--color-gold); }
+  80% { color: var(--color-term); }
 }
 
 @media (prefers-reduced-motion: reduce) {

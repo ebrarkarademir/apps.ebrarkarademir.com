@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
+import PixelArt from '../components/PixelArt.vue'
+import { grid, sprite } from '../pixel/kit'
 import TermWindow from '../components/TermWindow.vue'
 
 // Played on one phone passed around the table, so there is no online room
@@ -11,6 +13,38 @@ const props = defineProps({
 })
 
 defineEmits(['go-back'])
+
+// The table: wood in rings with a dark rim, seen from above
+const TABLE_ART = (() => {
+  const art = grid(48, 48)
+  art.disc(23.5, 23.5, 23, 'k').disc(23.5, 23.5, 22, '#8a5a34').disc(23.5, 23.5, 19.5, '#b07a48')
+  for (const r of [6, 11, 15]) art.ring(23.5, 23.5, r, '#a06c3e')
+  art.ring(23.5, 23.5, 21, '#6e4428')
+  return art
+})()
+
+// The bottle, pointing up: the gold cap is the end that picks someone
+const BOTTLE_ART = sprite([
+  '...yy...',
+  '...yy...',
+  '...GG...',
+  '...lG...',
+  '...lG...',
+  '...lG...',
+  '..lGGt..',
+  '.lGGGGt.',
+  'lGGGGGGt',
+  'lGGGGGGt',
+  'lGwwwwGt',
+  'lGwrrwGt',
+  'lGwrrwGt',
+  'lGwwwwGt',
+  'lGGGGGGt',
+  'lGGGGGGt',
+  'lGGGGGGt',
+  'lGGGGGGt',
+  '.ttttttt'
+])
 
 const PROMPT_COUNT = 10
 const SPIN_MS = 4200
@@ -66,7 +100,7 @@ const spotlightStyle = computed(() => {
   if (selectedPlayer.value === null) return {}
   const start = selectedPlayer.value * sliceAngle.value - sliceAngle.value / 2
   return {
-    background: `conic-gradient(from ${start}deg, rgba(0, 255, 0, 0.18) 0deg ${sliceAngle.value}deg, transparent ${sliceAngle.value}deg)`
+    background: `conic-gradient(from ${start}deg, rgba(255, 205, 117, 0.35) 0deg ${sliceAngle.value}deg, transparent ${sliceAngle.value}deg)`
   }
 })
 
@@ -141,7 +175,7 @@ onUnmounted(() => clearTimeout(spinTimeout))
     <!-- Setup Phase -->
     <form v-if="gamePhase === 'setup'" class="space-y-6" @submit.prevent="startGame">
       <div>
-        <h2 class="term-label mb-3">&gt; {{ t.selectPlayerCount }}</h2>
+        <h2 class="term-label mb-3">{{ t.selectPlayerCount }}</h2>
         <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
           <button
             v-for="count in [2, 3, 4, 5, 6, 7, 8]"
@@ -157,7 +191,7 @@ onUnmounted(() => clearTimeout(spinTimeout))
       </div>
 
       <div v-if="playerCount" class="space-y-3">
-        <h2 class="term-label">&gt; {{ t.enterNames }}</h2>
+        <h2 class="term-label">{{ t.enterNames }}</h2>
         <div class="grid sm:grid-cols-2 gap-2">
           <label v-for="(name, index) in playerNames" :key="index" class="relative">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 term-muted text-sm tabular-nums" aria-hidden="true">
@@ -181,14 +215,10 @@ onUnmounted(() => clearTimeout(spinTimeout))
 
     <!-- Game Phase -->
     <div v-else class="space-y-6">
-      <!-- Table: a wireframe radar scope -->
+      <!-- Table: a round wooden table seen from above, in pixels -->
       <!-- As wide as the window allows, but on a phone held sideways no taller than the screen leaves room for -->
       <div class="relative mx-auto w-full max-w-[max(13rem,min(24rem,calc(100dvh-11rem)))] aspect-square">
-        <div class="absolute inset-[9%] rounded-full border border-term scope-glow"></div>
-        <div class="absolute inset-[24%] rounded-full border border-dashed border-term-low"></div>
-        <div class="absolute inset-[39%] rounded-full border border-dashed border-term-low"></div>
-        <div class="absolute left-[9%] right-[9%] top-1/2 h-px bg-term-low"></div>
-        <div class="absolute top-[9%] bottom-[9%] left-1/2 w-px bg-term-low"></div>
+        <PixelArt :art="TABLE_ART" class="absolute inset-[9%] w-[82%] h-[82%]" />
 
         <!-- Spotlight towards the selected player -->
         <div
@@ -207,7 +237,7 @@ onUnmounted(() => clearTimeout(spinTimeout))
           <div
             :class="[
               'max-w-[6.5rem] truncate px-2 py-1 text-xs sm:text-sm font-semibold uppercase transition-colors duration-150',
-              selectedPlayer === index ? 'term-inverse player-picked' : 'bg-black border border-term-low term-muted'
+              selectedPlayer === index ? 'term-inverse player-picked px-frame' : 'bg-panel px-frame term-muted'
             ]"
           >
             {{ player }}
@@ -223,15 +253,7 @@ onUnmounted(() => clearTimeout(spinTimeout))
           class="absolute top-1/2 left-1/2 h-[52%] aspect-[1/3] text-term cursor-pointer disabled:cursor-default focus:outline-none"
           :style="bottleStyle"
         >
-          <svg viewBox="0 0 40 120" class="h-full w-full bottle-glow" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter" aria-hidden="true">
-            <rect x="15" y="2" width="10" height="7" fill="currentColor" />
-            <path
-              d="M15 9 h10 v24 c0 6 11 10 11 22 v55 a8 8 0 0 1 -8 8 h-16 a8 8 0 0 1 -8 -8 v-55 c0 -12 11 -16 11 -22 z"
-              fill="#000"
-            />
-            <rect x="8" y="66" width="24" height="26" stroke-dasharray="3 2" />
-            <path d="M12 75 h16 M14 81 h12" stroke-width="1" />
-          </svg>
+          <PixelArt :art="BOTTLE_ART" class="h-full w-full bottle-shadow" />
         </button>
       </div>
 
@@ -240,7 +262,7 @@ onUnmounted(() => clearTimeout(spinTimeout))
         :class="['text-center', selectedPlayer !== null ? 'font-display text-4xl leading-none' : 'term-muted text-sm font-semibold uppercase tracking-wider']"
         aria-live="polite"
       >
-        &gt; {{ statusText }}
+        {{ statusText }}
       </p>
 
       <!-- Game Controls -->
@@ -264,10 +286,10 @@ onUnmounted(() => clearTimeout(spinTimeout))
             <div
               v-if="currentChoice"
               :key="currentPromptKey"
-              :class="['p-6 text-center border border-term', currentChoice === 'dare' ? 'border-dashed' : '']"
+              :class="['term-window p-6 text-center', currentChoice === 'dare' ? 'bg-plum' : '']"
             >
               <p class="term-label mb-3">
-                {{ players[selectedPlayer] }} :: {{ currentChoice === 'truth' ? t.truth : t.dare }}
+                {{ players[selectedPlayer] }} · {{ currentChoice === 'truth' ? t.truth : t.dare }}
               </p>
               <p class="text-lg font-medium leading-relaxed">{{ currentPrompt }}</p>
             </div>
@@ -285,7 +307,7 @@ onUnmounted(() => clearTimeout(spinTimeout))
 
         <div class="text-center">
           <button @click="resetGame" :disabled="isSpinning" class="term-link">
-            <span aria-hidden="true">[~]</span>
+            <span aria-hidden="true"><i class="pxi pxi-swap" aria-hidden="true"></i></span>
             <span>{{ t.changePlayers }}</span>
           </button>
         </div>
@@ -295,12 +317,8 @@ onUnmounted(() => clearTimeout(spinTimeout))
 </template>
 
 <style scoped>
-.scope-glow {
-  box-shadow: 0 0 18px rgba(0, 255, 0, 0.2), inset 0 0 30px rgba(0, 255, 0, 0.12);
-}
-
-.bottle-glow {
-  filter: drop-shadow(0 0 4px rgba(0, 255, 0, 0.7));
+.bottle-shadow {
+  filter: drop-shadow(4px 6px 0 rgb(0 0 0 / 0.35));
 }
 
 .player-picked {
@@ -308,8 +326,8 @@ onUnmounted(() => clearTimeout(spinTimeout))
 }
 
 @keyframes picked-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.6); }
-  50% { box-shadow: 0 0 0 8px rgba(0, 255, 0, 0); }
+  0%, 100% { transform: none; }
+  50% { transform: translateY(-4px); }
 }
 
 .prompt-enter-active,

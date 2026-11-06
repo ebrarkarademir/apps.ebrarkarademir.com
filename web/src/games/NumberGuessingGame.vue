@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import PixelBar from '../components/PixelBar.vue'
 import TermWindow from '../components/TermWindow.vue'
 
 const props = defineProps({
@@ -85,8 +86,10 @@ const newGame = () => {
           <template v-if="gameWon"><span class="term-inverse px-3">{{ targetNumber }}</span></template>
           <template v-else>{{ low }}<span class="term-muted"> - </span>{{ high }}</template>
         </p>
-        <p class="text-sm sm:text-base whitespace-pre overflow-hidden" aria-hidden="true">
-          <span class="term-muted">{{ MIN }} </span>[{{ rangeBar }}]<span class="term-muted"> {{ MAX }}</span>
+        <p class="flex items-center gap-2 text-sm sm:text-base" aria-hidden="true">
+          <span class="term-muted tabular-nums">{{ MIN }}</span>
+          <PixelBar :bar="rangeBar" color="var(--color-sky)" class="flex-1" />
+          <span class="term-muted tabular-nums">{{ MAX }}</span>
         </p>
         <p class="term-muted text-sm mt-3">{{ t.numberGuessDesc }}</p>
       </div>
@@ -104,7 +107,7 @@ const newGame = () => {
       <div v-if="!gameWon" class="flex flex-col sm:flex-row gap-3">
         <label class="relative sm:flex-1">
           <span class="sr-only">{{ t.enterGuess }}</span>
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 font-semibold" aria-hidden="true">&gt;</span>
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-gold" aria-hidden="true"><i class="pxi pxi-next"></i></span>
           <input
             v-model="currentGuess"
             type="number"
@@ -124,7 +127,7 @@ const newGame = () => {
 
       <!-- Guess history -->
       <div v-if="guesses.length">
-        <p class="term-label mb-2">&gt; {{ t.guessHistory }}</p>
+        <p class="term-label mb-2">{{ t.guessHistory }}</p>
         <ul class="flex flex-wrap gap-2">
           <li
             v-for="(guess, index) in guesses"
@@ -134,7 +137,7 @@ const newGame = () => {
               guess.result === 'correct' ? 'term-inverse' : 'border border-term-low term-muted'
             ]"
           >
-            {{ guess.value }} {{ guess.result === 'high' ? '[v]' : guess.result === 'low' ? '[^]' : '[ok]' }}
+            {{ guess.value }} {{ guess.result === 'high' ? '▼' : guess.result === 'low' ? '▲' : '✓' }}
           </li>
         </ul>
       </div>

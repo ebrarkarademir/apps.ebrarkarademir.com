@@ -901,7 +901,7 @@ onUnmounted(() => {
           <span class="side-mark" :title="bar.color === 'w' ? t.chessWhite : t.chessBlack"><ChessPiece type="k" :color="bar.color" /></span>
           <span :class="['term-dot shrink-0', { 'is-off': !bar.online }]"></span>
           <span class="name truncate">{{ bar.name }}</span>
-          <span v-if="bar.score" class="score tabular-nums" :aria-label="`${t.chessScore}: ${bar.score}`">[{{ bar.score }}]</span>
+          <span v-if="bar.score" class="score tabular-nums" :aria-label="`${t.chessScore}: ${bar.score}`">{{ bar.score }}</span>
           <span class="taken" aria-hidden="true">
             <ChessPiece v-for="(type, index) in bar.taken" :key="index" :type="type" :color="bar.color === 'w' ? 'b' : 'w'" />
             <span v-if="bar.lead" class="lead">+{{ bar.lead }}</span>
@@ -928,13 +928,13 @@ onUnmounted(() => {
               <button type="button" class="term-btn term-btn-primary act flex-1" @click="press($event, () => emit('claim'))">{{ t.chessClaim }}</button>
             </template>
             <template v-else-if="opponentAway">
-              <span class="flex-1 min-w-0 text-xs leading-snug term-muted">&gt; {{ fmt(t.chessOpponentLeft, { name: opponent }) }}</span>
+              <span class="flex-1 min-w-0 text-xs leading-snug term-muted">{{ fmt(t.chessOpponentLeft, { name: opponent }) }}</span>
               <button type="button" :class="['term-btn act', { 'term-btn-primary': ui.armed }]" @click="press($event, resign)">
                 {{ ui.armed ? t.chessResignSure : t.chessResign }}
               </button>
             </template>
             <template v-else-if="offered">
-              <span class="offer-text text-sm">&gt; {{ fmt(t.chessDrawOffer, { name: opponent }) }}</span>
+              <span class="offer-text text-sm">{{ fmt(t.chessDrawOffer, { name: opponent }) }}</span>
               <button type="button" class="term-btn term-btn-primary act flex-1" @click="press($event, () => emit('draw'))">{{ t.chessAccept }}</button>
               <button type="button" class="term-btn act flex-1" @click="press($event, () => emit('decline'))">{{ t.chessDecline }}</button>
             </template>
@@ -952,7 +952,7 @@ onUnmounted(() => {
               </button>
             </template>
           </template>
-          <p v-else-if="!myColor" class="text-sm term-muted truncate">&gt; {{ t.chessWatching }}</p>
+          <p v-else-if="!myColor" class="text-sm term-muted truncate">{{ t.chessWatching }}</p>
         </div>
 
         <!-- The moves so far: one scrolling line in portrait, a list in landscape -->
@@ -967,7 +967,7 @@ onUnmounted(() => {
         <!-- What a pawn on the last rank becomes -->
         <div v-if="ui.promo" class="promo board-over" role="dialog" :aria-label="t.chessPromote">
           <div class="term-window p-3 text-center">
-            <p class="term-label mb-2">&gt; {{ t.chessPromote }}</p>
+            <p class="term-label mb-2">{{ t.chessPromote }}</p>
             <div class="grid grid-cols-4 gap-2">
               <button
                 v-for="[type, key] in PROMOTION_KEYS"
@@ -981,7 +981,7 @@ onUnmounted(() => {
                 <span class="promo-name">{{ t[key] }}</span>
               </button>
             </div>
-            <button type="button" class="term-link mt-3 text-xs" @click="ui.promo = null">[x] {{ t.chessCancel }}</button>
+            <button type="button" class="term-link mt-3 text-xs" @click="ui.promo = null"><i class="pxi pxi-close" aria-hidden="true"></i> {{ t.chessCancel }}</button>
           </div>
         </div>
       </div>
@@ -1037,7 +1037,8 @@ onUnmounted(() => {
   height: 36px;
   min-width: 0;
   padding: 0 0 0 0.5rem;
-  border: 1px solid var(--color-term-low);
+  background: var(--color-panel);
+  box-shadow: 0 0 0 3px var(--color-well);
   font-size: 0.875rem;
   color: var(--color-term-dim);
 }
@@ -1051,8 +1052,7 @@ onUnmounted(() => {
   color: var(--color-term);
 }
 .bar.is-turn {
-  border-color: var(--color-term);
-  box-shadow: 0 0 8px rgb(0 255 0 / 0.25);
+  box-shadow: 0 0 0 3px var(--color-gold);
 }
 .bar .name {
   flex: 0 1 auto;
@@ -1089,13 +1089,15 @@ onUnmounted(() => {
   padding: 0 0.6rem;
   min-width: 4.6rem;
   justify-content: flex-end;
-  border-left: 1px solid var(--color-term-low);
-  font-size: 1.6rem;
+  border-left: 3px solid var(--color-well);
+  background: var(--color-well);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
   line-height: 1;
   color: var(--color-term-dim);
 }
 .bar .clock.is-running {
-  background: var(--color-term);
+  background: var(--color-gold);
   color: var(--color-black);
 }
 .bar .clock.is-low {
@@ -1144,7 +1146,7 @@ onUnmounted(() => {
   scrollbar-width: none;
   white-space: nowrap;
   font-size: 0.8rem;
-  border-top: 1px dashed var(--color-term-low);
+  border-top: 2px solid var(--color-term-deep);
 }
 .moves::-webkit-scrollbar {
   display: none;
@@ -1159,7 +1161,8 @@ onUnmounted(() => {
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
-  border: 1px solid var(--color-term-low);
+  background: var(--color-panel);
+  box-shadow: 0 0 0 3px var(--color-well);
   padding: 0.25rem 0;
 }
 .move-row {
@@ -1175,7 +1178,7 @@ onUnmounted(() => {
   color: var(--color-term-low);
 }
 .move-row .san.is-last {
-  background: var(--color-term);
+  background: var(--color-gold);
   color: var(--color-black);
   padding: 0 0.2rem;
 }

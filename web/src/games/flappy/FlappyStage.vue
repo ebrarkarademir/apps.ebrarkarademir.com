@@ -4,6 +4,7 @@ import { COLS, ROWS, CELL_ASPECT, STEP, BIRD_X, LEVELS, createCourse, createRun,
 import { createRenderer, WING_CYCLE, DEAD_FRAME } from './renderer'
 import ArcadeStage from '../ascii/ArcadeStage.vue'
 import { GREEN, DIM, LOW, watchFonts } from '../ascii/paint'
+import { PIXEL_FONTS } from '../../pixel/kit'
 import { startLoop } from '../ascii/loop'
 import { stepParticles } from '../ascii/physics'
 import { sound } from '../ascii/sound'
@@ -209,14 +210,15 @@ function render () {
     pop,
     texts: [],
     flash,
-    shake
+    shake,
+    level
   }
   const levelText = upper(fmt(props.t.flappyLevelN, { n: level }))
   if (run.phase === 'ready') {
     scene.texts.push({ text: upper(props.t.flappyGetReady), y: 14, size: 6, display: true })
-    scene.texts.push({ text: `[ ${levelText} ]`, y: 19.5, size: 1.3, color: DIM })
+    scene.texts.push({ text: levelText, y: 19.5, size: 1.3, color: DIM })
     if (Math.floor(performance.now() / 500) % 2 === 0) {
-      scene.texts.push({ text: `> ${upper(props.t.flappyTapToFlap)} <`, y: 37.5, size: 1.5 })
+      scene.texts.push({ text: upper(props.t.flappyTapToFlap), y: 37.5, size: 1.5 })
     }
     scene.texts.push({ text: upper(props.t.flappyKeysHint), y: 40.5, size: 1.05, color: DIM })
   } else {
@@ -253,7 +255,7 @@ onMounted(() => {
   observer.observe(area.value)
   fit()
   // The sprites are drawn with the page fonts, so draw them again once a font has loaded
-  stopFonts = watchFonts(() => renderer?.rebuild())
+  stopFonts = watchFonts(() => renderer?.rebuild(), PIXEL_FONTS)
   window.addEventListener('keydown', onKey)
   newRun()
   stopLoop = startLoop({
@@ -304,6 +306,6 @@ onUnmounted(() => {
 
 <style scoped>
 .stage {
-  box-shadow: 0 0 0 1px var(--color-term-low), 0 0 18px rgb(0 255 0 / 0.15);
+  box-shadow: 0 0 0 var(--px) var(--color-well), 0 calc(var(--px) * 3) 0 0 rgb(0 0 0 / 0.45);
 }
 </style>

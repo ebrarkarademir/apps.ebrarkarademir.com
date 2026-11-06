@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import PixelArt from '../../components/PixelArt.vue'
+import { menuArt } from '../../pixel/menuArt'
 import confetti from 'canvas-confetti'
 import TermWindow from '../../components/TermWindow.vue'
 import RaceStage from './RaceStage.vue'
@@ -23,7 +25,6 @@ const props = defineProps({
 
 const emit = defineEmits(['exit', 'setup'])
 
-const FLAG_ART = ['|#_#_#_#', '|_#_#_#_', '|#_#_#_#', '|', '|'].join('\n')
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 
@@ -135,7 +136,7 @@ const frame = computed(() => (props.solo ? { is: TermWindow, attrs: { class: 'ma
   <component :is="frame.is" v-else-if="view.phase === 'results'" v-bind="frame.attrs" @back="emit('setup')">
     <div class="space-y-6">
       <div class="text-center">
-        <span class="inline-block whitespace-pre text-left text-sm leading-tight mb-3" aria-hidden="true">{{ FLAG_ART }}</span>
+        <PixelArt :art="menuArt.flag" class="h-14 w-auto mx-auto mb-3" />
         <h2 class="font-display text-5xl leading-none uppercase">{{ t.raceResults }}</h2>
         <p class="term-muted mt-2">&gt; {{ trackName }} &middot; {{ fmt(t.raceLapsCount, { n: view.laps }) }}</p>
         <p v-if="newRecord" class="mt-2 font-semibold" style="color: #ffd23f">&gt; {{ t.raceNewRecordSaved }}</p>

@@ -22,11 +22,11 @@ const mine = computed(() => characterOf(profile.avatar))
       type="button"
       role="radio"
       :aria-checked="mine === id"
-      :class="['term-card flex flex-col items-center gap-1 px-1 pt-2 pb-1.5 text-xs', { 'border-term bg-term-deep': mine === id }]"
+      :class="['term-card flex flex-col items-center gap-1 px-1 pt-2 pb-1.5 text-xs', { 'is-picked': mine === id }]"
       @click="setCharacter(id)"
     >
       <PixelPerson face :character="id" size="3.25rem" />
-      <span :class="['truncate max-w-full', mine === id ? 'font-semibold' : 'term-muted']">{{ mine === id ? '> ' : '' }}{{ t[LABELS[id]] }}</span>
+      <span :class="['truncate max-w-full', mine === id ? 'font-semibold' : 'term-muted']">{{ t[LABELS[id]] }}</span>
     </button>
   </div>
 </template>

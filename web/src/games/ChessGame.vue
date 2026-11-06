@@ -296,7 +296,7 @@ const resultKings = computed(() => {
     <template #lobby="{ view: lobby, isHost }">
       <div class="space-y-4">
         <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="term-label mr-1">&gt; {{ t.chessClock }}</span>
+          <span class="term-label mr-1">{{ t.chessClock }}</span>
           <button
             v-for="minutes in CLOCKS"
             :key="minutes"
@@ -309,7 +309,7 @@ const resultKings = computed(() => {
           </button>
         </div>
         <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="term-label mr-1">&gt; {{ t.chessHostPlays }}</span>
+          <span class="term-label mr-1">{{ t.chessHostPlays }}</span>
           <button
             v-for="side in SIDES"
             :key="side"
@@ -322,8 +322,8 @@ const resultKings = computed(() => {
           </button>
         </div>
         <div class="space-y-2 text-sm leading-relaxed">
-          <p class="term-muted">&gt; {{ t.chessLobbyHint }}</p>
-          <p class="term-muted">&gt; {{ t.chessControls }}</p>
+          <p class="term-muted">{{ t.chessLobbyHint }}</p>
+          <p class="term-muted">{{ t.chessControls }}</p>
         </div>
       </div>
     </template>
@@ -361,7 +361,7 @@ const resultKings = computed(() => {
               <ChessPiece v-for="king in resultKings" :key="king.color" type="k" :color="king.color" :class="{ 'rotate-90 translate-y-1': king.fallen }" />
             </div>
             <h2 class="mt-2 font-display text-5xl leading-none uppercase">{{ result.title }}</h2>
-            <p class="mt-2 text-sm term-muted">&gt; {{ result.line }}</p>
+            <p class="mt-2 text-sm term-muted">{{ result.line }}</p>
 
             <!-- Games won between the two, half a point each for a draw -->
             <div class="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -377,7 +377,7 @@ const resultKings = computed(() => {
               <button type="button" class="term-btn w-full mt-3" @click="room.act('lobby')">{{ t.onlineBackToLobby }}</button>
             </template>
             <p v-else class="mt-5 term-muted text-sm"><span class="term-cursor">{{ t.onlineWaitingHost }}</span></p>
-            <button type="button" class="term-link mt-3 text-xs" @click="resultHidden = true">[-] {{ t.chessShowBoard }}</button>
+            <button type="button" class="term-link mt-3 text-xs" @click="resultHidden = true"><i class="pxi pxi-minus" aria-hidden="true"></i> {{ t.chessShowBoard }}</button>
           </div>
         </div>
 
@@ -387,7 +387,7 @@ const resultKings = computed(() => {
           class="term-btn term-btn-primary absolute z-20 bottom-3 left-1/2 -translate-x-1/2 min-h-10 px-4 text-sm"
           @click="resultHidden = false"
         >
-          [+] {{ result.title }} · {{ fmtScore(scores.w) }}–{{ fmtScore(scores.b) }}
+          <i class="pxi pxi-plus" aria-hidden="true"></i> {{ result.title }} · {{ fmtScore(scores.w) }}–{{ fmtScore(scores.b) }}
         </button>
       </template>
     </ChessStage>

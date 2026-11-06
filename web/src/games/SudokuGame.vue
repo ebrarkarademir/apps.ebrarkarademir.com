@@ -1,5 +1,8 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import PixelArt from '../components/PixelArt.vue'
+import { menuArt } from '../pixel/menuArt'
+import { cardArt } from '../cardArt'
 import confetti from 'canvas-confetti'
 import { recordWin } from '../online/profile'
 import TermWindow from '../components/TermWindow.vue'
@@ -25,17 +28,7 @@ const COUNTDOWN_MS = 3000
 const ENDING_MS = 4500 // the full board and the winner show before the results
 const MAX_RACERS = 4
 
-const TITLE_ART = [
-  '+-------+-------+-------+',
-  '| 5 3 . | . 7 . | . . . |',
-  '| 6 . . | 1 9 5 | . . . |',
-  '| . 9 8 | . . . | . 6 . |',
-  '+-------+-------+-------+'
-].join('\n')
 // One cursor on a cell, or two going for the same one
-const SOLO_ART = ['+---+---+', '| 5 |>? |', '+---+---+'].join('\n')
-const ONLINE_ART = ['+---+---+---+', '| 5 |>?<| 3 |', '+---+---+---+'].join('\n')
-const LOSE_ART = [' \\ | /', '-- ! --', ' / | \\'].join('\n')
 
 const LEVEL_KEYS = { easy: 'sudokuEasy', medium: 'sudokuMedium', hard: 'sudokuHard', expert: 'sudokuExpert' }
 const LEVEL_DESC_KEYS = { easy: 'sudokuEasyDesc', medium: 'sudokuMediumDesc', hard: 'sudokuHardDesc', expert: 'sudokuExpertDesc' }
@@ -292,7 +285,7 @@ const winner = computed(() => (view.value?.outcome?.winner ? standings.value.fin
 watch(() => (view.value?.phase === 'results' ? view.value.round : 0), (round) => {
   if (round && winner.value?.id === room.myId) {
     recordWin('sudoku')
-    confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
+    confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#ffcd75', '#41a6f6', '#b13e53', '#a7f070', '#f4f4f4'], shapes: ['square'] })
   }
 })
 
@@ -305,26 +298,26 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
   <TermWindow v-if="mode === null" class="max-w-2xl" :title="t.sudokuTitle" :backLabel="t.back" @back="emit('go-back')">
     <div class="space-y-6">
       <div class="overflow-hidden text-center" aria-hidden="true">
-        <span class="inline-block whitespace-pre text-left text-[0.6rem] min-[400px]:text-xs sm:text-sm leading-tight">{{ TITLE_ART }}</span>
+        <PixelArt :art="cardArt['sudoku']" class="title-art mx-auto w-36 sm:w-44 h-auto" />
       </div>
 
       <div class="grid sm:grid-cols-2 gap-4">
         <button type="button" :class="modeCardClass" @click="mode = 'solo'">
-          <span class="whitespace-pre text-sm leading-tight" aria-hidden="true">{{ SOLO_ART }}</span>
+          <PixelArt :art="menuArt.solo" class="h-9 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.sudokuSolo }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.sudokuSoloDesc }}</span>
           <span class="mt-auto flex items-center justify-between gap-2 pt-1">
             <span v-if="savedGame" class="term-chip">{{ t.sudokuContinue }}: {{ levelName(savedGame.level) }}</span>
-            <span class="ml-auto text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="ml-auto text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
 
         <button type="button" :class="modeCardClass" @click="mode = 'online'">
-          <span class="whitespace-pre text-sm leading-tight" aria-hidden="true">{{ ONLINE_ART }}</span>
+          <PixelArt :art="menuArt.online" class="h-10 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.sudokuOnline }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.sudokuOnlineDesc }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
       </div>
@@ -335,13 +328,13 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
   <TermWindow v-else-if="mode === 'solo' && !play" class="max-w-2xl" :title="t.sudokuTitle" :backLabel="t.back" @back="mode = null">
     <div class="space-y-6">
       <div class="overflow-hidden text-center" aria-hidden="true">
-        <span class="inline-block whitespace-pre text-left text-[0.6rem] min-[400px]:text-xs sm:text-sm leading-tight">{{ TITLE_ART }}</span>
+        <PixelArt :art="cardArt['sudoku']" class="title-art mx-auto w-36 sm:w-44 h-auto" />
       </div>
 
       <button v-if="savedGame" type="button" :class="[cardClass, 'w-full']" @click="resume">
         <span class="flex items-center justify-between gap-2">
           <span class="font-display text-3xl leading-none uppercase">{{ t.sudokuContinue }}</span>
-          <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+          <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
         </span>
         <span class="flex flex-wrap gap-2">
           <span class="term-chip">{{ levelName(savedGame.level) }}</span>
@@ -393,7 +386,7 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
         :disabled="!!session.result"
         @click="onPauseClick"
       >
-        {{ session.paused ? '[>]' : '[||]' }}
+        <i :class="['pxi', session.paused ? 'pxi-play' : 'pxi-pause']" aria-hidden="true"></i>
       </button>
     </template>
 
@@ -401,7 +394,7 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
       <div v-if="session.result" class="absolute inset-0 z-20 flex items-center justify-center p-3 bg-black/40">
         <div class="term-window w-full max-w-xs p-5 text-center" role="dialog" aria-modal="false" :aria-label="session.result.won ? t.sudokuSolved : t.sudokuGameOver">
           <p v-if="session.result.won" class="seal mx-auto" aria-hidden="true" :style="{ fontFamily: JP }">完</p>
-          <span v-else class="inline-block whitespace-pre text-left text-sm leading-tight" aria-hidden="true">{{ LOSE_ART }}</span>
+          <PixelArt v-else :art="menuArt.boom" class="h-14 w-auto mx-auto" />
           <h2 class="mt-2 font-display text-5xl leading-none uppercase">{{ session.result.won ? t.sudokuSolved : t.sudokuGameOver }}</h2>
           <p v-if="!session.result.won" class="mt-2 text-sm term-muted">{{ fmt(t.sudokuOutOfMistakes, { n: MAX_MISTAKES }) }}</p>
 
@@ -438,7 +431,7 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
     <template #lobby="{ view: lobby, isHost }">
       <div class="space-y-4">
         <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="term-label mr-1">&gt; {{ t.sudokuLevel }}</span>
+          <span class="term-label mr-1">{{ t.sudokuLevel }}</span>
           <button
             v-for="level in DIFFICULTIES"
             :key="level"
@@ -451,8 +444,8 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
           </button>
         </div>
         <div class="space-y-2 text-sm leading-relaxed">
-          <p class="term-muted">&gt; {{ t.sudokuLobbyHint }}</p>
-          <p class="term-muted">&gt; {{ t.sudokuControlsOnline }}</p>
+          <p class="term-muted">{{ t.sudokuLobbyHint }}</p>
+          <p class="term-muted">{{ t.sudokuControlsOnline }}</p>
         </div>
       </div>
     </template>
@@ -483,7 +476,7 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
       <div class="text-center">
         <p class="seal mx-auto mb-4" aria-hidden="true" :style="{ fontFamily: JP }">完</p>
         <h2 class="font-display text-5xl leading-none uppercase">{{ fmt(t.sudokuRoundResults, { n: view.round }) }}</h2>
-        <p class="term-muted mt-2">&gt; {{ winner ? fmt(t.sudokuWinner, { name: winner.name }) : t.sudokuDraw }}</p>
+        <p class="term-muted mt-2">{{ winner ? fmt(t.sudokuWinner, { name: winner.name }) : t.sudokuDraw }}</p>
         <p class="mt-3 flex justify-center gap-2">
           <span class="term-chip">{{ levelName(view.level) }}</span>
           <span class="term-chip tabular-nums">{{ formatTime(view.time) }}</span>
@@ -532,6 +525,6 @@ const modeCardClass = 'term-card group flex flex-col gap-3 p-5 text-left'
   font-size: 2.75rem;
   line-height: 1;
   transform: rotate(-9deg);
-  box-shadow: 0 0 12px rgb(0 255 0 / 0.35);
+  box-shadow: 0 0 0 3px var(--color-gold);
 }
 </style>

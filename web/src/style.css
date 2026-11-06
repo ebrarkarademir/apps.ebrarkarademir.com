@@ -1,32 +1,66 @@
 @import "tailwindcss";
 
 /*
- * Design tokens: a green-phosphor CRT terminal.
- * - the default palette is cleared, so black and these greens are the only colors a class can use
- * - JetBrains Mono for text, VT323 (`font-display`) for big terminal type: titles, timers, scores.
- *   VT323 has no Cyrillic, so Russian and Kazakh letters come from Handjet, a pixel font of the
- *   same width and height (only its Cyrillic part is ever downloaded)
- * - no corner radius and no drop shadows: thin green wireframe lines and phosphor glow instead
+ * Design tokens: a pixel-art arcade.
+ * - a 16-color palette (Sweetie 16): a night-blue page, panels a step lighter, light text, and a
+ *   few bright colors for what matters: gold for the main action, sky blue for what's picked,
+ *   lime for online and right, red for danger
+ * - the old token names stay (term, term-dim, term-low, term-deep), so every page and game
+ *   screen takes the new colors: `term` is the light text, the others step down from it
+ * - Pixelify Sans for text and Press Start 2P (`font-display`) for titles, scores and timers.
+ *   The display font is made smaller with font-size-adjust, so the sizes the pages ask for
+ *   (picked for a narrow terminal font) still fit
+ * - no round corners and no soft shadows: chunky frames with notched corners, a light rim on
+ *   top, a dark one below, and a hard shadow under them, all whole pixels
  */
 @theme {
-  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --font-display: "VT323", "Handjet", "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Pixelify Sans", "Handjet", ui-monospace, Menlo, Consolas, monospace;
+  --font-mono: "Pixelify Sans", "Handjet", ui-monospace, Menlo, Consolas, monospace;
+  --font-display: "Press Start 2P", "Pixelify Sans", "Handjet", monospace;
+  /* Fixed-width pixel type, for anything that has to line up in columns */
+  --font-code: "VT323", "Handjet", ui-monospace, monospace;
 
   --color-*: initial;
-  --color-black: #000000;
-  --color-term: #00ff00;      /* phosphor: text and active lines */
-  --color-term-dim: #00b300;  /* secondary text */
-  --color-term-low: #007a00;  /* resting borders, disabled */
-  --color-term-deep: #002600; /* hover and selection wash */
+  --color-black: #1a1c2c;     /* the page */
+  --color-term: #f4f4f4;      /* text and active lines */
+  --color-term-dim: #94b0c2;  /* secondary text */
+  --color-term-low: #566c86;  /* resting borders, disabled */
+  --color-term-deep: #333c57; /* hover and selection wash */
+
+  --color-panel: #262b44;     /* windows and cards */
+  --color-well: #10111d;      /* sunk-in fields, the dark outline round frames */
+  --color-gold: #ffcd75;
+  --color-orange: #ef7d57;
+  --color-red: #b13e53;
+  --color-plum: #5d275d;
+  --color-lime: #a7f070;
+  --color-green: #38b764;
+  --color-teal: #257179;
+  --color-navy: #29366f;
+  --color-blue: #3b5dc9;
+  --color-sky: #41a6f6;
+  --color-cyan: #73eff7;
 
   --radius-*: initial;
   --shadow-*: initial;
   --inset-shadow-*: initial;
   --drop-shadow-*: initial;
+
+  /* Plain `border` lines are two pixels, chunky like the rest */
+  --default-border-width: 2px;
 }
 
 @layer base {
+  :root {
+    /* One art pixel, for frames and shadows */
+    --px: 3px;
+  }
+  @media (min-width: 40rem) {
+    :root {
+      --px: 4px;
+    }
+  }
+
   html {
     background: var(--color-black);
     color-scheme: dark;
@@ -64,17 +98,38 @@
     -webkit-touch-callout: default;
   }
 
+  /* The page: night blue with a faint grid of dots, like a level's backdrop */
   body {
-    background: var(--color-black);
+    background-color: var(--color-black);
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.035) 2px, transparent 2px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.035) 2px, transparent 2px);
+    background-size: 32px 32px;
     color: var(--color-term);
     font-family: var(--font-mono);
-    text-shadow: 0 0 5px rgb(0 255 0 / 0.45);
-    -webkit-font-smoothing: antialiased;
+    -webkit-font-smoothing: none;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Press Start 2P is a wide square font: font-size-adjust brings it down to about the width the
+     pages were laid out for. A hard shadow, one art pixel down and right. */
+  .font-display {
+    font-size-adjust: 0.36;
+    letter-spacing: 0.02em;
+    text-shadow: calc(var(--px) * 0.75) calc(var(--px) * 0.75) 0 rgb(0 0 0 / 0.55);
+  }
+
+  .font-code {
+    font-family: var(--font-code);
+  }
+
+  img,
+  canvas {
+    image-rendering: pixelated;
+  }
+
   ::selection {
-    background: var(--color-term);
+    background: var(--color-gold);
     color: var(--color-black);
     text-shadow: none;
   }
@@ -84,12 +139,12 @@
   }
 
   :focus-visible {
-    outline: 1px dashed var(--color-term);
-    outline-offset: 3px;
+    outline: 2px solid var(--color-sky);
+    outline-offset: calc(var(--px) + 2px);
   }
 
   input {
-    caret-color: var(--color-term);
+    caret-color: var(--color-gold);
   }
 
   input::placeholder {
@@ -99,32 +154,500 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-term-low) var(--color-black);
+    scrollbar-color: var(--color-term-low) var(--color-well);
     -webkit-tap-highlight-color: transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-well);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-term-low);
+    border: 2px solid var(--color-well);
   }
 }
 
 @layer components {
   /* ---------- Frames ---------- */
 
+  /*
+   * A pixel frame: an outline drawn with four box shadows, one per side, so the corners stay
+   * notched; a light rim inside on top and a dark one at the bottom; a hard shadow below.
+   * --edge is the outline's color, --rim and --shade the bevel's.
+   */
+  .term-window,
+  .term-card,
+  .term-btn,
+  .term-option,
+  .term-icon-btn,
+  .term-input,
+  .px-frame {
+    --edge: var(--color-well);
+    --rim: rgb(255 255 255 / 0.1);
+    --shade: rgb(0 0 0 / 0.28);
+    --drop: rgb(0 0 0 / 0.45);
+    --lift: var(--px);
+    box-shadow:
+      0 calc(var(--px) * -1) 0 0 var(--edge),
+      0 var(--px) 0 0 var(--edge),
+      calc(var(--px) * -1) 0 0 0 var(--edge),
+      var(--px) 0 0 0 var(--edge),
+      0 calc(var(--px) + var(--lift)) 0 0 var(--drop),
+      inset 0 var(--px) 0 0 var(--rim),
+      inset 0 calc(var(--px) * -1) 0 0 var(--shade);
+  }
+
   .term-window {
+    position: relative;
+    background: var(--color-panel);
+    --lift: calc(var(--px) * 2);
+  }
+
+  .term-panel {
+    border: 2px solid var(--color-term-deep);
+    background: rgb(0 0 0 / 0.14);
+  }
+
+  .term-card {
+    background: var(--color-panel);
+    transition: transform 80ms steps(2), background-color 80ms;
+  }
+  .term-card.is-picked,
+  .term-card:hover,
+  .term-card:focus-visible {
+    --edge: var(--color-gold);
+    background: #2e3452;
+    transform: translateY(calc(var(--px) * -1));
+    --lift: calc(var(--px) * 2);
+  }
+
+  /* ---------- Text ---------- */
+
+  .term-label {
+    font-family: var(--font-display);
+    font-size: 0.625rem;
+    line-height: 1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-gold);
+  }
+
+  .term-muted {
+    color: var(--color-term-dim);
+  }
+
+  .term-inverse {
+    background: var(--color-gold);
+    color: var(--color-black);
+    text-shadow: none;
+  }
+
+  .term-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.125rem 0.4rem;
+    background: var(--color-term-deep);
+    color: var(--color-term-dim);
+    box-shadow: 0 -2px 0 0 var(--color-well), 0 2px 0 0 var(--color-well), -2px 0 0 0 var(--color-well), 2px 0 0 0 var(--color-well);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Buttons ---------- */
+
+  /* Chunky arcade buttons that press down when clicked */
+  .term-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
+    background: var(--color-term-deep);
+    color: var(--color-term);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+    transition: transform 60ms steps(1), background-color 60ms;
+  }
+  .term-btn:hover:not(:disabled) {
+    background: #424c6e;
+    --edge: var(--color-term-dim);
+  }
+  .term-btn:active:not(:disabled) {
+    transform: translateY(var(--px));
+    --lift: 0px;
+  }
+
+  .term-btn-primary {
+    background: var(--color-gold);
+    color: var(--color-black);
+    --rim: rgb(255 255 255 / 0.45);
+    --shade: rgb(150 70 20 / 0.45);
+  }
+  .term-btn-primary:hover:not(:disabled) {
+    background: #ffdb94;
+    --edge: var(--color-well);
+  }
+
+  .term-btn:disabled {
+    background: var(--color-panel);
+    color: var(--color-term-low);
+    --rim: transparent;
+    --shade: transparent;
+    --lift: 0px;
+    cursor: not-allowed;
+  }
+
+  /* Selectable options: sky blue when chosen */
+  .term-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-panel);
+    color: var(--color-term-dim);
+    font-weight: 600;
+    text-align: center;
+    transition: background-color 60ms, color 60ms;
+  }
+  .term-option:hover:not(:disabled) {
+    background: var(--color-term-deep);
+    color: var(--color-term);
+  }
+  .term-option.is-active,
+  .term-option.is-active:hover:not(:disabled) {
+    background: var(--color-sky);
+    color: var(--color-black);
+    --rim: rgb(255 255 255 / 0.4);
+    --shade: rgb(20 40 120 / 0.45);
+  }
+  .term-option:disabled {
+    cursor: default;
+  }
+  .term-option.is-off {
+    opacity: 0.4;
+    --lift: 0px;
+    cursor: not-allowed;
+  }
+
+  /* Text commands such as BACK */
+  .term-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.375rem;
+    color: var(--color-term-dim);
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: color 60ms;
+  }
+  .term-link:hover:not(:disabled) {
+    color: var(--color-gold);
+  }
+  .term-link:disabled {
+    opacity: 0.4;
+  }
+
+  /* Clickable parts of the path in the nav */
+  .term-crumb {
+    color: var(--color-sky);
+    text-decoration: underline 2px var(--color-term-deep);
+    text-underline-offset: 0.25em;
+  }
+  .term-crumb:hover {
+    color: var(--color-gold);
+    text-decoration-color: var(--color-gold);
+  }
+
+  /* Small square icon buttons: help, close, the language menu */
+  .term-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    padding: 0 0.5rem;
+    background: var(--color-term-deep);
+    color: var(--color-term);
+    font-size: 0.875rem;
+    font-weight: 700;
+    --lift: calc(var(--px) * 0.75);
+  }
+  .term-icon-btn:hover {
+    background: #424c6e;
+  }
+  .term-icon-btn:active {
+    transform: translateY(var(--px));
+    --lift: 0px;
+  }
+
+  /* Nav categories */
+  .term-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding: 0 0.75rem;
+    color: var(--color-term-dim);
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: background-color 60ms, color 60ms;
+  }
+  .term-tab:hover {
+    background: var(--color-term-deep);
+    color: var(--color-term);
+  }
+  .term-tab.is-active {
+    background: var(--color-gold);
+    color: var(--color-black);
+    box-shadow: inset 0 -3px 0 0 rgb(150 70 20 / 0.45), inset 0 3px 0 0 rgb(255 255 255 / 0.4);
+  }
+
+  /* ---------- Inputs ---------- */
+
+  .term-input {
+    width: 100%;
+    height: 2.75rem;
+    padding: 0 0.75rem;
+    background: var(--color-well);
+    color: var(--color-term);
+    outline: none;
+    --edge: var(--color-term-low);
+    --rim: rgb(0 0 0 / 0.5);
+    --shade: transparent;
+    --drop: transparent;
+  }
+  .term-input:focus {
+    --edge: var(--color-sky);
+  }
+
+  /* ---------- Indicators ---------- */
+
+  /* Connection status: a lit square online, a dark one offline */
+  .term-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    flex-shrink: 0;
+    background: var(--color-lime);
+    box-shadow: 0 0 0 2px var(--color-well);
+  }
+  .term-dot.is-off {
+    background: var(--color-term-low);
+  }
+
+  /* Blinking block cursor */
+  .term-cursor::after {
+    content: "";
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-left: 0.2em;
+    vertical-align: -0.15em;
+    background: var(--color-gold);
+    animation: term-blink 1.05s steps(1) infinite;
+  }
+
+  .term-blink {
+    animation: term-blink 1.05s steps(1) infinite;
+  }
+
+  /* A spinner of four blocks taking turns */
+  .term-spinner::before {
+    content: "▖";
+    display: inline-block;
+    animation: term-spin 0.6s steps(1) infinite;
+  }
+
+
+  /* ---------- Pixel icons ----------
+     <i class="pxi pxi-close"></i>: a 7 by 7 pixel picture in the text's color, as tall as a
+     capital letter. Made by pixel art grids (see the list below). */
+  .pxi {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 0.875em;
+    height: 0.875em;
+    vertical-align: -0.1em;
+    background: currentColor;
+    -webkit-mask: var(--pxi) center / contain no-repeat;
+    mask: var(--pxi) center / contain no-repeat;
+    image-rendering: pixelated;
+    font-style: normal;
+  }
+  .pxi-close { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M0 0h1v1H0zM6 0h1v1H6zM1 1h1v1H1zM5 1h1v1H5zM2 2h1v1H2zM4 2h1v1H4zM3 3h1v1H3zM2 4h1v1H2zM4 4h1v1H4zM1 5h1v1H1zM5 5h1v1H5zM0 6h1v1H0zM6 6h1v1H6z'/></svg>"); }
+  .pxi-back { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M3 0h1v1H3zM2 1h2v1H2zM1 2h6v1H1zM0 3h7v1H0zM1 4h6v1H1zM2 5h2v1H2zM3 6h1v1H3z'/></svg>"); }
+  .pxi-next { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M3 0h1v1H3zM3 1h2v1H3zM0 2h6v1H0zM0 3h7v1H0zM0 4h6v1H0zM3 5h2v1H3zM3 6h1v1H3z'/></svg>"); }
+  .pxi-play { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M1 0h1v1H1zM1 1h2v1H1zM1 2h3v1H1zM1 3h4v1H1zM1 4h3v1H1zM1 5h2v1H1zM1 6h1v1H1z'/></svg>"); }
+  .pxi-pause { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M1 0h2v1H1zM4 0h2v1H4zM1 1h2v1H1zM4 1h2v1H4zM1 2h2v1H1zM4 2h2v1H4zM1 3h2v1H1zM4 3h2v1H4zM1 4h2v1H1zM4 4h2v1H4zM1 5h2v1H1zM4 5h2v1H4zM1 6h2v1H1zM4 6h2v1H4z'/></svg>"); }
+  .pxi-help { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M1 0h5v1H1zM0 1h2v1H0zM5 1h2v1H5zM5 2h2v1H5zM3 3h3v1H3zM3 4h2v1H3zM3 6h2v1H3z'/></svg>"); }
+  .pxi-plus { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M3 0h1v1H3zM3 1h1v1H3zM3 2h1v1H3zM0 3h7v1H0zM3 4h1v1H3zM3 5h1v1H3zM3 6h1v1H3z'/></svg>"); }
+  .pxi-minus { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M0 3h7v1H0z'/></svg>"); }
+  .pxi-swap { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M4 0h1v1H4zM0 1h6v1H0zM4 2h1v1H4zM2 4h1v1H2zM1 5h6v1H1zM2 6h1v1H2z'/></svg>"); }
+  .pxi-alert { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M3 0h1v1H3zM2 1h3v1H2zM2 2h1v1H2zM4 2h1v1H4zM1 3h2v1H1zM4 3h2v1H4zM1 4h5v1H1zM0 5h3v1H0zM4 5h3v1H4zM0 6h7v1H0z'/></svg>"); }
+  .pxi-check { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M6 1h1v1H6zM5 2h2v1H5zM0 3h1v1H0zM4 3h2v1H4zM0 4h2v1H0zM3 4h2v1H3zM1 5h3v1H1zM2 6h1v1H2z'/></svg>"); }
+  .pxi-star { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M3 0h1v1H3zM3 1h1v1H3zM0 2h7v1H0zM1 3h5v1H1zM2 4h3v1H2zM1 5h2v1H1zM4 5h2v1H4zM0 6h1v1H0zM6 6h1v1H6z'/></svg>"); }
+  .pxi-pencil { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M5 0h2v1H5zM4 1h3v1H4zM3 2h3v1H3zM2 3h3v1H2zM1 4h3v1H1zM0 5h3v1H0zM0 6h2v1H0z'/></svg>"); }
+  .pxi-bucket { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M2 0h1v1H2zM1 1h1v1H1zM3 1h1v1H3zM0 2h1v1H0zM4 2h1v1H4zM1 3h1v1H1zM5 3h2v1H5zM1 4h2v1H1zM4 4h3v1H4zM2 5h3v1H2zM6 5h1v1H6zM6 6h1v1H6z'/></svg>"); }
+  .pxi-eraser { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M4 0h2v1H4zM3 1h4v1H3zM2 2h5v1H2zM1 3h1v1H1zM3 3h3v1H3zM0 4h1v1H0zM4 4h1v1H4zM1 5h1v1H1zM3 5h1v1H3zM2 6h1v1H2z'/></svg>"); }
+  .pxi-full { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M0 0h3v1H0zM4 0h3v1H4zM0 1h1v1H0zM6 1h1v1H6zM0 2h1v1H0zM6 2h1v1H6zM0 4h1v1H0zM6 4h1v1H6zM0 5h1v1H0zM6 5h1v1H6zM0 6h3v1H0zM4 6h3v1H4z'/></svg>"); }
+  .pxi-unfull { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M1 0h1v1H1zM5 0h1v1H5zM0 1h2v1H0zM5 1h2v1H5zM0 5h2v1H0zM5 5h2v1H5zM1 6h1v1H1zM5 6h1v1H5z'/></svg>"); }
+  .pxi-down { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M0 2h7v1H0zM1 3h5v1H1zM2 4h3v1H2zM3 5h1v1H3z'/></svg>"); }
+  .pxi-up { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M3 1h1v1H3zM2 2h3v1H2zM1 3h5v1H1zM0 4h7v1H0z'/></svg>"); }
+  .pxi-grid { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M0 0h1v1H0zM2 0h1v1H2zM4 0h1v1H4zM6 0h1v1H6zM0 2h1v1H0zM2 2h1v1H2zM4 2h1v1H4zM6 2h1v1H6zM0 4h1v1H0zM2 4h1v1H2zM4 4h1v1H4zM6 4h1v1H6zM0 6h1v1H0zM2 6h1v1H2zM4 6h1v1H4zM6 6h1v1H6z'/></svg>"); }
+  .pxi-spy { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M2 1h3v1H2zM1 2h5v1H1zM0 3h7v1H0zM0 5h2v1H0zM3 5h1v1H3zM5 5h2v1H5zM0 6h2v1H0zM5 6h2v1H5z'/></svg>"); }
+  .pxi-bot { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M3 0h1v1H3zM1 1h5v1H1zM0 2h1v1H0zM6 2h1v1H6zM0 3h1v1H0zM2 3h1v1H2zM4 3h1v1H4zM6 3h1v1H6zM0 4h1v1H0zM6 4h1v1H6zM1 5h5v1H1zM1 6h1v1H1zM5 6h1v1H5z'/></svg>"); }
+  .pxi-user { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M2 0h3v1H2zM2 1h3v1H2zM2 2h3v1H2zM1 4h5v1H1zM0 5h7v1H0zM0 6h7v1H0z'/></svg>"); }
+  .pxi-crown { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M0 0h1v1H0zM3 0h1v1H3zM6 0h1v1H6zM0 1h2v1H0zM3 1h1v1H3zM5 1h2v1H5zM0 2h7v1H0zM0 3h7v1H0zM0 4h7v1H0zM0 6h7v1H0z'/></svg>"); }
+  .pxi-eye { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M2 1h3v1H2zM1 2h1v1H1zM5 2h1v1H5zM0 3h1v1H0zM3 3h1v1H3zM6 3h1v1H6zM1 4h1v1H1zM5 4h1v1H5zM2 5h3v1H2z'/></svg>"); }
+  .pxi-sound { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M3 0h1v1H3zM2 1h2v1H2zM5 1h1v1H5zM0 2h4v1H0zM6 2h1v1H6zM0 3h4v1H0zM5 3h1v1H5zM0 4h4v1H0zM6 4h1v1H6zM2 5h2v1H2zM5 5h1v1H5zM3 6h1v1H3z'/></svg>"); }
+  .pxi-mute { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M3 0h1v1H3zM2 1h2v1H2zM0 2h4v1H0zM5 2h1v1H5zM0 3h4v1H0zM6 3h1v1H6zM0 4h4v1H0zM5 4h1v1H5zM2 5h2v1H2zM3 6h1v1H3z'/></svg>"); }
+  .pxi-vibe { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M0 0h1v1H0zM2 0h3v1H2zM6 0h1v1H6zM0 1h1v1H0zM2 1h1v1H2zM4 1h1v1H4zM6 1h1v1H6zM1 2h2v1H1zM4 2h2v1H4zM0 3h1v1H0zM2 3h3v1H2zM6 3h1v1H6zM1 4h2v1H1zM4 4h2v1H4zM0 5h1v1H0zM2 5h1v1H2zM4 5h1v1H4zM6 5h1v1H6zM0 6h1v1H0zM2 6h3v1H2zM6 6h1v1H6z'/></svg>"); }
+  .pxi-chat { --pxi: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'><path d='M0 0h7v1H0zM0 1h1v1H0zM6 1h1v1H6zM0 2h1v1H0zM2 2h1v1H2zM4 2h1v1H4zM6 2h1v1H6zM0 3h1v1H0zM6 3h1v1H6zM0 4h7v1H0zM1 5h2v1H1zM0 6h1v1H0z'/></svg>"); }
+
+  /* A team's color, as a little square: home blue, away red */
+  .px-team {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 0.7em;
+    height: 0.7em;
+    vertical-align: -0.05em;
+    box-shadow: 0 0 0 2px var(--color-well), inset -2px -2px 0 0 rgb(0 0 0 / 0.3);
+  }
+  .px-team-0 {
+    background: var(--color-sky);
+  }
+  .px-team-1 {
+    background: var(--color-red);
+  }
+
+  /* A coin that spins, for loading and waiting */
+  .px-coin {
+    display: inline-block;
+    width: 0.75em;
+    height: 0.75em;
+    background: var(--color-gold);
+    box-shadow: inset -0.15em 0 0 0 var(--color-orange), 0 0 0 2px var(--color-well);
+    animation: px-coin 0.8s steps(4) infinite;
+  }
+}
+
+@keyframes term-blink {
+  50% { opacity: 0; }
+}
+
+@keyframes term-spin {
+  0% { content: "▖"; }
+  25% { content: "▘"; }
+  50% { content: "▝"; }
+  75% { content: "▗"; }
+}
+
+@keyframes px-coin {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(0.15); }
+}
+
+/* The whole app. (It was a CRT's glass; now nothing lies over the page.) */
+.crt {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-cursor::after,
+  .term-blink,
+  .term-spinner::before,
+  .px-coin {
+    animation: none;
+  }
+}
+
+/*
+ * The green terminal the site used to be, kept for the games that bring art of their own (Tank,
+ * Race, Crater, Blackjack): their frame and everything in it (see ArcadeStage's `classic`) keep
+ * the colors, fonts and controls they were made with.
+ */
+.term-classic {
+  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-display: "VT323", "Handjet", "JetBrains Mono", ui-monospace, monospace;
+  --color-black: #000000;
+  --color-term: #00ff00;
+  --color-term-dim: #00b300;
+  --color-term-low: #007a00;
+  --color-term-deep: #002600;
+  color: var(--color-term);
+  font-family: var(--font-mono);
+  text-shadow: 0 0 5px rgb(0 255 0 / 0.45);
+  -webkit-font-smoothing: antialiased;
+}
+.term-classic :is(img, canvas) {
+  image-rendering: auto;
+}
+.term-classic .font-display {
+  font-size-adjust: none;
+  letter-spacing: normal;
+  text-shadow: inherit;
+}
+.term-classic .border { border-width: 1px; }
+.term-classic .border-t { border-top-width: 1px; }
+.term-classic .border-b { border-bottom-width: 1px; }
+.term-classic .border-l { border-left-width: 1px; }
+.term-classic .border-r { border-right-width: 1px; }
+.term-classic .border-x { border-left-width: 1px; border-right-width: 1px; }
+.term-classic .border-y { border-top-width: 1px; border-bottom-width: 1px; }
+.term-classic :focus-visible {
+  outline: 1px dashed var(--color-term);
+  outline-offset: 3px;
+}
+.term-classic ::selection {
+  background: var(--color-term);
+  color: #000;
+}
+@layer components {
+  /* The pixel frames are box shadows: none here, unless the old look had one (below) */
+  .term-classic :is(.term-window, .term-card, .term-btn, .term-option, .term-icon-btn, .term-input, .term-chip, .term-dot, .term-tab) {
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* ---------- Frames ---------- */
+
+  .term-classic .term-window {
     position: relative;
     border: 1px solid var(--color-term);
     background: var(--color-black);
     box-shadow: 0 0 14px rgb(0 255 0 / 0.2), inset 0 0 28px rgb(0 255 0 / 0.06);
   }
 
-  .term-panel {
+  .term-classic .term-panel {
     border: 1px solid var(--color-term-low);
   }
 
-  .term-card {
+  .term-classic .term-card {
     border: 1px solid var(--color-term-low);
     background: var(--color-black);
     transition: border-color 80ms, background-color 80ms, box-shadow 80ms;
   }
-  .term-card:hover,
-  .term-card:focus-visible {
+  .term-classic .term-card:hover,
+  .term-classic .term-card:focus-visible {
     border-color: var(--color-term);
     background: var(--color-term-deep);
     box-shadow: 0 0 14px rgb(0 255 0 / 0.25);
@@ -132,7 +655,7 @@
 
   /* ---------- Text ---------- */
 
-  .term-label {
+  .term-classic .term-label {
     font-size: 0.75rem;
     line-height: 1rem;
     font-weight: 600;
@@ -141,17 +664,17 @@
     color: var(--color-term-dim);
   }
 
-  .term-muted {
+  .term-classic .term-muted {
     color: var(--color-term-dim);
   }
 
-  .term-inverse {
+  .term-classic .term-inverse {
     background: var(--color-term);
     color: var(--color-black);
     text-shadow: none;
   }
 
-  .term-chip {
+  .term-classic .term-chip {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -168,7 +691,7 @@
   /* ---------- Buttons ---------- */
 
   /* [ COMMAND ] buttons that light up (invert) on hover */
-  .term-btn {
+  .term-classic .term-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -184,34 +707,34 @@
     text-transform: uppercase;
     transition: background-color 80ms, color 80ms, box-shadow 80ms;
   }
-  .term-btn::before {
+  .term-classic .term-btn::before {
     content: "[";
   }
-  .term-btn::after {
+  .term-classic .term-btn::after {
     content: "]";
   }
-  .term-btn:hover:not(:disabled) {
+  .term-classic .term-btn:hover:not(:disabled) {
     background: var(--color-term);
     color: var(--color-black);
     text-shadow: none;
   }
-  .term-btn:active:not(:disabled) {
+  .term-classic .term-btn:active:not(:disabled) {
     transform: translateY(1px);
   }
 
-  .term-btn-primary {
+  .term-classic .term-btn-primary {
     background: var(--color-term);
     color: var(--color-black);
     text-shadow: none;
     box-shadow: 0 0 12px rgb(0 255 0 / 0.35);
   }
-  .term-btn-primary:hover:not(:disabled) {
+  .term-classic .term-btn-primary:hover:not(:disabled) {
     background: var(--color-black);
     color: var(--color-term);
     text-shadow: 0 0 5px rgb(0 255 0 / 0.45);
   }
 
-  .term-btn:disabled {
+  .term-classic .term-btn:disabled {
     border-color: var(--color-term-low);
     background: transparent;
     color: var(--color-term-low);
@@ -221,7 +744,7 @@
   }
 
   /* Selectable options: inverted when chosen */
-  .term-option {
+  .term-classic .term-option {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -235,29 +758,29 @@
     text-align: center;
     transition: background-color 80ms, color 80ms, border-color 80ms;
   }
-  .term-option:hover:not(:disabled) {
+  .term-classic .term-option:hover:not(:disabled) {
     border-color: var(--color-term);
     background: var(--color-term-deep);
     color: var(--color-term);
   }
-  .term-option.is-active,
-  .term-option.is-active:hover:not(:disabled) {
+  .term-classic .term-option.is-active,
+  .term-classic .term-option.is-active:hover:not(:disabled) {
     border-color: var(--color-term);
     background: var(--color-term);
     color: var(--color-black);
     text-shadow: none;
   }
-  .term-option:disabled {
+  .term-classic .term-option:disabled {
     cursor: default;
   }
-  .term-option.is-off {
+  .term-classic .term-option.is-off {
     border-style: dashed;
     opacity: 0.45;
     cursor: not-allowed;
   }
 
   /* Text commands such as [<] BACK */
-  .term-link {
+  .term-classic .term-link {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -269,22 +792,22 @@
     text-transform: uppercase;
     transition: background-color 80ms, color 80ms;
   }
-  .term-link:hover:not(:disabled) {
+  .term-classic .term-link:hover:not(:disabled) {
     background: var(--color-term);
     color: var(--color-black);
     text-shadow: none;
   }
-  .term-link:disabled {
+  .term-classic .term-link:disabled {
     opacity: 0.4;
   }
 
   /* Clickable parts of the ~/path prompt in the nav */
-  .term-crumb {
+  .term-classic .term-crumb {
     text-decoration: underline dotted var(--color-term-low);
     text-underline-offset: 0.25em;
     transition: background-color 80ms, color 80ms;
   }
-  .term-crumb:hover {
+  .term-classic .term-crumb:hover {
     background: var(--color-term);
     color: var(--color-black);
     text-shadow: none;
@@ -292,7 +815,7 @@
   }
 
   /* Small bracketed icon buttons: [?], [x], the language menu */
-  .term-icon-btn {
+  .term-classic .term-icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -306,13 +829,13 @@
     font-weight: 600;
     transition: background-color 80ms, border-color 80ms;
   }
-  .term-icon-btn:hover {
+  .term-classic .term-icon-btn:hover {
     border-color: var(--color-term);
     background: var(--color-term-deep);
   }
 
   /* Nav categories */
-  .term-tab {
+  .term-classic .term-tab {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -326,11 +849,11 @@
     white-space: nowrap;
     transition: background-color 80ms, color 80ms;
   }
-  .term-tab:hover {
+  .term-classic .term-tab:hover {
     background: var(--color-term-deep);
     color: var(--color-term);
   }
-  .term-tab.is-active {
+  .term-classic .term-tab.is-active {
     background: var(--color-term);
     color: var(--color-black);
     text-shadow: none;
@@ -338,7 +861,7 @@
 
   /* ---------- Inputs ---------- */
 
-  .term-input {
+  .term-classic .term-input {
     width: 100%;
     height: 2.75rem;
     padding: 0 0.75rem;
@@ -348,7 +871,7 @@
     outline: none;
     transition: border-color 80ms, box-shadow 80ms;
   }
-  .term-input:focus {
+  .term-classic .term-input:focus {
     border-color: var(--color-term);
     box-shadow: 0 0 0 1px var(--color-term), 0 0 12px rgb(0 255 0 / 0.3);
   }
@@ -356,7 +879,7 @@
   /* ---------- Indicators ---------- */
 
   /* Connection status: filled square online, hollow offline */
-  .term-dot {
+  .term-classic .term-dot {
     display: inline-block;
     width: 0.5rem;
     height: 0.5rem;
@@ -365,14 +888,14 @@
     background: var(--color-term);
     box-shadow: 0 0 6px rgb(0 255 0 / 0.6);
   }
-  .term-dot.is-off {
+  .term-classic .term-dot.is-off {
     border-color: var(--color-term-low);
     background: transparent;
     box-shadow: none;
   }
 
   /* Blinking block cursor */
-  .term-cursor::after {
+  .term-classic .term-cursor::after {
     content: "";
     display: inline-block;
     width: 0.55em;
@@ -384,64 +907,14 @@
     animation: term-blink 1.05s steps(1) infinite;
   }
 
-  .term-blink {
+  .term-classic .term-blink {
     animation: term-blink 1.05s steps(1) infinite;
   }
 
   /* | / - \ spinner */
-  .term-spinner::before {
+  .term-classic .term-spinner::before {
     content: "|";
     animation: term-spin 0.6s steps(1) infinite;
   }
-}
 
-@keyframes term-blink {
-  50% { opacity: 0; }
-}
-
-@keyframes term-spin {
-  0% { content: "|"; }
-  25% { content: "/"; }
-  50% { content: "-"; }
-  75% { content: "\\"; }
-}
-
-/* CRT glass over the whole app: scanlines and a dark vignette, plus a faint band rolling down */
-.crt::before,
-.crt::after {
-  content: "";
-  position: fixed;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  pointer-events: none;
-}
-.crt::before {
-  top: 0;
-  bottom: 0;
-  background:
-    radial-gradient(ellipse at center, transparent 58%, rgb(0 0 0 / 0.55) 100%),
-    repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / 0.3) 2px 3px);
-}
-.crt::after {
-  top: 0;
-  height: 30vh;
-  background: linear-gradient(to bottom, transparent, rgb(0 255 0 / 0.05) 50%, transparent);
-  transform: translateY(-30vh);
-  animation: crt-roll 9s linear infinite;
-}
-
-@keyframes crt-roll {
-  to { transform: translateY(100vh); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .crt::after {
-    display: none;
-  }
-  .term-cursor::after,
-  .term-blink,
-  .term-spinner::before {
-    animation: none;
-  }
 }

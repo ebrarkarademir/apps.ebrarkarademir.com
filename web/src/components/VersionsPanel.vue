@@ -24,7 +24,7 @@ const siteOpen = !currentGame
   <div class="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4" @click.self="emit('close')">
     <div role="dialog" aria-modal="true" aria-labelledby="versions-title" class="term-window w-full sm:max-w-lg max-h-[90vh] flex flex-col">
       <div class="relative px-5 pt-5 pb-4 border-b border-term-low">
-        <button type="button" class="term-icon-btn absolute top-3 right-3" :aria-label="t.versionsClose" @click="emit('close')">[x]</button>
+        <button type="button" class="term-icon-btn absolute top-3 right-3" :aria-label="t.versionsClose" @click="emit('close')"><i class="pxi pxi-close" aria-hidden="true"></i></button>
         <h2 id="versions-title" class="font-display text-3xl leading-none uppercase pr-12">{{ t.versionsTitle }}</h2>
         <p class="mt-2 text-sm term-muted">{{ t.versionsSite }} v{{ site[0].v }}</p>
       </div>
@@ -67,14 +67,15 @@ const siteOpen = !currentGame
   display: none;
 }
 .versions summary::before {
-  content: '[+]';
-  color: var(--color-term-low);
+  content: '+';
+  color: var(--color-gold);
+  font-family: var(--font-display);
 }
 .versions[open] summary::before {
-  content: '[-]';
+  content: '-';
 }
 .versions ol {
-  border-top: 1px dashed var(--color-term-low);
+  border-top: 2px solid var(--color-term-deep);
   padding: 0.4rem 0.75rem 0.6rem;
 }
 .versions li {

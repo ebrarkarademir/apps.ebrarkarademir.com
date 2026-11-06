@@ -1,37 +1,22 @@
 <script setup>
 import { computed } from 'vue'
-import { PIECES, SIDES, LINE_WIDTH } from './pieces'
+import PixelArt from '../../components/PixelArt.vue'
+import { pieceArt } from './pixelPieces'
 
-// One chess piece on the page, drawn the same as on the board: the players' bars, the pieces
-// taken, the promotion choice and the result. It's as big as its font size unless styled.
+// One chess (or dama) piece on the page, drawn the same as on the board: the players' bars, the
+// pieces taken, the promotion choice and the result. It's as big as its font size unless styled.
 const props = defineProps({
-  type: { type: String, required: true }, // p n b r q k, or a key of `set`
-  // Another game's pieces, in the format of pieces.js
-  set: { type: Object, default: () => PIECES },
+  type: { type: String, required: true }, // p n b r q k, or man / king
+  // Kept for the callers that pass another game's set: the type says which piece it is
+  set: { type: Object, default: null },
   color: { type: String, required: true } // w | b
 })
 
-const side = computed(() => SIDES[props.color] || SIDES.w)
+const art = computed(() => pieceArt(props.type, props.color))
 </script>
 
 <template>
-  <svg
-    viewBox="0 0 100 100"
-    class="chess-piece"
-    aria-hidden="true"
-    :style="{ filter: `drop-shadow(0 0 0.12em ${side.glow})` }"
-  >
-    <path
-      v-for="(part, index) in set[type]"
-      :key="index"
-      :d="part.d"
-      :fill="part.line ? 'none' : part.ink ? side.line : side.fill"
-      :stroke="side.line"
-      :stroke-width="LINE_WIDTH"
-      stroke-linejoin="round"
-      stroke-linecap="round"
-    />
-  </svg>
+  <PixelArt :art="art" class="chess-piece" />
 </template>
 
 <style scoped>
@@ -40,6 +25,5 @@ const side = computed(() => SIDES[props.color] || SIDES.w)
   width: 1em;
   height: 1em;
   flex-shrink: 0;
-  overflow: visible;
 }
 </style>

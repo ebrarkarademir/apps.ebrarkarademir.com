@@ -318,7 +318,7 @@ function buy (order) {
 </script>
 
 <template>
-  <ArcadeStage :t="t" :title="t.blackjackTitle" :exitLabel="exitLabel" :bare="full" @exit="emit('exit')">
+  <ArcadeStage :t="t" :title="t.blackjackTitle" :exitLabel="exitLabel" :bare="full" @exit="emit('exit')" classic>
     <template #actions>
       <button v-if="canLobby" type="button" class="term-icon-btn shrink-0 h-9 w-auto px-2 text-xs" :title="t.onlineBackToLobby" @click="emit('lobby')">
         [{{ t.bjLobbyShort }}]

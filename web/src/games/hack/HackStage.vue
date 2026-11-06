@@ -247,7 +247,7 @@ function caught () {
   haptics.buzz('over')
   emit('over', { score: s.score, layer: s.layer, cracked: s.cracked })
   if (s.newBest && s.score > 0 && !reduceMotion) {
-    later(500, () => confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] }))
+    later(500, () => confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#ffcd75', '#41a6f6', '#b13e53', '#a7f070', '#f4f4f4'], shapes: ['square'] }))
   }
 }
 
@@ -358,10 +358,7 @@ const keyRows = computed(() => KEYBOARDS[props.lang].map(row => [...row]))
 const slots = computed(() => s.known.map((ch, i) => (s.scramble.length ? s.scramble[i] : ch)))
 const typing = computed(() => Array.from({ length: s.length }, (_, i) => s.input[i] || ''))
 const traceCells = 20
-const traceBar = computed(() => {
-  const filled = Math.round((s.trace / TRACE_MAX) * traceCells)
-  return '#'.repeat(filled) + '.'.repeat(traceCells - filled)
-})
+const traceFilled = computed(() => Math.round((s.trace / TRACE_MAX) * traceCells))
 const alarm = computed(() => run && s.trace >= TRACE_ALARM && s.phase !== 'over')
 // Tiles as big as the screen's width allows for this many letters, up to 3.25rem
 // The tiles fill the width, a letter each (see .hack in the styles)
@@ -398,7 +395,7 @@ onUnmounted(() => {
         :disabled="s.phase === 'over' || s.phase === 'cracked' || s.phase === 'boot'"
         @click="press($event, togglePause)"
       >
-        {{ s.paused ? '[>]' : '[||]' }}
+        <i :class="['pxi', s.paused ? 'pxi-play' : 'pxi-pause']" aria-hidden="true"></i>
       </button>
     </template>
 
@@ -412,7 +409,9 @@ onUnmounted(() => {
         </div>
         <div v-if="run" :class="['trace', { 'is-alarm': alarm }]" role="meter" :aria-label="t.hackTrace" aria-valuemin="0" :aria-valuemax="TRACE_MAX" :aria-valuenow="Math.round(s.trace)">
           <span class="term-label shrink-0">{{ t.hackTrace }}</span>
-          <span class="flex-1 min-w-0 overflow-hidden whitespace-pre" aria-hidden="true">[{{ traceBar }}]</span>
+          <span class="trace-bar flex-1 min-w-0" aria-hidden="true">
+            <span v-for="n in traceCells" :key="n" :class="['seg', { 'is-on': n <= traceFilled, 'is-hot': n > traceCells * 0.7 }]"></span>
+          </span>
           <span class="shrink-0 w-12 text-right tabular-nums font-semibold">{{ Math.round(s.trace) }}%</span>
         </div>
         <div v-else class="hud">
@@ -456,14 +455,14 @@ onUnmounted(() => {
 
         <!-- Messages: errors, layers, and the result of a layer -->
         <p :class="['message', { 'is-error': s.error, 'is-good': s.phase === 'cracked' }]" aria-live="polite">
-          <template v-if="s.phase === 'cracked' && run">&gt; {{ s.message }} <span class="font-semibold">+{{ s.gained }}</span></template>
-          <template v-else-if="s.message">&gt; {{ s.message }}</template>
+          <template v-if="s.phase === 'cracked' && run">{{ s.message }} <span class="font-semibold">+{{ s.gained }}</span></template>
+          <template v-else-if="s.message">{{ s.message }}</template>
         </p>
 
         <!-- Scan, and give up in practice -->
         <div class="actions-row flex gap-2">
           <button type="button" class="term-btn act flex-1" :disabled="!canScan" @click="press($event, scan)">
-            [?] {{ t.hackScan }}<span v-if="run" class="cost">{{ fmt(t.hackScanCost, { n: TRACE_PER_SCAN }) }}</span>
+            <i class="pxi pxi-help" aria-hidden="true"></i> {{ t.hackScan }}<span v-if="run" class="cost">{{ fmt(t.hackScanCost, { n: TRACE_PER_SCAN }) }}</span>
           </button>
           <button v-if="!run" type="button" class="term-btn act flex-1" :disabled="s.phase !== 'play'" @click="press($event, giveUp)">{{ t.hackGiveUp }}</button>
         </div>
@@ -491,7 +490,7 @@ onUnmounted(() => {
               class="key wide"
               :aria-label="t.hackDelete"
               @click="press($event, erase)"
-            >&lt;-</button>
+            ><i class="pxi pxi-back" aria-hidden="true"></i></button>
           </div>
         </div>
       </div>
@@ -583,8 +582,28 @@ onUnmounted(() => {
   color: var(--color-term-dim);
 }
 .trace.is-alarm {
-  color: var(--color-term);
+  color: var(--color-red);
   animation: alarm 0.8s steps(2, jump-none) infinite;
+}
+
+/* The trace meter: a row of blocks that fill up, green, then red near the end */
+.trace-bar {
+  display: flex;
+  gap: 2px;
+  height: 0.9rem;
+  padding: 2px;
+  background: var(--color-well);
+}
+.trace-bar .seg {
+  flex: 1 1 0;
+  background: var(--color-term-deep);
+}
+.trace-bar .seg.is-on {
+  background: var(--color-lime);
+  box-shadow: inset 0 -2px 0 0 rgb(0 0 0 / 0.25);
+}
+.trace-bar .seg.is-on.is-hot {
+  background: var(--color-red);
 }
 
 .row {
@@ -600,20 +619,19 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: calc(var(--tile) * 0.85);
-  border-bottom: 2px solid var(--color-term-low);
+  border-bottom: 4px solid var(--color-term-deep);
   font-family: var(--font-display);
-  font-size: calc(var(--tile) * 0.62);
+  font-size: calc(var(--tile) * 0.75);
   line-height: 1;
   color: var(--color-term-low);
 }
 .slot.is-known {
-  color: var(--color-term);
-  border-bottom-color: var(--color-term);
-  text-shadow: 0 0 8px rgb(0 255 0 / 0.6);
-  animation: decode 0.35s ease-out;
+  color: var(--color-lime);
+  border-bottom-color: var(--color-lime);
+  animation: decode 0.35s steps(4);
 }
 .slot.is-scan {
-  border-bottom-style: dashed;
+  border-bottom-color: var(--color-gold);
 }
 .slot.is-boot {
   color: var(--color-term-dim);
@@ -625,40 +643,43 @@ onUnmounted(() => {
   justify-content: center;
   width: var(--tile);
   height: var(--tile);
-  border: 1px solid var(--color-term-low);
+  background: var(--color-panel);
+  box-shadow: 0 0 0 3px var(--color-well), inset 0 3px 0 0 rgb(255 255 255 / 0.08), inset 0 -3px 0 0 rgb(0 0 0 / 0.3);
   font-family: var(--font-display);
-  font-size: calc(var(--tile) * 0.66);
+  font-size: calc(var(--tile) * 0.8);
   line-height: 1;
 }
 .tile.is-empty {
-  border-style: dashed;
+  background: var(--color-well);
+  box-shadow: 0 0 0 3px var(--color-term-deep);
 }
 .tile.is-typed {
-  border-color: var(--color-term);
+  background: var(--color-term-deep);
 }
 .tile.is-cursor {
-  border-color: var(--color-term);
-  box-shadow: inset 0 -3px 0 var(--color-term);
+  box-shadow: 0 0 0 3px var(--color-gold);
   animation: cursor 1s steps(2, jump-none) infinite;
 }
-/* Marks: lit block for the right place, dashed for elsewhere, faint for not in it */
+/* Marks: lime block for the right place, gold for elsewhere, dark for not in it */
 .tile.is-hit {
-  background: var(--color-term);
-  border-color: var(--color-term);
+  background: var(--color-lime);
   color: var(--color-black);
   text-shadow: none;
-  box-shadow: 0 0 10px rgb(0 255 0 / 0.45);
+  box-shadow: 0 0 0 3px var(--color-well), inset 0 3px 0 0 rgb(255 255 255 / 0.45), inset 0 -3px 0 0 rgb(30 90 40 / 0.45);
 }
 .tile.is-near {
-  border: 2px dashed var(--color-term);
+  background: var(--color-gold);
+  color: var(--color-black);
+  text-shadow: none;
+  box-shadow: 0 0 0 3px var(--color-well), inset 0 3px 0 0 rgb(255 255 255 / 0.45), inset 0 -3px 0 0 rgb(150 70 20 / 0.45);
 }
 .tile.is-miss {
+  background: var(--color-well);
   color: var(--color-term-low);
-  border-color: var(--color-term-deep);
   text-shadow: none;
 }
 .tile.is-turned {
-  animation: turn 0.32s ease-out;
+  animation: turn 0.32s steps(4);
 }
 .row.is-shaking {
   animation: shake 0.4s ease-in-out;
@@ -679,10 +700,10 @@ onUnmounted(() => {
   color: var(--color-term-dim);
 }
 .message.is-error {
-  color: var(--color-term);
+  color: var(--color-orange);
 }
 .message.is-good {
-  color: var(--color-term);
+  color: var(--color-lime);
   font-weight: 600;
   letter-spacing: 0.08em;
 }
@@ -714,11 +735,11 @@ onUnmounted(() => {
   min-width: 0;
   max-width: 2.75rem;
   height: 2.9rem;
-  border: 1px solid var(--color-term-low);
-  background: transparent;
+  background: var(--color-term-deep);
+  box-shadow: inset 0 3px 0 0 rgb(255 255 255 / 0.1), inset 0 -4px 0 0 rgb(0 0 0 / 0.35);
   color: var(--color-term);
   font-family: var(--font-display);
-  font-size: 1.45rem;
+  font-size: 1.6rem;
   line-height: 1;
   touch-action: manipulation;
 }
@@ -732,20 +753,22 @@ onUnmounted(() => {
   letter-spacing: 0.04em;
 }
 .key:active {
-  background: var(--color-term-deep);
+  transform: translateY(2px);
+  box-shadow: inset 0 3px 0 0 rgb(0 0 0 / 0.25);
 }
 .key.is-hit {
-  background: var(--color-term);
-  border-color: var(--color-term);
+  background: var(--color-lime);
   color: var(--color-black);
   text-shadow: none;
 }
 .key.is-near {
-  border: 2px dashed var(--color-term);
+  background: var(--color-gold);
+  color: var(--color-black);
+  text-shadow: none;
 }
 .key.is-miss {
+  background: var(--color-well);
   color: var(--color-term-low);
-  border-color: var(--color-term-deep);
   text-shadow: none;
 }
 
@@ -761,7 +784,7 @@ onUnmounted(() => {
 }
 
 @keyframes turn {
-  0% { transform: rotateX(90deg); filter: brightness(2.5); }
+  0% { transform: scaleY(0.1); filter: brightness(1.6); }
   100% { transform: none; filter: none; }
 }
 @keyframes shake {
@@ -776,8 +799,8 @@ onUnmounted(() => {
   100% { transform: none; filter: none; }
 }
 @keyframes cursor {
-  0% { box-shadow: inset 0 -3px 0 var(--color-term); }
-  50% { box-shadow: none; }
+  0% { box-shadow: 0 0 0 3px var(--color-gold); }
+  50% { box-shadow: 0 0 0 3px var(--color-term-deep); }
 }
 @keyframes alarm {
   0% { opacity: 1; }

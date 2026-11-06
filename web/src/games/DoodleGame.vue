@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted, markRaw } from 'vue'
+import PixelBar from '../components/PixelBar.vue'
 import confetti from 'canvas-confetti'
 import { recordWin } from '../online/profile'
 import { useOnlineRoom } from '../online/useOnlineRoom'
@@ -34,9 +35,9 @@ const SEND_MS = 50 // how often the drawer's newest points go out
 const SYNC_RETRY_MS = 3000
 const TIMER_CELLS = 24
 const TOOLS = [
-  { id: 'pen', icon: '[/]', key: 'P', label: 'doodlePen' },
-  { id: 'fill', icon: '[%]', key: 'F', label: 'doodleFill' },
-  { id: 'eraser', icon: '[x]', key: 'E', label: 'doodleEraser' }
+  { id: 'pen', icon: 'pencil', key: 'P', label: 'doodlePen' },
+  { id: 'fill', icon: 'bucket', key: 'F', label: 'doodleFill' },
+  { id: 'eraser', icon: 'eraser', key: 'E', label: 'doodleEraser' }
 ]
 // The palette's color names, in the order of COLORS
 const COLOR_NAMES = [
@@ -616,7 +617,7 @@ watch(secondsLeft, (seconds, before) => {
 watch(phase, (now) => {
   if (now === 'final' && leaderboard.value[0]?.id === room.myId && !isTie.value) {
     recordWin('doodle')
-    confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#00ff00', '#00b300', '#007a00'], shapes: ['square'] })
+    confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors: ['#ffcd75', '#41a6f6', '#b13e53', '#a7f070', '#f4f4f4'], shapes: ['square'] })
     haptics.buzz('win')
   }
 })
@@ -648,19 +649,19 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
       <div class="space-y-4">
         <div class="space-y-3">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="term-label w-full sm:w-40">&gt; {{ t.doodleRounds }}</span>
+            <span class="term-label w-full sm:w-40">{{ t.doodleRounds }}</span>
             <button v-for="n in ROUND_OPTIONS" :key="n" type="button" :disabled="!isHost" :class="optionClass(lobby.rounds === n)" @click="room.act('settings', { rounds: n })">{{ n }}</button>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <span class="term-label w-full sm:w-40">&gt; {{ t.doodleTime }}</span>
+            <span class="term-label w-full sm:w-40">{{ t.doodleTime }}</span>
             <button v-for="n in TIME_OPTIONS" :key="n" type="button" :disabled="!isHost" :class="optionClass(lobby.seconds === n)" @click="room.act('settings', { seconds: n })">{{ fmt(t.doodleSeconds, { n }) }}</button>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <span class="term-label w-full sm:w-40">&gt; {{ t.doodleHints }}</span>
+            <span class="term-label w-full sm:w-40">{{ t.doodleHints }}</span>
             <button v-for="on in [true, false]" :key="String(on)" type="button" :disabled="!isHost" :class="optionClass(lobby.hints === on)" @click="room.act('settings', { hints: on })">{{ on ? t.doodleOn : t.doodleOff }}</button>
           </div>
         </div>
-        <p class="term-muted text-sm leading-relaxed">&gt; {{ t.doodleLobbyHint }}</p>
+        <p class="term-muted text-sm leading-relaxed">{{ t.doodleLobbyHint }}</p>
       </div>
     </template>
 
@@ -676,7 +677,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
     |     |</pre>
         <h2 class="font-display text-5xl leading-none uppercase">{{ t.doodleFinalTitle }}</h2>
         <p v-if="leaderboard[0]" class="term-muted mt-2">
-          &gt; {{ isTie ? t.doodleTie : fmt(t.doodleWinner, { name: leaderboard[0].name }) }}
+          {{ isTie ? t.doodleTie : fmt(t.doodleWinner, { name: leaderboard[0].name }) }}
         </p>
       </div>
 
@@ -704,7 +705,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
           <!-- The drawer's own turn on a phone: the word needs the room more -->
           <div v-show="!full" :class="['shrink-0 w-24 sm:w-32 min-w-0 leading-tight', { 'max-sm:hidden': canFull }]">
             <p class="term-label">{{ fmt(t.doodleRound, { n: view.round, total: view.rounds }) }}</p>
-            <p class="text-xs term-muted truncate"><span aria-hidden="true">[/] </span>{{ nameOf(view.drawer) }}</p>
+            <p class="text-xs term-muted truncate"><span aria-hidden="true"><i class="pxi pxi-pencil" aria-hidden="true"></i> </span>{{ nameOf(view.drawer) }}</p>
           </div>
 
           <div class="flex-1 min-w-0 text-center" aria-live="polite">
@@ -718,7 +719,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
               <span class="ml-2 term-muted text-xs tabular-nums whitespace-nowrap">({{ hintLengths }})</span>
             </template>
             <template v-else-if="phase === 'draw' && wordText">
-              <span v-if="amDrawer" class="term-label mr-1">{{ t.doodleDrawThis }}:</span> <span class="font-display text-3xl sm:text-4xl leading-none break-words">{{ wordText }}</span> <span v-if="iGuessed" class="ml-1 text-sm font-semibold">[ok]</span>
+              <span v-if="amDrawer" class="term-label mr-1">{{ t.doodleDrawThis }}:</span> <span class="font-display text-3xl sm:text-4xl leading-none break-words">{{ wordText }}</span> <span v-if="iGuessed" class="ml-1 text-sm font-semibold"><i class="pxi pxi-check" aria-hidden="true"></i></span>
             </template>
             <span v-else-if="phase === 'choose'" class="term-muted text-sm">
               {{ amDrawer ? t.doodleYourTurn : fmt(t.doodlePicking, { name: nameOf(view.drawer) }) }}
@@ -731,7 +732,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
           </div>
           <FullscreenButton v-if="canFull" :t="t" :full="full" @toggle="toggleFull" />
         </div>
-        <p class="text-xs whitespace-pre overflow-hidden term-muted" aria-hidden="true">[{{ timerBar }}]</p>
+        <PixelBar :bar="timerBar" :warn="timerBar.indexOf('.') !== -1 && timerBar.indexOf('.') < timerBar.length * 0.25" />
 
         <div class="board-room">
         <div class="board-wrap mx-auto w-full" :style="{ maxWidth: 'max(20rem, calc((100dvh - 17rem) * 4 / 3))' }">
@@ -773,7 +774,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
               <p v-if="otherSpellings" class="term-muted text-xs mt-1">{{ otherSpellings }}</p>
               <ul class="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
                 <li v-for="row in turnResults" :key="row.id" class="whitespace-nowrap">
-                  <span v-if="row.drew" aria-hidden="true">[/] </span>{{ row.name }} <span class="font-semibold">+{{ row.n }}</span>
+                  <span v-if="row.drew" aria-hidden="true"><i class="pxi pxi-pencil" aria-hidden="true"></i> </span>{{ row.name }} <span class="font-semibold">+{{ row.n }}</span>
                 </li>
                 <li v-if="!turnResults.length" class="term-muted">{{ t.doodleNobody }}</li>
               </ul>
@@ -804,7 +805,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
               :class="toolClass(tool === item.id)"
               @click="tool = item.id"
             >
-              <span class="max-[459px]:hidden" aria-hidden="true">{{ item.icon }}</span>
+              <i :class="['pxi max-[459px]:hidden', 'pxi-' + item.icon]" aria-hidden="true"></i>
               <span class="truncate">{{ t[item.label] }}</span>
             </button>
             <button
@@ -841,16 +842,16 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
               <span class="max-[379px]:hidden" aria-hidden="true">&lt;-</span><span>{{ t.doodleUndo }}</span>
             </button>
             <button type="button" :class="toolClass(false)" @click="clearBoard">
-              <span class="max-[379px]:hidden" aria-hidden="true">[ ]</span><span>{{ t.doodleClear }}</span>
+              <i class="pxi pxi-close max-[379px]:hidden" aria-hidden="true"></i><span>{{ t.doodleClear }}</span>
             </button>
             <button type="button" :class="toolClass(false)" @click="room.act('giveUp')">
-              <span class="max-[379px]:hidden" aria-hidden="true">[?]</span><span>{{ t.doodleGiveUp }}</span>
+              <span class="max-[379px]:hidden" aria-hidden="true"><i class="pxi pxi-help" aria-hidden="true"></i></span><span>{{ t.doodleGiveUp }}</span>
             </button>
           </div>
-          <p class="term-muted text-xs hidden lg:block">&gt; {{ t.doodleControls }}</p>
+          <p class="term-muted text-xs hidden lg:block">{{ t.doodleControls }}</p>
         </div>
 
-        <p v-if="phase === 'draw' && amDrawer" class="order-1 lg:order-3 border border-dashed border-term-low px-3 py-2 text-sm term-muted">&gt; {{ t.doodleNoTalking }}</p>
+        <p v-if="phase === 'draw' && amDrawer" class="order-1 lg:order-3 border border-dashed border-term-low px-3 py-2 text-sm term-muted">{{ t.doodleNoTalking }}</p>
         <form v-else class="order-1 lg:order-3 flex gap-2" @submit.prevent="sendText">
           <input
             v-model="text"
@@ -870,18 +871,18 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
           <p v-for="line in chatLines" :key="line.id" :class="['leading-snug break-words', line.style === 'got' ? 'term-inverse px-1' : line.style === 'close' ? 'border border-dashed border-term px-1' : '']">
             <template v-if="line.who">
               <span :class="line.inner ? 'term-muted' : line.mine ? 'term-muted' : 'font-semibold'">
-                <span v-if="line.inner" :title="t.doodleInner">(*) </span>{{ line.who }}&gt;
+                <span v-if="line.inner" :title="t.doodleInner"><i class="pxi pxi-star text-gold" aria-hidden="true"></i> </span>{{ line.who }}:
               </span>
               <span :class="{ 'term-muted': line.inner }"> {{ line.text }}</span>
             </template>
-            <span v-else :class="{ 'term-muted': !line.style }">&gt; {{ line.note }}</span>
+            <span v-else :class="{ 'term-muted': !line.style }">{{ line.note }}</span>
           </p>
         </div>
 
         <div class="order-3 lg:order-1">
           <div class="flex items-center justify-between gap-2 mb-2">
-            <h2 class="term-label">{{ t.onlinePlayers }} [{{ players.length }}]</h2>
-            <button type="button" class="term-icon-btn h-8 text-xs" :aria-pressed="!muted" @click="toggleSound">{{ muted ? 'SND:OFF' : 'SND:ON' }}</button>
+            <h2 class="term-label">{{ t.onlinePlayers }} · {{ players.length }}</h2>
+            <button type="button" class="term-icon-btn h-8 text-xs" :aria-pressed="!muted" @click="toggleSound"><i :class="['pxi', muted ? 'pxi-mute' : 'pxi-sound']" aria-hidden="true"></i></button>
           </div>
           <ol :class="listClass">
             <li
@@ -891,7 +892,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
             >
               <span class="w-5 term-muted tabular-nums text-xs">{{ index + 1 }}.</span>
               <span :class="['truncate', { 'font-semibold': player.id === room.myId }]">{{ player.name }}</span>
-              <span v-if="player.id === view.drawer" class="shrink-0" :title="t.doodleDrawing">[/]</span>
+              <span v-if="player.id === view.drawer" class="shrink-0" :title="t.doodleDrawing"><i class="pxi pxi-pencil" aria-hidden="true"></i></span>
               <span v-else-if="view.guessed?.includes(player.id)" class="shrink-0 term-inverse px-1 text-xs">ok</span>
               <span v-if="player.gained && phase !== 'choose'" class="shrink-0 text-xs term-muted">+{{ player.gained }}</span>
               <span class="ml-auto tabular-nums font-semibold">{{ player.score }}</span>

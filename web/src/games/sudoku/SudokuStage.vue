@@ -792,7 +792,7 @@ onUnmounted(() => {
           <span class="term-chip">{{ levelLabel }}</span>
           <span v-if="online" class="flex-1 text-center term-muted tabular-nums">{{ fmt(t.sudokuLeft, { n: ui.left }) }}</span>
           <span v-else class="flex-1 text-center tracking-widest" :aria-label="`${t.sudokuMistakes}: ${ui.mistakes}/${MAX_MISTAKES}`">
-            <span v-for="n in MAX_MISTAKES" :key="n" :class="n <= ui.mistakes ? 'text-term' : 'text-term-low'">{{ n <= ui.mistakes ? 'X' : '.' }}</span>
+            <i v-for="n in MAX_MISTAKES" :key="n" :class="['pxi pxi-close mx-0.5', n <= ui.mistakes ? 'text-red' : 'text-term-deep']" aria-hidden="true"></i>
           </span>
           <span class="tabular-nums font-semibold">{{ formatTime(ui.time) }}</span>
         </div>
@@ -812,7 +812,7 @@ onUnmounted(() => {
             <span class="term-chip">{{ levelLabel }}</span>
             <span v-if="online" class="flex-1 text-center term-muted tabular-nums">{{ fmt(t.sudokuLeft, { n: ui.left }) }}</span>
             <span v-else class="flex-1 text-center tracking-widest" :aria-label="`${t.sudokuMistakes}: ${ui.mistakes}/${MAX_MISTAKES}`">
-              <span v-for="n in MAX_MISTAKES" :key="n" :class="n <= ui.mistakes ? 'text-term' : 'text-term-low'">{{ n <= ui.mistakes ? 'X' : '.' }}</span>
+              <i v-for="n in MAX_MISTAKES" :key="n" :class="['pxi pxi-close mx-0.5', n <= ui.mistakes ? 'text-red' : 'text-term-deep']" aria-hidden="true"></i>
             </span>
             <span class="tabular-nums font-semibold">{{ formatTime(ui.time) }}</span>
           </div>
@@ -826,15 +826,15 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <p v-if="online && !player" class="term-panel px-3 py-2 text-sm leading-relaxed term-muted">&gt; {{ t.sudokuWatching }}</p>
+          <p v-if="online && !player" class="term-panel px-3 py-2 text-sm leading-relaxed term-muted"><i class="pxi pxi-eye" aria-hidden="true"></i> {{ t.sudokuWatching }}</p>
 
           <template v-else>
             <div :class="['grid gap-1.5', online ? 'grid-cols-2' : 'grid-cols-4']">
               <button v-if="!online" type="button" class="tool term-icon-btn" :disabled="!ui.canUndo || paused" :aria-label="t.sudokuUndo" @click="press($event, takeBack)">
-                <span aria-hidden="true">&lt;-</span><span class="label">{{ t.sudokuUndo }}</span>
+                <i class="pxi pxi-back" aria-hidden="true"></i><span class="label">{{ t.sudokuUndo }}</span>
               </button>
               <button type="button" class="tool term-icon-btn" :disabled="paused || ui.locked" :aria-label="t.sudokuErase" @click="press($event, clear)">
-                <span aria-hidden="true">[x]</span><span class="label">{{ t.sudokuErase }}</span>
+                <span aria-hidden="true"><i class="pxi pxi-close" aria-hidden="true"></i></span><span class="label">{{ t.sudokuErase }}</span>
               </button>
               <button
                 type="button"
@@ -843,10 +843,10 @@ onUnmounted(() => {
                 :aria-label="t.sudokuNotes"
                 @click="press($event, toggleNotes)"
               >
-                <span aria-hidden="true">{{ ui.notes ? '[#]' : '[ ]' }}</span><span class="label">{{ t.sudokuNotes }}</span>
+                <i class="pxi pxi-pencil" aria-hidden="true"></i><span class="label">{{ t.sudokuNotes }}</span>
               </button>
               <button v-if="!online" type="button" class="tool term-icon-btn" :disabled="ui.hints >= HINTS || paused" :aria-label="t.sudokuHint" @click="press($event, askHint)">
-                <span aria-hidden="true">[?]{{ HINTS - ui.hints }}</span><span class="label">{{ t.sudokuHint }}</span>
+                <span aria-hidden="true"><i class="pxi pxi-help" aria-hidden="true"></i>{{ HINTS - ui.hints }}</span><span class="label">{{ t.sudokuHint }}</span>
               </button>
             </div>
 
@@ -903,8 +903,7 @@ onUnmounted(() => {
   color: var(--color-term-dim);
 }
 .tool.is-on {
-  background: var(--color-term);
-  border-color: var(--color-term);
+  background: var(--color-sky);
   color: var(--color-black);
 }
 .tool.is-on .label {
@@ -913,8 +912,10 @@ onUnmounted(() => {
 .tool:disabled,
 .key:disabled {
   color: var(--color-term-low);
-  border-color: var(--color-term-low);
-  background: transparent;
+  background: var(--color-panel);
+  --rim: transparent;
+  --shade: transparent;
+  --lift: 0px;
   cursor: not-allowed;
 }
 
@@ -928,7 +929,7 @@ onUnmounted(() => {
   height: 52px;
 }
 .key .digit {
-  font-size: 2rem;
+  font-size: 1.9rem;
   line-height: 1;
 }
 .key .left {
@@ -950,12 +951,13 @@ onUnmounted(() => {
   height: 28px;
   min-width: 0;
   padding: 0 0.5rem;
-  border: 1px solid var(--color-term-low);
+  background: var(--color-panel);
+  box-shadow: 0 0 0 2px var(--color-well);
   color: var(--color-term-dim);
   font-size: 0.75rem;
 }
 .score.is-me {
-  border-color: var(--color-term);
+  box-shadow: 0 0 0 2px var(--color-gold);
   color: var(--color-term);
   font-weight: 600;
 }
@@ -967,7 +969,7 @@ onUnmounted(() => {
 }
 
 @keyframes bump {
-  0% { transform: scale(1.6); text-shadow: 0 0 8px var(--color-term); }
+  0% { transform: scale(1.6); color: var(--color-gold); }
   100% { transform: none; }
 }
 

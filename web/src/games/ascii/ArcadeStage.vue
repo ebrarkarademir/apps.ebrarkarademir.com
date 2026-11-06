@@ -1,5 +1,5 @@
 <script setup>
-import { ref, inject, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, inject, provide, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { sound } from './sound'
 import { haptics } from './haptics'
 
@@ -15,8 +15,14 @@ const props = defineProps({
   // Off for games where M is something you type
   soundKey: { type: Boolean, default: true },
   // Just the play area, no header: a game's full-screen view, which brings its own way out
-  bare: { type: Boolean, default: false }
+  bare: { type: Boolean, default: false },
+  // The green terminal look the site used to have, for games with art of their own (Tank, Race,
+  // Crater, Blackjack), which keep the frame they were made with
+  classic: { type: Boolean, default: false }
 })
+
+// The buttons the games put in the header (see FullscreenButton) follow the frame
+provide('arcadeClassic', props.classic)
 
 const emit = defineEmits(['exit'])
 
@@ -103,14 +109,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="arena fixed inset-0 z-40 flex flex-col bg-black select-none">
-    <header v-show="!bare" ref="header" class="shrink-0 flex items-center gap-2 h-12 px-2 sm:px-4 border-b border-term-low">
-      <!-- On a narrow phone just [<], to leave the game's buttons room -->
+  <div :class="['arena fixed inset-0 z-40 flex flex-col bg-black select-none', classic ? 'term-classic' : 'is-pixel']">
+    <header v-show="!bare" ref="header" class="arena-bar shrink-0 flex items-center gap-2 h-12 px-2 sm:px-4 border-b border-term-low">
+      <!-- On a narrow phone just the arrow, to leave the game's buttons room -->
       <button type="button" class="term-link shrink-0" :title="exitLabel" @click="emit('exit')">
-        <span aria-hidden="true">[&lt;]</span>
+        <span aria-hidden="true"><template v-if="classic">[&lt;]</template><i v-else class="pxi pxi-back"></i></span>
         <span class="max-[399px]:sr-only">{{ exitLabel }}</span>
       </button>
-      <h1 ref="titleEl" :class="['flex-1 min-w-0 truncate text-center font-display text-2xl leading-none uppercase', { 'sr-only': tight }]">[ {{ title }}<span v-if="version" class="version"> v{{ version }}</span> ]</h1>
+      <h1 ref="titleEl" :class="['flex-1 min-w-0 truncate text-center font-display leading-none uppercase', classic ? 'text-2xl' : 'text-xl sm:text-2xl', { 'sr-only': tight }]"><template v-if="classic">[ </template>{{ title }}<span v-if="version" class="version"> v{{ version }}</span><template v-if="classic"> ]</template></h1>
       <span v-if="tight" ref="roomEl" class="flex-1 min-w-0" aria-hidden="true"></span>
       <slot name="actions" />
       <button
@@ -121,7 +127,8 @@ onUnmounted(() => {
         :aria-pressed="buzzing"
         @click="onSwitch($event, toggleHaptics)"
       >
-        {{ buzzing ? 'VIB:ON' : 'VIB:OFF' }}
+        <template v-if="classic">{{ buzzing ? 'VIB:ON' : 'VIB:OFF' }}</template>
+        <span v-else :class="['flex items-center gap-1', { 'opacity-45': !buzzing }]"><i class="pxi pxi-vibe" aria-hidden="true"></i>{{ buzzing ? 'ON' : 'OFF' }}</span>
       </button>
       <button
         type="button"
@@ -130,7 +137,8 @@ onUnmounted(() => {
         :aria-pressed="!muted"
         @click="onSwitch($event, toggleSound)"
       >
-        {{ muted ? 'SND:OFF' : 'SND:ON' }}
+        <template v-if="classic">{{ muted ? 'SND:OFF' : 'SND:ON' }}</template>
+        <span v-else :class="['flex items-center gap-1', { 'opacity-45': muted }]"><i :class="['pxi', muted ? 'pxi-mute' : 'pxi-sound']" aria-hidden="true"></i>{{ muted ? 'OFF' : 'ON' }}</span>
       </button>
     </header>
 
@@ -148,5 +156,11 @@ onUnmounted(() => {
 }
 .arena {
   -webkit-touch-callout: none;
+}
+/* The pixel header: a panel bar with a dark edge under it */
+.is-pixel .arena-bar {
+  background: var(--color-panel);
+  border-bottom: var(--px) solid var(--color-well);
+  box-shadow: inset 0 calc(var(--px) * -1) 0 0 rgb(0 0 0 / 0.25);
 }
 </style>

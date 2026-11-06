@@ -1,5 +1,8 @@
 <script setup>
 import { ref, reactive, computed, watch, markRaw } from 'vue'
+import PixelArt from '../components/PixelArt.vue'
+import { menuArt } from '../pixel/menuArt'
+import { cardArt } from '../cardArt'
 import TermWindow from '../components/TermWindow.vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom, currentRoom } from '../online/useOnlineRoom'
@@ -28,15 +31,6 @@ const MAX_TANKS = mapOf(0).spawns.length
 const SETUP_KEY = 'tankSolo'
 const LEVEL_NAMES = Object.keys(LEVELS)
 
-const LETTERS = {
-  T: [' _____ ', '|_   _|', '  | |  ', '  |_|  '],
-  A: ['   _   ', '  /_\\  ', ' / _ \\ ', '/_/ \\_\\'],
-  N: [' _  _ ', '| \\| |', '| .` |', '|_|\\_|'],
-  K: [' _  __', '| |/ /', "| ' < ", '|_|\\_\\']
-}
-const TITLE_ART = [0, 1, 2, 3].map(row => [...'TANK'].map(letter => LETTERS[letter][row]).join(' ')).join('\n')
-const SOLO_ART = [' #=#=#         #=#=#', ' [(@)]=- o  -=[(B)]', ' #=#=#         #=#=#'].join('\n')
-const ONLINE_ART = [' #=#=#  #=#=#    #=#=#', ' [(A)]=-[(B)]= -=[(C)]', ' #=#=#  #=#=#    #=#=#'].join('\n')
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 const shuffle = (list) => {
@@ -366,25 +360,25 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
   <TermWindow v-if="mode === null" class="max-w-2xl" :title="t.tankTitle" :backLabel="t.back" @back="emit('go-back')">
     <div class="space-y-6">
       <div class="overflow-hidden text-center" aria-hidden="true">
-        <span class="inline-block whitespace-pre text-left text-[0.6rem] min-[400px]:text-xs sm:text-sm leading-tight">{{ TITLE_ART }}</span>
+        <PixelArt :art="cardArt['tanks']" class="title-art mx-auto w-36 sm:w-44 h-auto" />
       </div>
 
       <div class="grid sm:grid-cols-2 gap-4">
         <button type="button" :class="cardClass" @click="mode = 'setup'">
-          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ SOLO_ART }}</span>
+          <PixelArt :art="menuArt.solo" class="h-9 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.gameSolo }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.tankSoloDesc }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
 
         <button type="button" :class="cardClass" @click="mode = 'online'">
-          <span class="whitespace-pre text-xs sm:text-sm leading-tight" aria-hidden="true">{{ ONLINE_ART }}</span>
+          <PixelArt :art="menuArt.online" class="h-10 w-auto" />
           <span class="font-display text-3xl leading-none uppercase">{{ t.gameOnline }}</span>
           <span class="term-muted text-sm leading-relaxed">{{ t.tankOnlineDesc }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
       </div>
@@ -400,20 +394,20 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
 
       <div class="space-y-4">
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-40">&gt; {{ t.tankEnemies }}</span>
+          <span class="term-label w-full sm:w-40">{{ t.tankEnemies }}</span>
           <button v-for="n in MAX_TANKS - 1" :key="n" type="button" :class="optionClass(setup.bots === n)" @click="setup.bots = n">{{ n }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-40">&gt; {{ t.botLevel }}</span>
+          <span class="term-label w-full sm:w-40">{{ t.botLevel }}</span>
           <button v-for="level in LEVEL_NAMES" :key="level" type="button" :class="optionClass(setup.level === level)" @click="setup.level = level">{{ levelName(level) }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-40">&gt; {{ t.tankRounds }}</span>
+          <span class="term-label w-full sm:w-40">{{ t.tankRounds }}</span>
           <button v-for="n in ROUND_CHOICES" :key="n" type="button" :class="optionClass(setup.rounds === n)" @click="setup.rounds = n">{{ n }}</button>
         </div>
       </div>
 
-      <p class="term-muted text-sm leading-relaxed">&gt; {{ fmt(t.tankSoloHint, { n: setup.bots }) }} {{ t.tankLobbyHint }}</p>
+      <p class="term-muted text-sm leading-relaxed">{{ fmt(t.tankSoloHint, { n: setup.bots }) }} {{ t.tankLobbyHint }}</p>
 
       <button type="button" class="term-btn term-btn-primary w-full min-h-12" @click="startSolo">{{ t.startGame }}</button>
       <p class="term-muted text-center text-xs sm:text-sm leading-relaxed">{{ t.tankControls }}</p>
@@ -438,27 +432,27 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
       <div class="space-y-4">
         <!-- Bots fill the arena up to eight tanks -->
         <div class="space-y-2">
-          <h2 class="term-label">{{ t.gameBots }} [{{ lobby.bots.length }}]</h2>
+          <h2 class="term-label">{{ t.gameBots }} · {{ lobby.bots.length }}</h2>
           <ul v-if="lobby.bots.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <li v-for="bot in lobby.bots" :key="bot.id" class="flex items-center gap-2 border border-term-low px-3 py-2 text-sm">
               <span class="shrink-0 text-[10px] uppercase tracking-wider term-muted">[bot]</span>
               <span class="truncate">{{ fmt(t.botName, { n: bot.n }) }}</span>
-              <button v-if="isHost" type="button" class="ml-auto shrink-0 term-link text-xs" :aria-label="fmt(t.removeBot, { name: fmt(t.botName, { n: bot.n }) })" @click="room.act('removeBot', { id: bot.id })">[x]</button>
+              <button v-if="isHost" type="button" class="ml-auto shrink-0 term-link text-xs" :aria-label="fmt(t.removeBot, { name: fmt(t.botName, { n: bot.n }) })" @click="room.act('removeBot', { id: bot.id })"><i class="pxi pxi-close" aria-hidden="true"></i></button>
             </li>
           </ul>
-          <button v-if="isHost && lobbyCount < MAX_TANKS" type="button" class="term-link text-xs" @click="room.act('addBot')">[+] {{ t.addBot }}</button>
+          <button v-if="isHost && lobbyCount < MAX_TANKS" type="button" class="term-link text-xs" @click="room.act('addBot')"><i class="pxi pxi-plus" aria-hidden="true"></i> {{ t.addBot }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-36">&gt; {{ t.botLevel }}</span>
+          <span class="term-label w-full sm:w-36">{{ t.botLevel }}</span>
           <button v-for="level in LEVEL_NAMES" :key="level" type="button" :disabled="!isHost" :class="optionClass(lobby.level === level)" @click="room.act('settings', { level })">{{ levelName(level) }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-36">&gt; {{ t.tankRounds }}</span>
+          <span class="term-label w-full sm:w-36">{{ t.tankRounds }}</span>
           <button v-for="n in ROUND_CHOICES" :key="n" type="button" :disabled="!isHost" :class="optionClass(lobby.rounds === n)" @click="room.act('settings', { rounds: n })">{{ n }}</button>
         </div>
         <div class="space-y-2 text-sm leading-relaxed">
-          <p class="term-muted">&gt; {{ t.tankLobbyHint }}</p>
-          <p class="term-muted">&gt; {{ t.tankControls }}</p>
+          <p class="term-muted">{{ t.tankLobbyHint }}</p>
+          <p class="term-muted">{{ t.tankControls }}</p>
         </div>
       </div>
     </template>

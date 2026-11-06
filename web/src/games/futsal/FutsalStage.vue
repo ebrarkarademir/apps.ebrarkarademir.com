@@ -597,7 +597,7 @@ watch(() => props.round, () => {
   newMatch()
   fit()
 })
-const courtLabels = (names) => [`(#) ${upper(names[0])}`, `${upper(names[1])} ( )`]
+const courtLabels = (names) => [upper(names[0]), upper(names[1])]
 watch(teamNames, (names) => renderer?.setLabels(courtLabels(names)))
 
 onMounted(() => {
@@ -651,7 +651,7 @@ onUnmounted(() => {
       <!-- Scoreboard: each team's score boxed beside its name, the clock between, and a waiting kick-off under it -->
       <div v-if="!full" class="w-full shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4" :style="{ maxWidth: `${Math.max(box.w, 300)}px`, height: `${TOP_BAR}px` }" aria-hidden="true">
         <p class="flex items-center justify-end gap-2 min-w-0">
-          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">(#) {{ teamNames[0] }}</span>
+          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider"><span class="px-team px-team-0 mr-1.5" aria-hidden="true"></span>{{ teamNames[0] }}</span>
           <span class="score">{{ hud.score[0] }}</span>
         </p>
         <div class="text-center leading-none">
@@ -660,7 +660,7 @@ onUnmounted(() => {
         </div>
         <p class="flex items-center gap-2 min-w-0">
           <span class="score">{{ hud.score[1] }}</span>
-          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">{{ teamNames[1] }} ( )</span>
+          <span class="truncate text-xs sm:text-sm font-semibold uppercase tracking-wider">{{ teamNames[1] }}<span class="px-team px-team-1 ml-1.5" aria-hidden="true"></span></span>
         </p>
       </div>
       <p class="sr-only" aria-live="polite">{{ teamNames[0] }} {{ hud.score[0] }}, {{ teamNames[1] }} {{ hud.score[1] }}</p>
@@ -675,7 +675,7 @@ onUnmounted(() => {
       <!-- Full screen: the score small in one corner and the way out in the other -->
       <template v-if="full">
         <p class="mini-score absolute left-2 top-2 z-10 pointer-events-none font-display text-xl leading-none tabular-nums whitespace-nowrap" aria-hidden="true">
-          (#) {{ hud.score[0] }} : {{ hud.score[1] }} ( ) <span :class="['term-muted', { 'term-blink': hud.hurry }]">{{ hud.clock }}</span>
+          <span class="px-team px-team-0" aria-hidden="true"></span> {{ hud.score[0] }} : {{ hud.score[1] }} <span class="px-team px-team-1" aria-hidden="true"></span> <span :class="['term-muted', { 'term-blink': hud.hurry }]">{{ hud.clock }}</span>
         </p>
         <FullscreenButton :t="t" full class="absolute right-2 top-2 z-10 bg-black/70" @toggle="onFullClick" />
       </template>
@@ -690,15 +690,18 @@ onUnmounted(() => {
 
 <style scoped>
 .stage {
-  box-shadow: 0 0 0 1px var(--color-term-low), 0 0 18px rgb(0 255 0 / 0.15);
+  box-shadow: 0 0 0 var(--px) var(--color-well), 0 calc(var(--px) * 3) 0 0 rgb(0 0 0 / 0.45);
 }
 
+/* The score: a lit panel like an arena's scoreboard */
 .score {
-  min-width: 2.4rem;
-  padding: 0.2rem 0.4rem 0;
-  border: 1px solid var(--color-term);
+  min-width: 2.6rem;
+  padding: 0.35rem 0.45rem 0.3rem;
+  background: var(--color-well);
+  color: var(--color-gold);
+  box-shadow: 0 0 0 3px var(--color-term-deep);
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: 1.1rem;
   line-height: 1;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -715,7 +718,7 @@ onUnmounted(() => {
   width: 112px;
   height: 112px;
   margin: -56px 0 0 -56px;
-  border: 1px dashed var(--color-term-dim);
+  border: 3px dashed rgb(244 244 244 / 0.4);
   border-radius: 9999px;
   pointer-events: none;
 }
@@ -727,9 +730,10 @@ onUnmounted(() => {
   width: 44px;
   height: 44px;
   margin: -22px 0 0 -22px;
-  border: 1px solid var(--color-term);
+  border: 3px solid var(--color-well);
   border-radius: 9999px;
-  background: rgb(0 255 0 / 0.15);
-  box-shadow: 0 0 12px rgb(0 255 0 / 0.35);
+  background: var(--color-gold);
+  box-shadow: inset -4px -4px 0 0 rgb(150 70 20 / 0.45), inset 4px 4px 0 0 rgb(255 255 255 / 0.4);
+  opacity: 0.85;
 }
 </style>

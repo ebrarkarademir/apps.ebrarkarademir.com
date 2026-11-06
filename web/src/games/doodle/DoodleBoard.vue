@@ -2,8 +2,9 @@
 import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { WIDTH, HEIGHT } from './sketch'
 
-// The board on screen: the sketch scaled to fit, with a phosphor halo. When it's this player's
-// turn it also turns mouse, pen and finger input into board coordinates for the game.
+// The board on screen: the sketch as pixel art, every 4 by 4 board pixels one block, blown up
+// to fit with hard edges. When it's this player's turn it also turns mouse, pen and finger
+// input into board coordinates for the game.
 const props = defineProps({
   sketch: { type: Object, required: true },
   canDraw: { type: Boolean, default: false },
@@ -18,7 +19,11 @@ const MIN_STEP = 2 // board pixels the pen has to move before the next point cou
 
 const frame = ref(null)
 const screen = ref(null)
-const halo = ref(null)
+// The sketch at pixel-art size: one pixel for each block of the board
+const PIXEL = 4
+const small = document.createElement('canvas')
+small.width = WIDTH / PIXEL
+small.height = HEIGHT / PIXEL
 const ring = reactive({ show: false, x: 0, y: 0, px: 0 })
 let frameRequest = 0
 let observer = null
@@ -27,28 +32,27 @@ let last = null
 
 function paint () {
   frameRequest = 0
-  for (const canvas of [screen.value, halo.value]) {
-    const ctx = canvas?.getContext('2d')
-    if (!ctx) continue
-    ctx.imageSmoothingEnabled = true
-    ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(props.sketch.canvas, 0, 0, canvas.width, canvas.height)
-  }
+  const ctx = screen.value?.getContext('2d')
+  if (!ctx) return
+  // Each block takes the color at its middle, so a block is one color, never a blend
+  const g = small.getContext('2d')
+  g.imageSmoothingEnabled = false
+  g.drawImage(props.sketch.canvas, 0, 0, small.width, small.height)
+  ctx.imageSmoothingEnabled = false
+  ctx.drawImage(small, 0, 0, screen.value.width, screen.value.height)
 }
 
 const schedule = () => {
   if (!frameRequest) frameRequest = requestAnimationFrame(paint)
 }
 
-// Canvas pixels follow the frame's size; the halo only needs half of them, it gets blurred
+// Canvas pixels follow the frame's size
 function fit () {
   const box = frame.value?.getBoundingClientRect()
   if (!box?.width) return
   const dpr = Math.min(2, window.devicePixelRatio || 1)
   screen.value.width = Math.round(box.width * dpr)
   screen.value.height = Math.round(box.height * dpr)
-  halo.value.width = Math.round(box.width / 2)
-  halo.value.height = Math.round(box.height / 2)
   paint()
 }
 
@@ -132,7 +136,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="frame" class="board relative w-full aspect-[4/3] border border-term-low bg-black overflow-hidden select-none">
+  <div ref="frame" class="board relative w-full aspect-[4/3] bg-[#000] overflow-hidden select-none">
     <canvas
       ref="screen"
       :class="['absolute inset-0 w-full h-full', { 'is-drawing': canDraw, 'is-filling': canDraw && tool === 'fill' }]"
@@ -145,10 +149,9 @@ onUnmounted(() => {
       @lostpointercapture="onUp"
       @pointerleave="ring.show = false"
     ></canvas>
-    <canvas ref="halo" class="halo absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true"></canvas>
     <div
       v-if="ring.show"
-      class="absolute pointer-events-none border border-term"
+      class="absolute pointer-events-none border-2 border-gold"
       :style="{ left: `${ring.x - ring.px / 2}px`, top: `${ring.y - ring.px / 2}px`, width: `${ring.px}px`, height: `${ring.px}px` }"
       aria-hidden="true"
     ></div>
@@ -157,11 +160,9 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* A blurred copy on top, added like light: the strokes glow like the rest of the screen */
-.halo {
-  filter: blur(4px);
-  mix-blend-mode: screen;
-  opacity: 0.7;
+/* A sunk-in screen in a dark frame */
+.board {
+  box-shadow: 0 0 0 var(--px) var(--color-well), 0 0 0 calc(var(--px) * 2) var(--color-term-deep);
 }
 .is-drawing {
   cursor: none;

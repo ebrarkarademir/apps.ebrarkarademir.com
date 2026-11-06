@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+import PixelArt from '../components/PixelArt.vue'
+import { menuArt } from '../pixel/menuArt'
 import TermWindow from '../components/TermWindow.vue'
 import OnlineRoom from '../online/OnlineRoom.vue'
 import { useOnlineRoom, currentRoom } from '../online/useOnlineRoom'
@@ -26,8 +28,6 @@ const props = defineProps({
 const emit = defineEmits(['go-back'])
 
 const ERROR_MS = 3500
-const SOLO_ART = ['.------.        ', '|A     |  .----', '|  /\\  |  |?   ', "'------'  '----"].join('\n')
-const ONLINE_ART = [' o    o    o    o    o', '/|\\  /|\\  /|\\  /|\\  /|\\', '/ \\  / \\  / \\  / \\  / \\'].join('\n')
 const cardClass = 'term-card group flex flex-col gap-2 sm:gap-3 p-3 sm:p-5 text-left min-w-0'
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
@@ -166,7 +166,7 @@ function leaveSolo () {
   <TermWindow v-if="mode === null" class="max-w-4xl" :title="t.blackjackTitle" :backLabel="t.back" @back="emit('go-back')">
     <div class="space-y-4 sm:space-y-6">
       <p v-if="errorText" role="alert" class="flex gap-3 border border-dashed border-term px-4 py-2 text-sm">
-        <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
+        <span class="shrink-0 term-blink" aria-hidden="true"><i class="pxi pxi-alert" aria-hidden="true"></i></span>
         <span>{{ errorText }}</span>
       </p>
 
@@ -174,20 +174,20 @@ function leaveSolo () {
 
       <div class="grid grid-cols-2 gap-3 sm:gap-4">
         <button type="button" :class="cardClass" @click="startSolo">
-          <span class="whitespace-pre text-[0.55rem] min-[400px]:text-xs sm:text-sm leading-tight overflow-hidden" aria-hidden="true">{{ SOLO_ART }}</span>
+          <PixelArt :art="menuArt.solo" class="h-9 w-auto" />
           <span class="font-display text-2xl sm:text-3xl leading-none uppercase">{{ t.gameSolo }}</span>
           <span class="term-muted text-xs sm:text-sm leading-relaxed">{{ t.bjPlaySoloHint }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-xs sm:text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-xs sm:text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
 
         <button type="button" :class="cardClass" @click="mode = 'online'">
-          <span class="whitespace-pre text-[0.55rem] min-[400px]:text-xs sm:text-sm leading-tight overflow-hidden" aria-hidden="true">{{ ONLINE_ART }}</span>
+          <PixelArt :art="menuArt.online" class="h-10 w-auto" />
           <span class="font-display text-2xl sm:text-3xl leading-none uppercase">{{ t.gameOnline }}</span>
           <span class="term-muted text-xs sm:text-sm leading-relaxed">{{ t.bjOpenTableHint }}</span>
           <span class="mt-auto flex items-center justify-end pt-1">
-            <span class="text-xs sm:text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">&gt; run</span>
+            <span class="text-xs sm:text-sm font-semibold uppercase tracking-widest term-muted group-hover:text-term" aria-hidden="true">run</span>
           </span>
         </button>
       </div>
@@ -232,11 +232,11 @@ function leaveSolo () {
     <template #lobby>
       <div class="space-y-4">
         <p v-if="errorText" role="alert" class="flex gap-3 border border-dashed border-term px-4 py-2 text-sm">
-          <span class="shrink-0 term-blink" aria-hidden="true">[!]</span>
+          <span class="shrink-0 term-blink" aria-hidden="true"><i class="pxi pxi-alert" aria-hidden="true"></i></span>
           <span>{{ errorText }}</span>
         </p>
         <ChipsPanel :t="t" :wallet="view?.me" :name="room.me?.name || ''" @refill="act('refill')" />
-        <p class="term-muted text-sm leading-relaxed">&gt; {{ t.bjLobbyHint }}</p>
+        <p class="term-muted text-sm leading-relaxed">{{ t.bjLobbyHint }}</p>
       </div>
     </template>
 

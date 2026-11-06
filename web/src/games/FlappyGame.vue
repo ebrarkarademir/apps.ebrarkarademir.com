@@ -1,6 +1,8 @@
 <script setup>
 import { reactive, computed, onMounted, onUnmounted } from 'vue'
 import FlappyStage from './flappy/FlappyStage.vue'
+import PixelArt from '../components/PixelArt.vue'
+import { sprite } from '../pixel/kit'
 
 // Flappy: one bird, one course that gets harder level by level, and the best score kept on
 // this device. Opening the game goes straight to the bird, waiting for the first tap.
@@ -16,13 +18,36 @@ const OVER_DELAY_MS = 450 // the score card waits for the bird to hit the ground
 
 // Medals at the same scores as the original game
 const MEDALS = [
-  { min: 40, key: 'flappyMedalPlatinum', mark: '#' },
-  { min: 30, key: 'flappyMedalGold', mark: '*' },
-  { min: 20, key: 'flappyMedalSilver', mark: '+' },
-  { min: 10, key: 'flappyMedalBronze', mark: 'o' }
+  { min: 40, key: 'flappyMedalPlatinum', mark: '#', colors: { m: 'C', M: 'w', d: 'c' } },
+  { min: 30, key: 'flappyMedalGold', mark: '*', colors: { m: 'y', M: 'w', d: 'o' } },
+  { min: 20, key: 'flappyMedalSilver', mark: '+', colors: { m: 'g', M: 'w', d: 's' } },
+  { min: 10, key: 'flappyMedalBronze', mark: 'o', colors: { m: 'o', M: 'y', d: 'r' } }
 ]
-const NO_MEDAL_ART = [' .--.', '( - x)>', " `--'"].join('\n')
-const medalArt = (mark) => [' \\ /', ".-'-.", `| ${mark} |`, "'---'"].join('\n')
+// A medal on a ribbon, in its metal's colors; with no medal, the crashed bird
+const MEDAL_ROWS = [
+  'rr.....bb',
+  '.rr...bb.',
+  '..rr.bb..',
+  '...mmm...',
+  '..mMMmm..',
+  '.mMmmmdm.',
+  '.mMmmmdm.',
+  '.mmmmmdm.',
+  '..mdddm..',
+  '...mmm...'
+]
+const NO_MEDAL = sprite([
+  '....kkkk....',
+  '..kkyyyykk..',
+  '.kyyyyyywwk.',
+  'kyyyyyywkwkw',
+  'kkkkkyyywkwk',
+  'kwwwwkyywkwk',
+  'kwwwkyyykooo',
+  '.kkkyyykoook',
+  '....kkkkkkk.'
+], { outline: null })
+const medalArt = (colors) => sprite(MEDAL_ROWS, { colors: { ...colors, r: 'r', b: 'b' } })
 
 const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 const randomSeed = () => Math.floor(Math.random() * 2 ** 31)
@@ -124,7 +149,7 @@ onUnmounted(() => {
         :disabled="!game.paused && game.phase !== 'play'"
         @click="onPauseClick"
       >
-        {{ game.paused ? '[>]' : '[||]' }}
+        <i :class="['pxi', game.paused ? 'pxi-play' : 'pxi-pause']" aria-hidden="true"></i>
       </button>
     </template>
 
@@ -135,7 +160,7 @@ onUnmounted(() => {
           <p class="mt-2"><span class="term-chip">{{ fmt(t.flappyReachedLevel, { n: game.level }) }}</span></p>
 
           <div class="mt-4 flex items-center justify-center gap-5">
-            <span class="whitespace-pre text-left text-sm leading-tight" aria-hidden="true">{{ medal ? medalArt(medal.mark) : NO_MEDAL_ART }}</span>
+            <PixelArt :art="medal ? medalArt(medal.colors) : NO_MEDAL" class="w-14 h-auto shrink-0" />
             <dl class="grid grid-cols-[auto_auto] items-baseline gap-x-4 text-left">
               <dt class="term-label">{{ t.flappyScore }}</dt>
               <dd class="font-display text-4xl leading-none tabular-nums">{{ game.score }}</dd>
