@@ -93,7 +93,8 @@ export const SITE = [
   { v: '1.55.2', date: '2026-11-04', commit: 'b65cb42', note: 'Futsal guests see their own player where the host has it again, so it can’t walk into the ball' },
   { v: '1.56.0', date: '2026-11-04', commit: '6295836', note: 'Pick your character: the man in the suit, in the sweatshirt or in the hat, on the Users tab, in lobbies and their chat, and at the Blackjack table' },
   { v: '1.57.0', date: '2026-11-04', commit: '2feae0c', note: 'Blackjack: bets and side bets up to $10,000,000, with $25K, $100K and $1M chips' },
-  { v: '1.58.0', date: '2026-11-07', note: 'Joining a lobby tries the direct link and the relay at once; Neon Laps arrows on phones; Doodle Race full screen sideways and shorter waits; Futsal empty nets; one unit a side in Crater Duel; no card numbers, medals or profile panel; the character is picked on the Users tab only' }
+  { v: '1.58.0', date: '2026-11-07', commit: '512f3d9', note: 'Joining a lobby tries the direct link and the relay at once; Neon Laps arrows on phones; Doodle Race full screen sideways and shorter waits; Futsal empty nets; one unit a side in Crater Duel; no card numbers, medals or profile panel; the character is picked on the Users tab only' },
+  { v: '1.59.0', date: '2026-11-07', note: 'Head Ball (Kafa Topu): one on one with big heads, solo against the computer or online, made for phones with full screen' }
 ]
 
 export const GAMES = {
@@ -110,7 +111,10 @@ export const GAMES = {
     { v: '2.1.1', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
     { v: '2.2.0', date: '2026-11-02', commit: 'a744391', note: 'Rounds in a match; a destroyed player can watch' },
     { v: '2.2.1', date: '2026-11-02', commit: '3022633', note: 'Glow and particles shared with Neon Laps' },
-    { v: '2.2.2', date: '2026-11-07', note: 'Joining is quicker: the direct link and the relay are tried at once' }
+    { v: '2.2.2', date: '2026-11-07', commit: '512f3d9', note: 'Joining is quicker: the direct link and the relay are tried at once' }
+  ],
+  headball: [
+    { v: '1.0.0', date: '2026-11-07', note: 'First version: solo against the computer or one on one online; six players to pick; phone buttons and full screen sideways' }
   ],
   futsal: [
     { v: '1.0.0', date: '2026-10-28', commit: '3203918', note: 'First version, solo or online for up to 10' },
@@ -123,7 +127,7 @@ export const GAMES = {
     { v: '2.3.0', date: '2026-11-02', commit: '3d1cd53', note: 'A new look: courts, kits, boards, goal effects' },
     { v: '2.3.1', date: '2026-11-02', commit: 'cc277f1', note: 'Back to the earlier look' },
     { v: '2.3.2', date: '2026-11-04', commit: 'b65cb42', note: 'A guest’s own player is drawn where the host has it again (the moving-ahead from 2.2.1 taken back): it went through the ball and other players on the guest’s screen; the connection corner goes with it' },
-    { v: '2.4.0', date: '2026-11-07', note: 'Empty nets, no # inside; joining is quicker' }
+    { v: '2.4.0', date: '2026-11-07', commit: '512f3d9', note: 'Empty nets, no # inside; joining is quicker' }
   ],
   flappy: [
     { v: '1.0.0', date: '2026-10-26', commit: '4cfe810', note: 'First version, solo and online' },
@@ -147,11 +151,11 @@ export const GAMES = {
     { v: '3.0.0', date: '2026-11-04', commit: 'f0d22d9', note: 'Daylight pixel art: skies with a sun and hills, a skyline or a cave wall; grass on banded, outlined dirt, brick rock, scorched craters; pixel soldiers, shots and explosions; a windsock; pixel panels, weapon icons and a big FIRE button' },
     { v: '3.1.0', date: '2026-11-04', commit: '9127e36', note: 'Bigger soldiers (half as tall again, hit anywhere on the body), a real rifle twice as long, shots twice the size; hold FIRE or Space to charge the power; a power gauge by the soldier and the angle by the sight; a band while dragging; last shot’s aim and landing as a guide; fine-aim buttons; Shift for slow aiming' },
     { v: '3.2.0', date: '2026-11-04', commit: '4367e2e', note: 'A simple aim: one line of dots from the gun, longer the more power, and an X where the last shot landed; no sight, gauge, labels, guide path or band on the battlefield' },
-    { v: '3.3.0', date: '2026-11-07', note: 'One unit for each side, always; the Units each setting is gone; joining is quicker' }
+    { v: '3.3.0', date: '2026-11-07', commit: '512f3d9', note: 'One unit for each side, always; the Units each setting is gone; joining is quicker' }
   ],
   race: [
     { v: '1.0.0', date: '2026-11-02', commit: '3022633', note: 'First version, solo against bots or online' },
-    { v: '1.1.0', date: '2026-11-07', note: 'Left and right arrows to steer on a phone, instead of the wheel; joining is quicker' }
+    { v: '1.1.0', date: '2026-11-07', commit: '512f3d9', note: 'Left and right arrows to steer on a phone, instead of the wheel; joining is quicker' }
   ],
   blackjack: [
     { v: '1.0.0', date: '2026-11-02', commit: '8378ec8', note: 'First version, solo or up to five at a table' },
@@ -164,7 +168,7 @@ export const GAMES = {
     { v: '1.6.1', date: '2026-11-04', commit: '3df5a60', note: 'He plays his own frames' },
     { v: '1.7.0', date: '2026-11-04', commit: '6295836', note: 'Each player sits as the character they picked: the man in the suit, in the sweatshirt or in the hat, drinking and smoking from their own frames' },
     { v: '1.8.0', date: '2026-11-04', commit: '2feae0c', note: 'Bets up to $10,000,000, side bets too (they had their own $1,000 limit); $25K, $100K and $1M chips' },
-    { v: '1.8.1', date: '2026-11-07', note: 'Joining is quicker: the direct link and the relay are tried at once' }
+    { v: '1.8.1', date: '2026-11-07', commit: '512f3d9', note: 'Joining is quicker: the direct link and the relay are tried at once' }
   ],
   sudoku: [
     { v: '1.0.0', date: '2026-10-26', commit: '031f28b', note: 'First version, solo' },
@@ -173,7 +177,7 @@ export const GAMES = {
     { v: '1.3.0', date: '2026-10-28', commit: '83a89aa', note: 'Russian and Kazakh' },
     { v: '1.3.1', date: '2026-11-01', commit: '65599bf', note: 'No phone zoom; named Sudoku' },
     { v: '1.3.2', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
-    { v: '1.3.3', date: '2026-11-07', note: 'Joining is quicker: the direct link and the relay are tried at once' }
+    { v: '1.3.3', date: '2026-11-07', commit: '512f3d9', note: 'Joining is quicker: the direct link and the relay are tried at once' }
   ],
   chess: [
     { v: '1.0.0', date: '2026-10-30', commit: 'f32488c', note: 'First version, one-on-one online' },
@@ -182,7 +186,7 @@ export const GAMES = {
     { v: '1.1.2', date: '2026-11-01', commit: '65599bf', note: 'No phone zoom; named Chess' },
     { v: '1.1.3', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
     { v: '1.1.4', date: '2026-11-02', commit: '295a221', note: 'A trimmer lobby' },
-    { v: '1.1.5', date: '2026-11-07', note: 'Joining is quicker: the direct link and the relay are tried at once' }
+    { v: '1.1.5', date: '2026-11-07', commit: '512f3d9', note: 'Joining is quicker: the direct link and the relay are tried at once' }
   ],
   dama: [
     { v: '1.0.0', date: '2026-10-30', commit: '807882b', note: 'First version, online Turkish draughts' },
@@ -190,7 +194,7 @@ export const GAMES = {
     { v: '1.1.1', date: '2026-11-01', commit: '65599bf', note: 'No phone zoom; named Dama' },
     { v: '1.1.2', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
     { v: '1.1.3', date: '2026-11-02', commit: '295a221', note: 'A trimmer lobby' },
-    { v: '1.1.4', date: '2026-11-07', note: 'Joining is quicker: the direct link and the relay are tried at once' }
+    { v: '1.1.4', date: '2026-11-07', commit: '512f3d9', note: 'Joining is quicker: the direct link and the relay are tried at once' }
   ],
   world: [
     { v: '1.0.0', date: '2026-10-29', commit: '9fc5c65', note: 'First version, a 3D social world' },
@@ -202,7 +206,7 @@ export const GAMES = {
     { v: '1.1.0', date: '2026-10-30', commit: '0a74707', note: 'Bigger board on phones, 154 more words, colors' },
     { v: '1.2.0', date: '2026-11-01', commit: 'fae9042', note: 'Full screen for the drawer' },
     { v: '1.2.1', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
-    { v: '1.3.0', date: '2026-11-07', note: 'Full screen turns a phone sideways: the board as tall as the screen, the word and clock left of it, the tools right; 3 s to see the word instead of 6, 10 s to pick one instead of 15; joining is quicker' }
+    { v: '1.3.0', date: '2026-11-07', commit: '512f3d9', note: 'Full screen turns a phone sideways: the board as tall as the screen, the word and clock left of it, the tools right; 3 s to see the word instead of 6, 10 s to pick one instead of 15; joining is quicker' }
   ],
   hack: [
     { v: '1.0.0', date: '2026-10-30', commit: '498a41b', note: 'First version, in four languages' },
@@ -216,7 +220,7 @@ export const GAMES = {
     { v: '1.3.0', date: '2026-10-28', commit: '83a89aa', note: 'Russian and Kazakh' },
     { v: '1.4.0', date: '2026-10-30', commit: '326c61c', note: '273 questions, each with a level and a topic' },
     { v: '1.4.1', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
-    { v: '1.4.2', date: '2026-11-07', note: 'Joining is quicker: the direct link and the relay are tried at once' }
+    { v: '1.4.2', date: '2026-11-07', commit: '512f3d9', note: 'Joining is quicker: the direct link and the relay are tried at once' }
   ],
   'number-guess': [
     { v: '1.0.0', date: '2025-08-24', commit: 'f0c46cd', note: 'First version' },
@@ -240,7 +244,7 @@ export const GAMES = {
     { v: '2.3.0', date: '2026-10-28', commit: 'c6662a0', note: 'Invites from the Users chat' },
     { v: '2.4.0', date: '2026-10-28', commit: '83a89aa', note: 'Russian and Kazakh' },
     { v: '2.4.1', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
-    { v: '2.4.2', date: '2026-11-07', note: 'Joining is quicker: the direct link and the relay are tried at once' }
+    { v: '2.4.2', date: '2026-11-07', commit: '512f3d9', note: 'Joining is quicker: the direct link and the relay are tried at once' }
   ],
   tabu: [
     { v: '1.0.0', date: '2025-08-24', commit: 'f0c46cd', note: 'First version' },
@@ -251,7 +255,7 @@ export const GAMES = {
     { v: '1.5.0', date: '2026-10-28', commit: 'c6662a0', note: 'Invites from the Users chat' },
     { v: '1.6.0', date: '2026-10-28', commit: '83a89aa', note: 'Russian and Kazakh' },
     { v: '1.6.1', date: '2026-11-02', commit: '2a9ccc5', note: 'The room stays open across games' },
-    { v: '1.6.2', date: '2026-11-07', note: 'Joining is quicker: the direct link and the relay are tried at once' }
+    { v: '1.6.2', date: '2026-11-07', commit: '512f3d9', note: 'Joining is quicker: the direct link and the relay are tried at once' }
   ]
 }
 

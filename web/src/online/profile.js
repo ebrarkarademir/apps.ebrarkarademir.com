@@ -20,7 +20,7 @@ export const cleanName = (name) => String(name || '').replace(/\s+/g, ' ').trim(
 export const cleanBio = (bio) => String(bio || '').replace(/\s+/g, ' ').trim().slice(0, MAX_BIO)
 
 // The online games, for the medal that asks for all of them
-export const ONLINE_GAME_IDS = ['tanks', 'crater', 'blackjack', 'futsal', 'race', 'doodle', 'sudoku', 'chess', 'dama', 'quiz-race', 'casus-kim', 'tabu']
+export const ONLINE_GAME_IDS = ['tanks', 'crater', 'blackjack', 'futsal', 'headball', 'race', 'doodle', 'sudoku', 'chess', 'dama', 'quiz-race', 'casus-kim', 'tabu']
 
 const blankStats = () => ({ hosted: 0, joined: 0, chats: 0, minutes: 0, wins: {}, played: {} })
 

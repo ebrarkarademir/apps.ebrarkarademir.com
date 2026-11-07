@@ -265,6 +265,80 @@ export const rules = {
       ]
     }
   },
+  headball: {
+    EN: {
+      icon: '[O]',
+      title: 'Head Ball',
+      players: '1 player against the computer, or 2 online',
+      duration: '1–2 min matches',
+      goal: 'Score more goals than the other player before time runs out.',
+      steps: [
+        'Play the computer alone, or online: one person creates a room, a friend joins with the code. Anyone else watches.',
+        'On a phone: ◀ ▶ bottom left to run, JUMP and KICK bottom right. On a keyboard: A D or the arrows run, W or ↑ jumps, Space or K kicks.',
+        'The ball bounces off your head by itself: jump into it to head it hard. KICK swings your foot and sends a ball in reach forward and up.',
+        'The ball goes in when all of it is over the line, under the crossbar. Level at full time? The next goal wins.'
+      ],
+      tips: [
+        '[FULL] turns a phone sideways and fills the screen.',
+        'A low ball kicked goes high; a high one goes flatter.',
+        'M turns the sound on or off, P pauses a solo match.'
+      ]
+    },
+    TR: {
+      icon: '[O]',
+      title: 'Kafa Topu',
+      players: 'Bilgisayara karşı tek kişi ya da çevrim içi 2 kişi',
+      duration: '1–2 dakikalık maçlar',
+      goal: 'Süre bitmeden rakibinden daha çok gol at.',
+      steps: [
+        'Tek başına bilgisayara karşı oyna ya da çevrim içi: bir kişi oda oluşturur, arkadaşı kodla katılır. Diğerleri izler.',
+        'Telefonda: koşmak için sol alttaki ◀ ▶, sağ altta ZIPLA ve ŞUT. Klavyede: A D ya da oklar koşar, W ya da ↑ zıplar, Boşluk ya da K şut çeker.',
+        'Top kafana değince kendiliğinden seker: sert kafa için topa doğru zıpla. ŞUT ayağını savurur ve yakındaki topu ileri ve yukarı gönderir.',
+        'Topun tamamı çizgiyi üst direğin altından geçince gol olur. Süre bittiğinde berabere mi? Sonraki golü atan kazanır.'
+      ],
+      tips: [
+        '[FULL] telefonu yan çevirir ve ekranı doldurur.',
+        'Alçak top şutla yükselir; yüksek top daha düz gider.',
+        'M sesi açıp kapatır, P tek kişilik maçı duraklatır.'
+      ]
+    },
+    RU: {
+      icon: '[O]',
+      title: 'Футбол головой',
+      players: '1 игрок против компьютера или 2 онлайн',
+      duration: 'Матчи по 1–2 мин',
+      goal: 'Забей больше голов, чем соперник, пока не вышло время.',
+      steps: [
+        'Играй с компьютером или онлайн: один создаёт комнату, друг входит по коду. Остальные смотрят.',
+        'На телефоне: ◀ ▶ слева внизу для бега, ПРЫЖОК и УДАР справа внизу. На клавиатуре: A D или стрелки — бег, W или ↑ — прыжок, пробел или K — удар.',
+        'Мяч сам отскакивает от головы: прыгни в него, чтобы ударить сильно. УДАР взмахивает ногой и отправляет мяч вперёд и вверх.',
+        'Гол засчитан, когда весь мяч пересёк линию под перекладиной. Ничья в конце? Следующий гол побеждает.'
+      ],
+      tips: [
+        '[FULL] поворачивает телефон боком и заполняет экран.',
+        'Низкий мяч после удара летит высоко, высокий — ниже.',
+        'M включает и выключает звук, P ставит соло-матч на паузу.'
+      ]
+    },
+    KK: {
+      icon: '[O]',
+      title: 'Баспен доп',
+      players: 'Компьютерге қарсы 1 ойыншы немесе онлайн 2',
+      duration: '1–2 минуттық матчтар',
+      goal: 'Уақыт біткенше қарсыласыңнан көп гол соқ.',
+      steps: [
+        'Компьютермен жалғыз ойна не онлайн: бір адам бөлме ашады, досы кодпен кіреді. Қалғандары көреді.',
+        'Телефонда: жүгіру үшін сол жақ төменгі ◀ ▶, оң жақ төменде СЕКІРУ және СОҒУ. Пернетақтада: A D не бағыт пернелері — жүгіру, W не ↑ — секіру, Бос орын не K — соғу.',
+        'Доп басқа тигенде өзі серпіледі: қатты соғу үшін допқа қарай секір. СОҒУ аяқты сермеп, жақын допты алға және жоғары жібереді.',
+        'Доп толығымен сызықтан тақтайдың астынан өткенде гол болады. Соңында тең бе? Келесі гол жеңіс әкеледі.'
+      ],
+      tips: [
+        '[FULL] телефонды жанына бұрып, экранды толтырады.',
+        'Төмен доп соққанда жоғары ұшады, биік доп — төменірек.',
+        'M дыбысты қосады не өшіреді, P жеке матчты кідіртеді.'
+      ]
+    }
+  },
   sudoku: {
     EN: {
       icon: '[9]',
