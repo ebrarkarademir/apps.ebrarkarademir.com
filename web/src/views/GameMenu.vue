@@ -24,12 +24,11 @@ defineEmits(['select-game', 'update:flipped'])
   <div class="max-w-6xl mx-auto">
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
       <GameCard
-        v-for="(game, index) in games"
+        v-for="game in games"
         :key="game.id"
         :game="game"
         :t="t"
         :flipped="flipped === game.id"
-        :shortcut="index < 9 ? index + 1 : 0"
         @flip="$emit('update:flipped', $event ? game.id : null)"
         @run="$emit('select-game', game.id)"
       />

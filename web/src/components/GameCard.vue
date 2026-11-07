@@ -15,11 +15,6 @@ const props = defineProps({
   flipped: {
     type: Boolean,
     default: false
-  },
-  // Number key that opens this game, shown in the corner on devices with a keyboard
-  shortcut: {
-    type: Number,
-    default: 0
   }
 })
 
@@ -52,10 +47,7 @@ watch(() => props.flipped, async (flipped) => {
       >
         <span class="flex items-start justify-between gap-2 text-xs sm:text-sm font-semibold" aria-hidden="true">
           <span>{{ game.icon }}</span>
-          <span class="flex items-start gap-2">
-            <span v-if="game.version" class="term-muted text-[0.625rem] sm:text-xs font-normal tabular-nums">v{{ game.version }}</span>
-            <span v-if="shortcut" class="term-muted hidden pointer-fine:inline">{{ shortcut }}</span>
-          </span>
+          <span v-if="game.version" class="term-muted text-[0.625rem] sm:text-xs font-normal tabular-nums">v{{ game.version }}</span>
         </span>
 
         <span class="flex-1 min-h-0 flex items-center justify-center" aria-hidden="true">

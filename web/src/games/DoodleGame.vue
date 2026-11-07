@@ -22,8 +22,8 @@ const props = defineProps({
 
 defineEmits(['go-back'])
 
-const CHOOSE_MS = 15000
-const REVEAL_MS = 6000
+const CHOOSE_MS = 10000
+const REVEAL_MS = 3000
 const ROUND_OPTIONS = [1, 2, 3]
 const TIME_OPTIONS = [60, 90, 120]
 const HINT_AT = [0.5, 0.75] // shares of the drawing time after which another letter shows
@@ -516,10 +516,11 @@ watch(() => view.value?.turn, async (turn, before) => {
 })
 
 // ---------- Full screen ----------
-// The drawer can give the drawing the whole screen: the word and the clock over the board, the
-// tools beside or under it, and nothing else. It ends with the drawing time.
+// The drawer can give the drawing the whole screen, and a phone turns sideways for it: the board
+// as tall as the screen, the word and the clock in a strip on its left, the tools on its right,
+// and nothing else. Held upright, the tools go under the board. It ends with the drawing time.
 
-const { full, leave: leaveFull, toggle: toggleFull } = useFullscreen(() => turnEl.value)
+const { full, leave: leaveFull, toggle: toggleFull } = useFullscreen(() => turnEl.value, { orientation: 'landscape' })
 const canFull = computed(() => amDrawer.value && phase.value === 'draw')
 watch(canFull, (can) => {
   if (!can) leaveFull()
@@ -700,7 +701,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
     <div v-else ref="turnEl" :class="['turn grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start', { 'is-full': full }]" @pointerdown="sound.unlock()">
       <div class="drawing min-w-0 space-y-2">
         <!-- Round and drawer, the word or its hint, the clock; for the drawer, the full-screen switch -->
-        <div class="flex items-center gap-3 min-h-12">
+        <div class="head flex items-center gap-3 min-h-12">
           <!-- The drawer's own turn on a phone: the word needs the room more -->
           <div v-show="!full" :class="['shrink-0 w-24 sm:w-32 min-w-0 leading-tight', { 'max-sm:hidden': canFull }]">
             <p class="term-label">{{ fmt(t.doodleRound, { n: view.round, total: view.rounds }) }}</p>
@@ -731,7 +732,7 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
           </div>
           <FullscreenButton v-if="canFull" :t="t" :full="full" @toggle="toggleFull" />
         </div>
-        <p class="text-xs whitespace-pre overflow-hidden term-muted" aria-hidden="true">[{{ timerBar }}]</p>
+        <p class="bar text-xs whitespace-pre overflow-hidden term-muted" aria-hidden="true">[{{ timerBar }}]</p>
 
         <div class="board-room">
         <div class="board-wrap mx-auto w-full" :style="{ maxWidth: 'max(20rem, calc((100dvh - 17rem) * 4 / 3))' }">
@@ -930,8 +931,9 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
   outline-offset: 2px;
 }
 
-/* Full screen: the word and the clock over the board, the tools under it on a phone held
-   upright and beside it otherwise. The board is as big as the room left allows. */
+/* Full screen: held upright, the word and the clock over the board and the tools under it;
+   sideways, the word and the clock in a strip left of the board and the tools right of it.
+   The board is as big as the room left allows. */
 .turn.is-full {
   position: fixed;
   inset: 0;
@@ -976,8 +978,36 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
   .turn.is-full {
     flex-direction: row;
   }
+  .turn.is-full .drawing {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  .turn.is-full .drawing > * {
+    margin-block: 0;
+  }
+  .turn.is-full .head {
+    flex: 0 0 auto;
+    width: min(9rem, 17%);
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+  .turn.is-full .head > * {
+    flex: 0 0 auto;
+    width: auto;
+    max-width: 100%;
+    text-align: left;
+  }
+  .turn.is-full .head .font-display {
+    font-size: 1.75rem;
+    white-space: normal;
+  }
+  .turn.is-full .bar {
+    display: none;
+  }
   .turn.is-full .side {
-    width: min(18rem, 38%);
+    width: min(16rem, 27%);
     overflow-y: auto;
   }
   /* The tool column is narrow: names only, without the little icons, and the brush sizes on
@@ -987,6 +1017,18 @@ const primary = 'term-btn term-btn-primary w-full min-h-12'
   }
   .turn.is-full .tools > .grid:first-child {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* A phone on its side: the board goes from the top of the screen to the bottom */
+@media (orientation: landscape) and (max-height: 540px) {
+  .turn.is-full {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .turn.is-full .head,
+  .turn.is-full .side {
+    padding-block: 0.5rem;
   }
 }
 

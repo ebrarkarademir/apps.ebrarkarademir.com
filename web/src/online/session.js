@@ -14,9 +14,11 @@ import { profile, ensureName, cleanName, recordStat, ONLINE_GAME_IDS } from './p
 // what they receive and send actions back. No server of our own is involved; PeerJS's public
 // broker just introduces the devices to each other.
 //
-// Guests first try a direct WebRTC link. Many routers block that even between devices on the
-// same Wi-Fi, so when it doesn't come up quickly the same messages go through a public MQTT
-// relay instead (see relay.js). The host listens on both from the start.
+// Guests try a direct WebRTC link and a public MQTT relay (see relay.js) at the same time, and
+// stay on whichever reaches the host first: the direct link as soon as it opens, the relay as
+// soon as the host answers there. Many routers block the direct link even between devices on
+// the same Wi-Fi, and nobody waits for it to give up first. The host listens on both from the
+// start, and every join carries a stamp, so a slower join that arrives late can't take over.
 //
 // The state has a few fields of the room's own (game, phase, ready, hostId, players,
 // sessionEnds) and the rest belongs to the game. When the host picks another game, the
@@ -43,7 +45,6 @@ import { profile, ensureName, cleanName, recordStat, ONLINE_GAME_IDS } from './p
 const PEER_PREFIX = 'ebrarkarademir-room-'
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const CONNECT_TIMEOUT_MS = 25000
-const DIRECT_MS = 7000 // how long a guest tries the direct link before switching to the relay
 const RELAY_ANSWER_MS = 5000 // per relay broker, how long a guest waits for the host to answer
 const RELAY_PING_MS = 4000
 const RELAY_TIMEOUT_MS = 15000 // silence after which a relayed player counts as gone
@@ -117,7 +118,7 @@ let attempt = 0 // bumped on every reset, so callbacks from an abandoned connect
 let opening = 0 // bumped by every create, join and leave, so a start still waiting for a name gives up
 let peer = null
 let connectTimer = null
-let directTimer = null
+let joinStamp = 0 // guest: the last join's stamp, which only goes up
 // Host: guests by link key (PeerJS peer id or 'relay:' + relay id) -> { playerId, send, relay, lastSeen }
 const guests = new Map()
 const hostRelays = [] // host: one connection per relay broker
@@ -341,11 +342,16 @@ function handleGuestMessage (key, link, msg) {
   const known = guests.get(key)
   if (known) known.lastSeen = Date.now()
   if (msg.type === 'join' && typeof msg.clientId === 'string' && link) {
-    // The same tab reconnecting (or switching to the relay) replaces its old connection
+    // The same tab reconnecting (or switching ways) replaces its old connection, unless this
+    // join is the older one and only got here late
+    const at = Number.isFinite(msg.at) ? msg.at : 0
+    for (const [other, guest] of guests) {
+      if (guest.playerId === msg.clientId && other !== key && guest.at > at) return
+    }
     guests.forEach((guest, other) => {
       if (guest.playerId === msg.clientId && other !== key) guests.delete(other)
     })
-    const guest = { ...link, playerId: msg.clientId, lastSeen: Date.now() }
+    const guest = { ...link, playerId: msg.clientId, at, lastSeen: Date.now() }
     guests.set(key, guest)
     addPlayer(msg.clientId, msg.name, msg.av)
     sendTo(guest)
@@ -545,23 +551,36 @@ async function joinRoom (rawCode) {
   role.value = 'guest'
   roomCode.value = code
   const myAttempt = attempt
-  const status = { reachedBroker: false, notFound: false, relayStarted: false }
+  const status = { reachedBroker: false, notFound: false }
   connectTimer = setTimeout(() => {
     fail(status.notFound ? 'onlineErrNotFound' : status.reachedBroker ? 'onlineErrNoRoute' : 'onlineErrConnection')
   }, CONNECT_TIMEOUT_MS)
 
-  // Direct link didn't come up: drop it and go through the relay
-  const toRelay = () => {
-    if (attempt !== myAttempt || status.relayStarted || screen.value !== 'connecting') return
-    status.relayStarted = true
-    clearTimeout(directTimer)
+  // Both ways at once; the first to reach the host is kept and the other let go
+  const race = { winner: null, relayLink: null, directLink: null }
+  const dropDirect = () => {
     const directPeer = peer
     peer = null
-    hostLink = null
     directPeer?.destroy()
-    joinViaRelay(code, myAttempt, randomId())
   }
-  directTimer = setTimeout(toRelay, DIRECT_MS)
+  race.pick = (kind) => {
+    if (race.winner || attempt !== myAttempt) return
+    race.winner = kind
+    if (kind === 'direct') {
+      // The relay may have sent a join already; this one's newer stamp wins at the host
+      const relay = guestRelay
+      guestRelay = null
+      relay?.close()
+      hostLink = race.directLink
+      connection.kind = 'direct'
+      hostLink.send(joinMessage())
+    } else {
+      dropDirect()
+      hostLink = race.relayLink
+      connection.kind = 'relay'
+    }
+    connection.ms = null
+  }
 
   const guestPeer = new Peer(peerOptions)
   peer = guestPeer
@@ -569,11 +588,13 @@ async function joinRoom (rawCode) {
     status.reachedBroker = true
     const conn = guestPeer.connect(PEER_PREFIX + code, { reliable: true })
     const link = { send: (msg) => conn.open && conn.send(msg), close: () => conn.close() }
-    hostLink = link
-    connection.kind = 'direct'
-    conn.on('open', () => conn.send(joinMessage()))
+    conn.on('open', () => {
+      if (race.winner || peer !== guestPeer) return
+      race.directLink = link
+      race.pick('direct')
+    })
     conn.on('iceStateChanged', (iceState) => {
-      if (hostLink === link && iceState === 'failed') toRelay()
+      if (iceState === 'failed' && !race.winner && peer === guestPeer) dropDirect()
     })
     conn.on('data', (msg) => {
       if (hostLink === link) receiveFromHost(msg)
@@ -586,12 +607,17 @@ async function joinRoom (rawCode) {
   guestPeer.on('error', (err) => {
     if (peer !== guestPeer) return
     if (err.type === 'peer-unavailable') status.notFound = true
-    // Once in the room, the data connection survives broker hiccups
-    if (screen.value === 'connecting') toRelay()
+    // Once in the room, the data connection survives broker hiccups; before that the relay
+    // carries on alone
+    if (screen.value === 'connecting' && !race.winner) dropDirect()
   })
+  joinViaRelay(code, myAttempt, randomId(), race)
 }
 
-const joinMessage = () => ({ type: 'join', name: profile.name, av: profile.avatar, clientId: myId })
+const joinMessage = () => {
+  joinStamp = Math.max(joinStamp + 1, Date.now())
+  return { type: 'join', name: profile.name, av: profile.avatar, clientId: myId, at: joinStamp }
+}
 
 function receiveFromHost (msg) {
   lastHostMessage = Date.now()
@@ -629,7 +655,6 @@ function receiveFromHost (msg) {
   }
   if (msg.type !== 'state' || !msg.state || typeof msg.state !== 'object') return
   clearTimeout(connectTimer)
-  clearTimeout(directTimer)
   const next = msg.state
   if (typeof next.msLeft === 'number') {
     next.deadline = Date.now() + next.msLeft
@@ -659,49 +684,61 @@ function startTiming () {
 }
 
 // Try each broker until the host answers there. Also used to get back in after the relay drops.
-async function joinViaRelay (code, myAttempt, relayId) {
+// While joining, `race` is the direct link's contest with it: the relay only becomes the way to
+// the host if it gets an answer first, and gives up once the direct link has won.
+async function joinViaRelay (code, myAttempt, relayId, race = null) {
+  const lost = () => attempt !== myAttempt || race?.winner === 'direct'
   for (const url of RELAY_BROKERS) {
-    if (attempt !== myAttempt) return
+    if (lost()) return
     let relay
+    let link = null
     try {
       relay = await connectRelay(url, {
         onMessage: (topic, msg) => {
-          if (guestRelay === relay) receiveFromHost(msg)
+          if (guestRelay !== relay) return
+          if (race && !race.winner) race.pick('relay')
+          receiveFromHost(msg)
         },
         onClose: () => {
           if (guestRelay !== relay || attempt !== myAttempt) return
           guestRelay = null
-          hostLink = null
-          joinViaRelay(code, myAttempt, relayId)
+          if (hostLink === link) hostLink = null
+          if (!race || race.winner === 'relay') joinViaRelay(code, myAttempt, relayId)
         }
       })
     } catch {
       continue
     }
-    if (attempt !== myAttempt) {
+    if (lost()) {
       relay.close()
       return
     }
     guestRelay = relay
-    connection.kind = 'relay'
-    connection.ms = null
     await relay.subscribe(guestTopic(code, relayId))
-    const link = {
+    // The direct link may have won meanwhile, and closed this relay
+    if (lost()) return
+    link = {
       send: (msg) => relay.publish(hostTopic(code), { from: relayId, msg }),
       close: () => {
         link.send({ type: 'leave' })
         relay.close()
       }
     }
-    hostLink = link
+    if (race) {
+      race.relayLink = link
+    } else {
+      hostLink = link
+      connection.kind = 'relay'
+      connection.ms = null
+    }
     const asked = Date.now()
     link.send(joinMessage())
-    if (await waitFor(() => attempt !== myAttempt || lastHostMessage > asked, RELAY_ANSWER_MS)) {
-      if (attempt === myAttempt) watchRelayedHost(myAttempt)
+    if (await waitFor(() => attempt !== myAttempt || (race ? !!race.winner : lastHostMessage > asked), RELAY_ANSWER_MS)) {
+      if (attempt === myAttempt && (!race || race.winner === 'relay')) watchRelayedHost(myAttempt)
       return
     }
-    guestRelay = null
-    hostLink = null
+    if (guestRelay === relay) guestRelay = null
+    if (hostLink === link) hostLink = null
     relay.close()
   }
 }
@@ -785,7 +822,6 @@ function resetConnection ({ linger = 0 } = {}) {
   attempt++
   closing = false
   clearTimeout(connectTimer)
-  clearTimeout(directTimer)
   clearInterval(relayTimer)
   clearInterval(rttTimer)
   clearInterval(liveTimer)

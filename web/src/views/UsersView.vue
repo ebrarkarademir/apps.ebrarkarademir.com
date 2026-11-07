@@ -3,17 +3,15 @@ import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from
 import TermWindow from '../components/TermWindow.vue'
 import PixelPerson from '../components/PixelPerson.vue'
 import CharacterPicker from '../components/CharacterPicker.vue'
-import MedalBadge from '../components/MedalBadge.vue'
 import { flagPng } from '../online/ipInfo'
 import { MAX_TEXT } from '../online/useUsers'
-import { profile, autoCountry, cleanName, cleanBio, randomName, MAX_NAME, MAX_BIO, MEDALS, medalProgress } from '../online/profile'
+import { profile, autoCountry, cleanName, cleanBio, randomName, MAX_NAME, MAX_BIO } from '../online/profile'
 import { banner } from '../online/asciiFont'
 import { COUNTRY_CODES } from '../online/countries'
 import { currentRoom } from '../online/session'
 
 // The Users page: everyone with the site open, each as a little Linux user: a name and user
-// number, an ASCII face, nationality, a few words, medals named like groups, and what they're
-// doing right now. Pick someone to chat, invite them to a game or ask to join their lobby.
+// number, a face, nationality, a few words, and what they're doing right now. Pick someone to chat, invite them to a game or ask to join their lobby.
 // Your own entry is where you change your name, face, words and nationality. The list and the
 // chats live in App (see useUsers.js), so messages reach the visitor anywhere on the site.
 
@@ -92,30 +90,6 @@ const unreadFrom = (item) => props.users.chats.get(item.id)?.unread || 0
 // ---------- Their profile ----------
 
 const nameBanner = computed(() => (person.value ? banner(person.value.name) : null))
-const medals = computed(() => {
-  const have = new Set(person.value?.md || [])
-  return MEDALS.map(medal => ({ medal, earned: have.has(medal.id) }))
-})
-const pickedMedal = ref(null)
-watch(() => person.value?.id, () => { pickedMedal.value = null })
-const medalShown = computed(() => medals.value.find(item => item.medal.id === pickedMedal.value) || null)
-const medalBanner = computed(() => (medalShown.value ? banner(medalShown.value.medal.id) : null))
-const medalStatus = (item) => {
-  if (item.earned) return props.t.usersMedalEarned
-  if (!person.value?.self) return props.t.usersMedalLocked
-  const { have, goal } = medalProgress(item.medal)
-  return item.medal.id === 'sys' ? props.t.usersMedalLocked : fmt(props.t.usersMedalProgress, { have, goal })
-}
-
-// The "id" command's answer, with the medals as groups
-const idLine = computed(() => {
-  const p = person.value
-  if (!p) return ''
-  const name = p.name || 'guest'
-  const groups = ['100(users)', ...medals.value.filter(item => item.earned).map(item => `${item.medal.gid}(${item.medal.id})`)]
-  return `uid=${p.uid || '?'}(${name}) gid=100(users) groups=${groups.join(',')}`
-})
-
 // Asking to join their lobby only makes sense when they're in one and you aren't
 const canAsk = computed(() => {
   const p = person.value
@@ -303,45 +277,7 @@ onUnmounted(() => {
           <span v-else-if="sameLobby" class="term-chip shrink-0">{{ t.usersSameLobby }}</span>
         </div>
 
-        <div class="grid gap-5 xl:grid-cols-2 xl:items-start">
-          <div class="space-y-5 min-w-0">
-            <!-- As a Linux box would describe them -->
-            <section class="term-panel p-3 text-xs sm:text-sm overflow-x-auto" aria-labelledby="users-finger-title">
-              <h3 id="users-finger-title" class="sr-only">{{ t.usersAbout }}</h3>
-              <pre class="leading-relaxed whitespace-pre-wrap break-words"><span class="term-muted">$ finger {{ nameOf(person) }}</span>
-{{ t.usersLogin }}: {{ nameOf(person) }}
-{{ t.usersFrom }}: {{ person.cc ? regionName(person.cc) : '?' }}
-{{ t.usersOnSince }}: {{ clock(person.since) }} ({{ onlineFor(person.since) }})
-{{ t.usersNow }}: {{ activity(person) }}
-{{ t.usersPlan }}: {{ person.bio || '-' }}
-<span class="term-muted">$ id {{ nameOf(person) }}</span>
-{{ idLine }}</pre>
-            </section>
-
-            <!-- Medals -->
-            <section aria-labelledby="users-medals-title">
-              <h3 id="users-medals-title" class="term-label mb-3">{{ t.usersMedals }} [{{ medals.filter(item => item.earned).length }}/{{ medals.length }}]</h3>
-              <ul class="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                <li v-for="(item, index) in medals" :key="item.medal.id">
-                  <button
-                    type="button"
-                    class="w-full"
-                    :aria-pressed="pickedMedal === item.medal.id"
-                    :aria-label="`${item.medal.id}: ${t['medal_' + item.medal.id]}`"
-                    @click="pickedMedal = pickedMedal === item.medal.id ? null : item.medal.id"
-                  >
-                    <MedalBadge class="w-full" :medal="item.medal" :earned="item.earned" :selected="pickedMedal === item.medal.id" :index="index" />
-                  </button>
-                </li>
-              </ul>
-              <div v-if="medalShown" class="term-panel border-term mt-3 p-3 space-y-2" role="status">
-                <pre v-if="medalBanner" :class="['medal-title overflow-x-auto no-scrollbar text-[10px] sm:text-xs leading-none', { 'is-earned': medalShown.earned }]" aria-hidden="true">{{ medalBanner }}</pre>
-                <p class="text-sm"><span class="font-semibold">{{ medalShown.medal.id }}</span> · {{ t['medal_' + medalShown.medal.id] }}</p>
-                <p class="text-xs term-muted">{{ medalStatus(medalShown) }}</p>
-              </div>
-            </section>
-          </div>
-
+        <div class="max-w-2xl">
           <!-- Chat -->
           <section v-if="!person.self" class="term-panel flex flex-col" aria-labelledby="users-chat-title">
             <div class="flex items-center gap-2 px-3 py-2 border-b border-term-low">
@@ -469,26 +405,13 @@ onUnmounted(() => {
   animation: banner-glow 3s ease-in-out infinite;
 }
 
-.medal-title {
-  margin: 0;
-  font-family: inherit;
-  white-space: pre;
-  color: var(--color-term-low);
-}
-
-.medal-title.is-earned {
-  color: var(--color-term);
-  animation: banner-glow 2s ease-in-out infinite;
-}
-
 @keyframes banner-glow {
   0%, 100% { text-shadow: 0 0 4px rgb(0 255 0 / 0.35); }
   50% { text-shadow: 0 0 10px rgb(0 255 0 / 0.9); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .name-banner,
-  .medal-title.is-earned {
+  .name-banner {
     animation: none;
   }
 }

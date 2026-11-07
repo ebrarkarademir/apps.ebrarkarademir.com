@@ -20,7 +20,7 @@ const props = defineProps({
 const emit = defineEmits(['go-back'])
 
 const MAX_SIDES = 6
-const UNIT_OPTIONS = [1, 2, 3]
+const PER_SIDE = 1 // one unit for each side
 const TIME_OPTIONS = [15, 20, 30]
 const ROUND_OPTIONS = [1, 3, 5, 10] // rounds in a match
 const LEVEL_OPTIONS = ['random', ...LEVEL_IDS]
@@ -179,7 +179,6 @@ function onAction (s, playerId, action) {
   switch (action.type) {
     case 'settings':
       if (!isHost || !between(s)) return
-      if (UNIT_OPTIONS.includes(action.perSide)) s.perSide = action.perSide
       if (TIME_OPTIONS.includes(action.aimSeconds)) s.aimSeconds = action.aimSeconds
       if (LEVEL_OPTIONS.includes(action.level)) s.level = action.level
       if (BOT_LEVEL_NAMES.includes(action.botLevel)) s.botLevel = action.botLevel
@@ -218,7 +217,7 @@ function onAction (s, playerId, action) {
       s.mapLevel = s.level === 'random' ? LEVEL_IDS[Math.floor(Math.random() * LEVEL_IDS.length)] : s.level
       ground = createTerrain(s.seed, s.mapLevel)
       s.ammo = s.sides.map(() => startAmmo())
-      s.units = spawnUnits(ground, s.perSide, Math.random, s.sides.length)
+      s.units = spawnUnits(ground, PER_SIDE, Math.random, s.sides.length)
       s.left = s.sides.map(() => false)
       s.craters = []
       s.round++
@@ -280,7 +279,6 @@ function onTick (s, now) {
 }
 
 const initialState = () => ({
-  perSide: 2,
   aimSeconds: 20,
   level: 'random', // the host's pick
   mapLevel: 'hills', // this match's map
@@ -347,13 +345,12 @@ const lobbyCount = computed(() => (room.view ? people(room.view).length + room.v
 // ---------- Solo ----------
 
 const loadSetup = () => {
-  const fallback = { bots: 1, botLevel: 'normal', perSide: 2, aimSeconds: 20, level: 'random', rounds: 3 }
+  const fallback = { bots: 1, botLevel: 'normal', aimSeconds: 20, level: 'random', rounds: 3 }
   try {
     const saved = JSON.parse(localStorage.getItem(SETUP_KEY) || '{}')
     return {
       bots: saved.bots >= 1 && saved.bots < MAX_SIDES ? saved.bots : fallback.bots,
       botLevel: BOT_LEVEL_NAMES.includes(saved.botLevel) ? saved.botLevel : fallback.botLevel,
-      perSide: UNIT_OPTIONS.includes(saved.perSide) ? saved.perSide : fallback.perSide,
       aimSeconds: TIME_OPTIONS.includes(saved.aimSeconds) ? saved.aimSeconds : fallback.aimSeconds,
       level: LEVEL_OPTIONS.includes(saved.level) ? saved.level : fallback.level,
       rounds: ROUND_OPTIONS.includes(saved.rounds) ? saved.rounds : fallback.rounds
@@ -386,7 +383,6 @@ const savedName = () => {
 function startSolo () {
   const bots = Array.from({ length: setup.bots }, (_, i) => ({ id: `bot${i + 1}`, n: i + 1 }))
   solo.open(savedName() || props.t.gameYou, {
-    perSide: setup.perSide,
     aimSeconds: setup.aimSeconds,
     level: setup.level,
     botLevel: setup.botLevel,
@@ -440,7 +436,7 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
     </div>
   </TermWindow>
 
-  <!-- Solo: opponents, bots, units, time and map -->
+  <!-- Solo: opponents, bots, time and map -->
   <TermWindow v-else-if="mode === 'setup'" class="max-w-2xl" :title="t.craterTitle" :backLabel="t.back" @back="mode = null">
     <div class="space-y-6">
       <h2 class="font-display text-4xl leading-none uppercase">{{ t.gameSolo }}</h2>
@@ -453,10 +449,6 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
         <div class="flex flex-wrap items-center gap-2">
           <span class="term-label w-full sm:w-44">&gt; {{ t.botLevel }}</span>
           <button v-for="level in BOT_LEVEL_NAMES" :key="level" type="button" :class="optionClass(setup.botLevel === level)" @click="setup.botLevel = level">{{ botLevelName(level) }}</button>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.craterUnits }}</span>
-          <button v-for="n in UNIT_OPTIONS" :key="n" type="button" :class="optionClass(setup.perSide === n)" @click="setup.perSide = n">{{ n }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <span class="term-label w-full sm:w-44">&gt; {{ t.craterTurnTime }}</span>
@@ -522,17 +514,6 @@ const optionClass = (active) => ['term-option min-h-8 px-3 text-sm font-semibold
             :class="optionClass(lobby.botLevel === level)"
             @click="room.act('settings', { botLevel: level })"
           >{{ botLevelName(level) }}</button>
-        </div>
-        <div class="flex flex-wrap items-center gap-2 text-sm">
-          <span class="term-label w-full sm:w-44">&gt; {{ t.craterUnits }}</span>
-          <button
-            v-for="n in UNIT_OPTIONS"
-            :key="n"
-            type="button"
-            :disabled="!isHost"
-            :class="optionClass(lobby.perSide === n)"
-            @click="room.act('settings', { perSide: n })"
-          >{{ n }}</button>
         </div>
         <div class="flex flex-wrap items-center gap-2 text-sm">
           <span class="term-label w-full sm:w-44">&gt; {{ t.craterTurnTime }}</span>

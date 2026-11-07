@@ -175,10 +175,7 @@ function paintCourt (unit, dpr, labels, turn) {
     line(front, -GOAL_HALF, front, GOAL_HALF, { ends: false })
     put('+', front, 0, GREEN)
     put('+', goalLine - s * SECOND_SPOT, 0)
-    // The goal: the net's mesh, its frame and the posts
-    for (let x = HALF_W + 0.45; x < HALF_W + GOAL_DEPTH - 0.2; x += 0.6) {
-      for (let y = -GOAL_HALF + 0.75; y < GOAL_HALF - 0.4; y += 1) put('#', s * x, y, LOW, 0.9, 400)
-    }
+    // The goal: an empty net, just its frame and the posts
     line(back, -GOAL_HALF, back, GOAL_HALF)
     for (const sy of [-1, 1]) line(goalLine, sy * GOAL_HALF, back, sy * GOAL_HALF, { ends: false })
     for (const sy of [-1, 1]) put('o', goalLine, sy * GOAL_HALF, GREEN, 1.3, 800)

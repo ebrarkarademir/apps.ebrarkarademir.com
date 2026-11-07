@@ -20,7 +20,7 @@ import { haptics } from '../ascii/haptics'
 // The full-screen race: the track as big as the screen with a camera following this player's
 // car, the minimap and the standings in the top right, place, lap and times in the top left.
 // The car drives itself; the player steers: left and right (or A and D) on a keyboard, a
-// steering wheel bottom left on a touch screen. Turning slows the car, so that's how a bend is
+// left arrow bottom left and a right arrow bottom right on a touch screen. Turning slows the car, so that's how a bend is
 // taken. Space (or the button bottom right) fires a shell. A car stuck against a wall backs out
 // by itself.
 //
@@ -71,8 +71,6 @@ const SMALL_SPAN = 46 // the same on a phone, closer in, so the cars aren't too 
 const PASS_HOLD = 0.8 // seconds a new order has to last before "passed" goes in the feed
 const AUTOPILOT = { ...LEVELS.easy, fire: 0, greed: 0 }
 const AUTOPILOT_POWER = 0.72 // how hard a car that's finished drives on
-const WHEEL_LOCK = 90 // degrees the wheel turns for full lock
-const WHEEL_MAX = 120 // and the most it turns at all
 const FIRE_KEYS = new Set(['Space', 'Enter', 'KeyF', 'KeyX'])
 const DRIVE_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'])
 
@@ -80,7 +78,7 @@ const area = ref(null)
 const canvas = ref(null)
 const ammo = ref(0) // for the fire button
 const touchUi = ref(typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches)
-const wheel = reactive({ on: false, turn: 0 }) // the touch wheel: held, and turned how many degrees
+const pads = reactive({ left: false, right: false }) // the touch arrows held down
 
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
@@ -199,13 +197,11 @@ function newRace () {
 
 // ---------- Input ----------
 
-// Steering only: the gas is always down. The touch wheel steers as far as it's turned; keys
-// steer to full lock.
+// Steering only: the gas is always down. Keys and the touch arrows steer to full lock.
 function controls () {
-  const left = keys.has('ArrowLeft') || keys.has('KeyA')
-  const right = keys.has('ArrowRight') || keys.has('KeyD')
-  const steer = wheel.on ? wheel.turn / WHEEL_LOCK : (right ? 1 : 0) - (left ? 1 : 0)
-  return { gas: true, brake: false, steer: Math.max(-1, Math.min(1, steer)) }
+  const left = pads.left || keys.has('ArrowLeft') || keys.has('KeyA')
+  const right = pads.right || keys.has('ArrowRight') || keys.has('KeyD')
+  return { gas: true, brake: false, steer: (right ? 1 : 0) - (left ? 1 : 0) }
 }
 
 // A car up against a wall, going nowhere, backs out for a moment, turning its nose away
@@ -243,43 +239,27 @@ function onKeyUp (event) {
   keys.delete(event.code)
 }
 
-// The touch wheel turns with the thumb round its middle, as a real one would, and springs back
-// to straight when let go
-let wheelGrip = null // { id, cx, cy, last } while a thumb holds it
+// The touch arrows steer while a finger is on them, each followed by its own pointer so both
+// thumbs can be down at once
+const padGrip = { left: null, right: null } // the pointer holding each arrow
 
-const angleAt = (grip, event) => (Math.atan2(event.clientY - grip.cy, event.clientX - grip.cx) * 180) / Math.PI
-
-function wheelDown (event) {
+function padDown (side, event) {
   event.preventDefault()
   sound.unlock()
   touchUi.value = true
-  if (wheelGrip) return
   try {
     event.currentTarget.setPointerCapture?.(event.pointerId)
   } catch {
     // A pointer the browser no longer knows: it just isn't captured
   }
-  const rect = event.currentTarget.getBoundingClientRect()
-  wheelGrip = { id: event.pointerId, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, last: 0 }
-  wheelGrip.last = angleAt(wheelGrip, event)
-  wheel.on = true
+  padGrip[side] = event.pointerId
+  pads[side] = true
 }
 
-function wheelMove (event) {
-  if (wheelGrip?.id !== event.pointerId) return
-  // Too near the middle to tell which way it went
-  if (Math.hypot(event.clientX - wheelGrip.cx, event.clientY - wheelGrip.cy) < 12) return
-  const now = angleAt(wheelGrip, event)
-  const turned = ((now - wheelGrip.last + 540) % 360) - 180
-  wheelGrip.last = now
-  wheel.turn = Math.max(-WHEEL_MAX, Math.min(WHEEL_MAX, wheel.turn + turned))
-}
-
-function wheelUp (event) {
-  if (wheelGrip?.id !== event.pointerId) return
-  wheelGrip = null
-  wheel.on = false
-  wheel.turn = 0
+function padUp (side, event) {
+  if (padGrip[side] !== event.pointerId) return
+  padGrip[side] = null
+  pads[side] = false
 }
 
 function fireDown (event) {
@@ -291,9 +271,8 @@ function fireDown (event) {
 // Switching apps or windows lets go of everything
 function releaseAll () {
   keys.clear()
-  wheelGrip = null
-  wheel.on = false
-  wheel.turn = 0
+  padGrip.left = padGrip.right = null
+  pads.left = pads.right = false
 }
 
 const onVisibility = () => {
@@ -1116,26 +1095,22 @@ onUnmounted(() => {
     <div ref="area" class="relative flex-1 min-h-0 overflow-hidden touch-none" @contextmenu.prevent>
       <canvas ref="canvas" class="block" role="img" :aria-label="title"></canvas>
 
-      <!-- Touch controls: the steering wheel bottom left, fire bottom right -->
+      <!-- Touch controls: left arrow bottom left; right arrow bottom right, fire above it -->
       <template v-if="touchUi && driver">
-        <div
-          :class="['wheel', { held: wheel.on }]"
-          :aria-label="t.raceWheel"
-          role="slider"
-          :aria-valuenow="Math.round(wheel.turn)"
-          @pointerdown="wheelDown"
-          @pointermove="wheelMove"
-          @pointerup="wheelUp"
-          @pointercancel="wheelUp"
+        <button
+          v-for="side in ['left', 'right']"
+          :key="side"
+          type="button"
+          :class="['pad', side, { held: pads[side] }]"
+          :aria-label="side === 'left' ? t.raceLeft : t.raceRight"
+          @pointerdown="padDown(side, $event)"
+          @pointerup="padUp(side, $event)"
+          @pointercancel="padUp(side, $event)"
         >
-          <svg viewBox="-50 -50 100 100" :style="{ transform: `rotate(${wheel.turn}deg)` }" aria-hidden="true">
-            <circle class="rim" r="44" />
-            <circle class="rim-in" r="36" />
-            <path class="spoke" d="M -36 2 L -10 6 M 36 2 L 10 6 M 0 10 L 0 36" />
-            <circle class="hub" r="10" />
-            <rect class="mark" x="-3" y="-49" width="6" height="10" rx="1" />
+          <svg viewBox="-50 -50 100 100" aria-hidden="true">
+            <path :d="side === 'left' ? 'M 22 -30 L -26 0 L 22 30 Z' : 'M -22 -30 L 26 0 L -22 30 Z'" />
           </svg>
-        </div>
+        </button>
         <button
           v-if="ammo > 0"
           type="button"
@@ -1155,64 +1130,51 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.wheel {
+.pad {
   position: absolute;
-  left: max(14px, env(safe-area-inset-left));
-  bottom: max(14px, env(safe-area-inset-bottom));
-  width: 150px;
-  height: 150px;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: 104px;
+  height: 104px;
+  border-radius: 22px;
+  border: 2px solid var(--color-term);
+  background: rgb(0 0 0 / 0.4);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-}
-
-.wheel svg {
-  width: 100%;
-  height: 100%;
-  transition: transform 0.15s ease-out;
+  -webkit-tap-highlight-color: transparent;
   filter: drop-shadow(0 0 6px rgb(0 255 0 / 0.35));
 }
 
-/* Held, it follows the thumb exactly; let go, it springs back */
-.wheel.held svg {
-  transition: none;
+.pad.left {
+  left: max(16px, env(safe-area-inset-left));
 }
 
-.rim {
-  fill: none;
-  stroke: var(--color-term);
-  stroke-width: 7;
+.pad.right {
+  right: max(16px, env(safe-area-inset-right));
+}
+
+.pad svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pad path {
+  fill: var(--color-term);
   opacity: 0.85;
 }
 
-.rim-in {
-  fill: rgb(0 0 0 / 0.35);
-  stroke: var(--color-term-dim);
-  stroke-width: 1;
+.pad.held {
+  background: rgb(0 255 0 / 0.22);
 }
 
-.spoke {
-  fill: none;
-  stroke: var(--color-term);
-  stroke-width: 6;
-  stroke-linecap: round;
-  opacity: 0.8;
-}
-
-.hub {
-  fill: rgb(0 40 0 / 0.9);
-  stroke: var(--color-term);
-  stroke-width: 2;
-}
-
-.mark {
-  fill: #ffd23f;
+.pad.held path {
+  opacity: 1;
 }
 
 .fire {
   position: absolute;
-  right: max(16px, env(safe-area-inset-right));
-  bottom: max(24px, env(safe-area-inset-bottom));
+  right: max(24px, env(safe-area-inset-right));
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 120px);
   width: 88px;
   height: 88px;
   border-radius: 9999px;
